@@ -32,6 +32,7 @@ export function AdminApp() {
       <div className="console-brand"><b>Pawsure</b> <span className="tag">Ops console</span></div>
       <div className="small muted" style={{ padding: '0 10px 8px' }}>{ROLE_LABEL[role]} · every view is logged</div>
       {SECTIONS.filter(([k]) => allowed.includes(k)).map(([k, l, i]) => <button key={k} aria-current={sec === k ? 'page' : 'false'} onClick={() => setSec(k)}><Icon name={i} size={18} />{l}</button>)}
+      {location.hash === '#admin' && <button onClick={() => { location.hash = ''; }}>Back to the owner app</button>}
       <button onClick={signOut} className="console-out">Sign out</button>
     </aside>
     <main className="console-main">
@@ -53,6 +54,7 @@ function StaffSignIn({ onDone, notStaff, onSignOut }: { onDone: () => void; notS
       : <><div className="field"><label htmlFor="sc">6-digit code</label><input id="sc" className="input mono" inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value)} />{demo && <span className="xs muted">Demo code: <span className="mono">{demo}</span></span>}</div>
         <button className="btn primary block" onClick={async () => { setErr(null); try { const r = await api<{ token: string; userId: string }>('/auth/otp/verify', { body: { phone: e164, code }, auth: false }); session.set({ token: r.token, userId: r.userId }); onDone(); } catch { setErr('That code doesn’t match.'); } }}>Sign in</button></>}
     {err && <span className="errtext" role="alert">{err}</span>}
+    {location.hash === '#admin' && <button className="btn ghost sm" onClick={() => { location.hash = ''; }}>Back to the owner app</button>}
     <p className="xs muted">Demo staff: ops 98110 00001 · ops lead 98110 00002 · privacy lead 98110 00003 · auditor 98110 00004</p>
   </div></div>;
 }

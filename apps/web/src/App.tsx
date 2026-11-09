@@ -20,7 +20,10 @@ type Sub = null | 'routine' | 'health' | 'helper' | 'circle' | 'privacy' | 'wall
 const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'search'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
 export function App() {
-  const isAdmin = location.pathname.startsWith('/admin');
+  // The hosted app uses /admin; the shareable demo can't use paths, so it also accepts #admin.
+  const [hash, setHash] = useState(location.hash);
+  useEffect(() => { const h = () => setHash(location.hash); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
+  const isAdmin = location.pathname.startsWith('/admin') || hash === '#admin';
   const lookinToken = location.pathname.startsWith('/l/') ? location.pathname.slice(3) : null;
   const [authed, setAuthed] = useState(!!session.get());
   const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null);
@@ -97,6 +100,7 @@ function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView |
       {[5, 15, 60].map(m => <button key={m} disabled={busy} onClick={() => act(() => api('/demo/clock', { body: { advance: m }, auth: false }))}>+{m === 60 ? '1h' : m + 'm'}</button>)}
       {!friendOnly && <button aria-pressed={phone} onClick={() => { setPhone(!phone); setFriends(false); }}>{phone ? 'Hide' : 'Show'} Sunita’s phone</button>}
       {!friendOnly && <button aria-pressed={friends} onClick={() => { setFriends(!friends); setPhone(false); }}>{friends ? 'Hide' : 'Show'} friends’ phones</button>}
+      <button onClick={() => { location.hash = 'admin'; }}>Ops console</button>
       {!friendOnly && <label>AI <select value={llm} onChange={e => { const m = e.target.value; setLlm(m); api('/demo/llm', { body: { mode: m }, auth: false }); }} style={{ background: 'transparent', color: 'inherit', border: '1px solid #ffffff44', borderRadius: 99 }}><option value="ok">working</option><option value="timeout">times out (8 s)</option><option value="down">unavailable</option><option value="lowconf">low confidence</option></select></label>}
     </div>
     {phone && <HelperSim hh={hh} day={day} onChange={onChange} />}

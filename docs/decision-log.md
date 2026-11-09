@@ -39,3 +39,4 @@ Format: ID · decision · status · owner · basis. **Proposed** items need sign
 | D-33 | Spam limits: 10 cover requests per household per hour, 20 friend invites per day; configurable | Proposed | Security | §9 request spam |
 | D-34 | A helper's “delete my data” stops check-ins at once (like “stop”); the privacy lead reviews what can be erased, keeping records others rely on for their retention period | Proposed | Privacy lead | PS-119, scenario #17 |
 | D-35 | Rewards arms are assigned by stratified shuffle (gate app yes/no) from a recorded seed so the split can be reproduced | Proposed | Ops lead | PS-126 |
+| D-36 | The shareable demo runs the real API and PGlite inside the visitor's browser (no hosting, no accounts), with Node crypto replaced by audited browser libraries (@noble) and a fixed, non-secret code-card key. Demo only; never used for pilot data | Proposed | Tech lead | Product owner asked for a shareable demo link, 9 Nov 2026 |

@@ -1,4 +1,28 @@
-{ "name": "@pawsure/web", "version": "0.1.0", "private": true, "type": "module",
-  "scripts": { "dev": "vite --port 5173", "build": "vite build", "preview": "vite preview --port 4173" },
-  "dependencies": { "@pawsure/domain": "*", "react": "^18.3.1", "react-dom": "^18.3.1" },
-  "devDependencies": { "@types/react": "^18.3.12", "@types/react-dom": "^18.3.1", "@vitejs/plugin-react": "^4.3.4", "vite": "^5.4.11", "vite-plugin-pwa": "^0.21.1" } }
+{
+  "name": "@pawsure/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "build:demo": "vite build --mode demo && node -e \"require('fs').copyFileSync('../../node_modules/@electric-sql/pglite/dist/postgres.data','dist-demo/pglite-fs.wasm')\"",
+    "preview:demo": "vite preview --mode demo --outDir dist-demo --port 4174 --strictPort"
+  },
+  "dependencies": {
+    "@pawsure/domain": "*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@noble/ciphers": "^1.0.0",
+    "@noble/hashes": "^1.5.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "buffer": "^6.0.3",
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^0.21.1"
+  }
+}

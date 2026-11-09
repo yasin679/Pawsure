@@ -70,6 +70,10 @@ tools/            gen-docs (permission matrix, traceability), gen-api-docs, test
                   load-test, backup-now, restore-drill
 ```
 
+## Shareable demo (no server)
+
+`npm run build:demo -w @pawsure/web` builds a version where the real API and database (PGlite) run inside the visitor's browser, with the demo household and mock vendors. It is static files (`apps/web/dist-demo`), published as a private Claude artifact for sharing. Each visitor gets their own copy that resets when the page reloads; nothing is sent anywhere, no real SMS or WhatsApp. The ops console is at `#admin` (or the **Ops console** button in the demo bar). This is for showing the product, not for the pilot (decision D-36).
+
 ## Configuration
 
 Copy `.env.example`. **Never commit real secrets.** Outside demo mode the API refuses to start without `OTP_PEPPER`, and all demo routes, the demo clock and on-screen OTP codes are disabled.
