@@ -1,0 +1,30 @@
+{
+  "name": "pawsure",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pawsure P0 pilot: owner PWA, API, domain rules and operations console (PRD v1.3).",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @pawsure/api & npm run dev --workspace @pawsure/web",
+    "dev:api": "npm run dev --workspace @pawsure/api",
+    "dev:web": "npm run dev --workspace @pawsure/web",
+    "build": "npm run build --workspace @pawsure/web",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/domain && tsc -p packages/db && tsc -p apps/api && tsc -p apps/web",
+    "docs": "tsx tools/gen-docs.ts && tsx tools/gen-api-docs.mts",
+    "report": "tsx tools/test-report.mts",
+    "load-test": "tsx tools/load-test.mts",
+    "backup": "tsx tools/backup-now.mts",
+    "restore-drill": "tsx tools/restore-drill.mts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
