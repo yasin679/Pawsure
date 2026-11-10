@@ -20,7 +20,9 @@
     "backup": "tsx tools/backup-now.mts",
     "restore-drill": "tsx tools/restore-drill.mts",
     "e2e": "playwright test",
-    "e2e:sheet": "npx tsx tools/test-report.mts && python tools/test-sheet.py"
+    "e2e:sheet": "npx tsx tools/test-report.mts && python tools/test-sheet.py",
+    "docs:shots": "playwright test -c docs/build/shots.config.ts",
+    "docs:pdf": "python docs/build/gen_uat.py && python docs/build/build_pdfs.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

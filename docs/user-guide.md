@@ -1,0 +1,564 @@
+---
+id: PS-UG-01
+title: User Guide
+subtitle: Screen-by-screen guide for pet owners, care-circle members, helpers and friends
+audience: Pet owners and co-owners; backups and family; helpers; friends who cover
+---
+
+# User Guide
+
+## 1 About this guide
+
+This guide walks through every screen of the Pawsure app in the order you meet them during a day of care. Each screen has a screenshot with numbered markers and a table that explains every marked item.
+
+![Figure 1: Today, the owner’s home screen](images/10-today.jpg)
+
+### 1.1 What Pawsure does
+
+Pawsure helps you know your pet was cared for while you are out, whoever is doing the caring. You plan the day once. Your helper checks in on WhatsApp or with a missed call, the app shows how strong the evidence is for each task, and if a check-in is missed it tells you first, then your backup. When your usual help can’t come, Pawsure finds cover among your own friends, and nothing is sent to anyone until you approve it.
+
+> [!IMPORTANT]
+> **Three things Pawsure always does**
+>
+> - **Shows evidence honestly.** Each task says how strong its evidence is. A visit alone never confirms a task, and some days will be incomplete; the app says so.
+> - **Asks before it shares.** Nothing is recorded about a helper until they say Yes, and nothing goes to a friend until you approve it. Your flat number and key details are shared only with a friend you have confirmed, for that visit only.
+> - **Is not an emergency service.** Pawsure alerts the people you chose. In an emergency, call your vet or the 24x7 clinic on your pet’s emergency card.
+
+### 1.2 Who should read it
+
+| Reader | Sections to read |
+|---|---|
+| Pet owners and co-owners | All sections |
+| Backups and family members | 2, 11 and 14 |
+| Helpers | 12 (helpers mostly use WhatsApp, not the app) |
+| Friends who cover | 9 and 13 |
+
+### 1.3 How to read the screenshots
+
+Numbered markers on a screenshot point to the item described in the matching row of the table below it. The outline shows the exact area the marker refers to. Names of buttons and fields are shown in **bold**.
+
+> [!NOTE]
+> **Sample data**
+>
+> The screenshots use the built-in demo household: Neha, her dogs and cats Bruno and Misty, helper Sunita, backup Ankita and friends Priya, Arjun, Kavya and Meera. All names, numbers and addresses are fictional.
+
+### 1.4 Key terms
+
+| Term | Meaning |
+|---|---|
+| Household | Your home in Pawsure: its pets, routine, care circle and friends. |
+| Helper | The person who usually looks after your pets (for example a house help). They check in on WhatsApp or by missed call, never through this app. |
+| Care circle | People you add with a role: co-owner, backup, family or viewer. |
+| Backup | The person alerted if a check-in is missed and you haven’t responded. Backups never give medicine. |
+| Task | One thing to do for a pet at a time, such as *Lunch + fresh water at 1:00 PM*. |
+| Visit | The helper’s time in your home, recorded by arrival and exit missed calls. Separate from task evidence. |
+| Evidence label | How strong the evidence is for a task: Likely, Confirmed, Not confirmed, Missed and so on (section 15). |
+| Covered day | A day on which every pet’s tasks were done with evidence, or resolved by you before midnight. |
+| Code card | A monthly card of daily 4-digit codes, kept in the food box. A photo or keypad entry with today’s code proves the helper was there today. |
+| Friend | Someone you invite who chose to help. They decide what they can help with and when. |
+| Find cover | Asking your friends to cover a task, in your own words. |
+
+## 2 Getting started
+
+### 2.1 Opening Pawsure
+
+Open Pawsure in your phone’s browser and tap **Add to Home Screen** to install it like an app. It works on recent Android and iPhone browsers.
+
+![Figure 2: The welcome screen](images/01-welcome.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Get started** | Begins sign-in with your mobile number. |
+
+### 2.2 Signing in
+
+![Figure 3: Entering your mobile number](images/02-phone.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Mobile number** | Your 10-digit Indian mobile number. Friends never see it. |
+| 2 | **Send code** | Sends a 6-digit code by SMS. You can ask for a new code after 30 seconds, and up to 3 codes in 15 minutes. |
+
+![Figure 4: Entering the code](images/03-code.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **6-digit code** | The code from the SMS. It expires after 5 minutes. After 5 wrong tries you must ask for a new code. |
+| 2 | **Verify** | Signs you in. |
+| 3 | **Resend code** | Sends a new code. |
+
+> [!NOTE]
+> In the demo, no SMS is sent: the code is shown on screen.
+
+### 2.3 Terms, privacy and your profile (first sign-in only)
+
+![Figure 5: Terms and privacy](images/04-consent.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Terms of Use** | Required. The version you accepted is recorded with the time. |
+| 2 | **Privacy Notice** | Required. Explains what Pawsure collects, why, for how long, and your rights. |
+| 3 | **Optional** | Care alerts on WhatsApp and calls, and pilot research interviews. You can change these later. |
+
+![Figure 6: About you](images/05-profile.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Your name** | Shown to your care circle and, by first name, to friends you ask. |
+| 2 | **App language** | English, Hindi or Marathi. |
+| 3 | **Society** | Your location anchor. Friends see the society and tower only, never a map pin. |
+| 4 | **Flat (private)** | Never shown to anyone except a friend you have confirmed for a visit, and a backup you authorised. |
+
+### 2.4 Screen layout
+
+The bottom bar has five tabs: **Today**, **Find cover**, **Friends**, **Pet** and **Me**. **SOS** is always at the top of Today.
+
+### 2.5 Roles and what you see
+
+| Role | What they see in the app |
+|---|---|
+| Owner | Everything for the household. Only the owner sees the code card. |
+| Co-owner | The same as the owner, except the code card and helper records. |
+| Backup, family, viewer | A care-circle home: today’s timeline and alerts (section 11). |
+| Helper | A helper home explaining how to use WhatsApp (section 12). |
+| Friend | Requests sent to them and their own settings (section 13). |
+
+### 2.6 Signing out
+
+**Me → Sign out** ends your session on this phone and clears what was shown, so the next person using the phone sees nothing of yours. **Sign out of all devices** ends every session you have, for example if you lose a phone.
+
+## 3 Today
+
+Today shows who is caring, what is planned, and the evidence for each task as it arrives.
+
+![Figure 7: Today](images/10-today.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **SOS** | Report an emergency or problem (section 3.6). |
+| 2 | **Day status** | *Covered so far*, *Not covered yet*, *Covered day* or *Unknown*. |
+| 3 | **Pets** | Each pet in the household. |
+| 4 | **Who’s caring today?** | Who is looking after the pets today. Tap **Change**, or **My help can’t come today**. |
+| 5 | **Heading out?** | The 30-second leaving checklist (section 3.3). |
+| 6 | **Tabs** | Today, Find cover, Friends, Pet and Me. |
+
+### 3.1 Plan and evidence
+
+![Figure 8: Plan and evidence](images/11-plan-evidence.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Timeline** | Everything that happened today, in order: plan, check-ins, alerts and your actions. |
+| 2 | **Day report** | A summary of the day you can share with your helper. |
+| 3 | **Time** | When the task is due. |
+| 4 | **Evidence label** | How strong the evidence is. Tap the task for the reasons (section 3.4). |
+
+Visit evidence (the helper’s arrival and exit calls) is shown above the tasks of that visit, separately from each task’s evidence. A visit alone never confirms a task.
+
+### 3.2 Who’s caring today?
+
+![Figure 9: Who’s caring today?](images/12-whos-caring.jpg)
+
+| # | Option | What happens |
+|---|---|---|
+| 1 | **Own helper (tracked)** | Your helper checks in; you are alerted if something is missed. |
+| 2 | **Trusted Helper mode** | No check-ins, alerts or points today. Later, tap **Covered**; if you don’t, the day shows *Unknown*. |
+| 3 | **Nobody yet** | Shows *cover needed*. Your plan is kept. |
+| 4 | **A friend** | Opens Find cover (section 6). |
+
+**My help can’t come today** marks your helper unavailable for today. The original plan stays in the record, Pawsure warns you if the pets would be alone longer than your limit, and **Ask a friend to cover** opens Find cover with a request already written for the next task.
+
+### 3.3 Leaving and coming back
+
+![Figure 10: Before you go](images/13-leaving.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Checklist** | Water, doors, toilet pads. A reminder only; it doesn’t check anything. |
+| 2 | **Expected return** | Used for the alone-window warning and the return check. |
+| 3 | **Skip** | Leave without the checklist. |
+| 4 | **I’m leaving** | Records that you left. |
+
+When you’re home, tap **I’m back**. If some tasks have incomplete evidence, Pawsure asks a 10-second **return check**.
+
+![Figure 11: Quick return check](images/14-return-check.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Questions** | Food bowl, water bowl, toilet pad, your pets, anything damaged. One tap each. |
+| 2 | **Save** | A matching answer can mark an unconfirmed task *Matched*. A contradicting answer marks a *Likely* task *Mismatch*: the helper’s points for it are held for review and the helper is told the reason. A mismatch is never treated as wrongdoing. |
+
+### 3.4 When a check-in is missed
+
+![Figure 12: A missed check-in](images/15-missed-alert.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Label** | *Missed* once the grace period has passed with no evidence. |
+| 2 | **What happens next** | When your backup will be alerted if you don’t respond. |
+| 3 | **I’m on it** | Stops the next steps. Only this tap (or pressing 1 on a call) counts; a read receipt does not. |
+| 4 | **Call Sunita** | Logs that you called; your phone places the call. |
+
+After **I’m on it**, tap **Mark resolved** and say what happened. A missed task resolved before 11:59 PM still counts toward a covered day.
+
+**Escalation timings** (from the task’s due time):
+
+| Task type | Your alert | Backup look-in link | Cover suggestions |
+|---|---|---|---|
+| Standard (feeding, water, litter, pads) | +30 min | +60 min (open for 15 min) | +75 min |
+| Walk | +45 min | +75 min | +90 min |
+| Medicine | +15 min | Never (backups never give medicine) | +60 min |
+
+Tap any task to see why it has its label, its escalation ladder and its history:
+
+![Figure 13: Task detail](images/16-task-detail.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Why this label** | The evidence rules that produced the label. |
+| 2 | **Escalation ladder** | Each step, when it is due, and whether it was sent or stopped. |
+| 3 | **Lifecycle** | Every change to the task, in order. History is never overwritten. |
+| 4 | **Change this task** | Cancel for today, mark partly done, or skipped, with a reason. A cancelled task is left out of the covered-day count. |
+
+### 3.5 Timeline and day report
+
+![Figure 14: Timeline](images/19-timeline.jpg)
+
+![Figure 15: Day report](images/20-day-report.jpg)
+
+The day report lists each task with its label, the calls you placed, points earned from your home, and upcoming health dates. **Thank Sunita on WhatsApp** opens WhatsApp with a thank-you message.
+
+### 3.6 SOS: reporting a problem
+
+![Figure 16: Report a problem](images/17-sos.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Call your vet first** | Your vet’s name and number. Pawsure is not an emergency service. |
+| 2 | **S1 Urgent** | Pet hurt, bite, collapse or breathing trouble, pet missing, door or key problem. You and your backup are alerted at once by WhatsApp and phone; calls repeat every 5 minutes; at 15 minutes your whole care circle is called; the Pawsure team is told. |
+| 3 | **S2 Unwell** | Vomiting, not eating, limping, unusual behaviour. You first; backup after 15 minutes; calls at 30 minutes. |
+| 4 | **S3 Practical** | Food, water or pads ran out, pet left outside. You first; backup after 30 minutes. |
+
+![Figure 17: An open incident](images/18-incident.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Who is told and when** | Each step with *Sent*, *Stopped* or *Pending*. Steps stop when someone taps **I’m on it**. |
+| 2 | **Your vet** | Call your own vet directly. |
+| 3 | **Resolution note** | Required to close the incident. |
+
+## 4 Pet
+
+![Figure 18: Pet](images/21-pet.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Pets** | Switch between pets, or **+ Add** a pet. Only the name is required. |
+| 2 | **Edit** | Food, allergies, medicine instructions, fears, vet, 24x7 clinic, backup contact. Saved as owner-provided with the date. |
+| 3 | **Emergency card** | Allergies, medicine, vet, 24x7 clinic and backup on one screen. |
+| 4 | **Routine** | The daily tasks (section 4.2). |
+| 5 | **Health calendar** | Vaccines, deworming and follow-ups (section 4.3). |
+
+### 4.1 Emergency card
+
+![Figure 19: Emergency card](images/22-emergency-card.jpg)
+
+Helpers see the emergency card during a visit or incident; a confirmed friend sees it during their visit; a backup sees it through the look-in link. Medicine instructions are copied from your vet; Pawsure never suggests doses.
+
+### 4.2 Routine
+
+![Figure 20: Routine](images/23-routine.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Add** | A new task: pet, name, type, time, who does it (helper or you), instructions. |
+| 2 | **Task** | Tap to edit. |
+
+Changes take effect from **tomorrow**. Today’s plan and past days are never rewritten.
+
+### 4.3 Health calendar
+
+![Figure 21: Health calendar](images/24-health.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Add** | A date from your vet card: type, name, given on, next due, source. |
+| 2 | **State** | *Upcoming*, *Due soon*, *Due today*, *Overdue*, *Snoozed* or *Done*. |
+| 3 | **Done / Snooze 1 day** | Mark it done, or snooze the reminder. |
+
+Reminders go out 3 days before, on the due date, and once when overdue. Pawsure only reminds you of dates you or your vet entered.
+
+## 5 Helper and code card
+
+![Figure 22: Helper and check-ins](images/25-helper.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Consent status** | *Waiting for a reply*, *Consent given*, *Said “Not now”* or *Stopped check-ins*. Nothing is recorded until the helper says Yes. |
+| 2 | **Practice together** | Sends a practice prompt; nothing is recorded as evidence. |
+| 3 | **Invite another helper** | Name, phone and their language. The invitation goes on WhatsApp. |
+
+If your helper says *Not now* or stops, nothing about them is recorded. Use **Trusted Helper mode** or your own return check; their tasks show *Not confirmed*, never *failed*.
+
+### 5.1 The code card
+
+![Figure 23: Food-box code card](images/26-code-card.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Today’s code** | Highlighted. The helper types it in the photo caption or keys it on the IVR call. |
+| 2 | **Rotate now** | Makes a new card at once; the old codes stop counting. Print the new card before the next visit. |
+
+A new card is made automatically each month. Codes are encrypted, checked on the server, and never appear in messages or logs.
+
+## 6 Find cover
+
+Ask in your own words. Pawsure understands the request, checks your own friends, and sends nothing until you approve.
+
+> [!NOTE]
+> **How requests are understood**
+>
+> No AI model is connected in this release. Requests are understood by rules, and the request screen says so (*understood by rules (no AI connected)*). Choosing which friends to suggest never uses AI: it uses who opted in, who is free, the tasks they chose, distance and key arrangements.
+
+### 6.1 Ask
+
+![Figure 24: Ask Pawsure](images/30-ask.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Describe what you need** | For example *Can someone feed Bruno and take him down at 5?* **Speak** works in supported browsers; typing always works. |
+| 2 | **Examples** | Sample requests to try. |
+| 3 | **Understand my request** | Shows what Pawsure understood for you to check. |
+| 4 | **Simple form** | Pick tasks, pet, time and key arrangement instead of typing. Matching works the same. |
+
+### 6.2 Check the details
+
+![Figure 25: Check the details](images/31-check-details.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **You said** | Your words, unchanged. |
+| 2 | **Tasks** | Tap to add or remove. |
+| 3 | **Time** | Corrected if needed. If the time has passed or is unclear, Pawsure asks. |
+| 4 | **Access** | Key handover, someone at home, or friend has key. |
+| 5 | **Search my friends** | Blocked until any highlighted questions are answered. |
+
+Medicine requests only go to friends who chose *Medicines*, and they get your written instructions.
+
+### 6.3 Suggestions
+
+![Figure 26: Suggestions](images/32-suggestions.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Why this friend** | Distance band, free time, task choice, key readiness, consented reply history. |
+| 2 | **Ask (name)** | Ask this one friend. |
+| 3 | **Select** | Tick several, then **Ask these** or **Ask all 3**. |
+
+**Friends not shown — why** gives counts only (for example *1 · Paused requests*); names are never shown, and declining never counts against anyone. If nobody is free, Pawsure says so honestly and suggests a different time or widening the distance. Nearby Pawsure members are switched off until identity checks are approved.
+
+### 6.4 Approve the message
+
+![Figure 27: Approve the message](images/33-approve.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Message** | Exactly what the friend will receive, in their language, with the meaning in English. |
+| 2 | **Not included** | Flat number, key location, emergency card and when the home is empty are not shared until you confirm someone. |
+| 3 | **I approve** | Required before anything is sent. |
+| 4 | **Send on WhatsApp** | Sends the request. |
+
+With **Ask all 3**, the first valid Yes is held for 10 minutes while you confirm; the others see *waiting for the owner to confirm*, and are closed politely once you confirm.
+
+### 6.5 Follow and confirm
+
+![Figure 28: Request status](images/35-request.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **State** | *Sent*, *Provisional hold*, *Accepted - pending owner confirmation*, *Confirmed*, *Completed*, *Declined*, *Expired*, *Cancelled*, *No-show*. |
+| 2 | **Friend** | Their reply: waiting, said yes, suggested another time, declined. A request expires after 15 minutes without a reply (reminder at 8). |
+| 3 | **Confirm** | Confirms the friend. If they suggested another time, the button says **Confirm 5:30** and nothing changes until you tap it. |
+| 4 | **Event history** | Every step, in order. |
+
+![Figure 29: Confirmed: what is shared](images/36-confirmed.jpg)
+
+Once confirmed, the friend sees the flat number, key arrangement, pet notes and emergency card for this visit only; access is removed when they tap **Done**, cancel, or 2 hours after the task. A cover task appears on Today. If your helper was unavailable, only the matching tasks (same pet, same kind of task) move to the friend; anything else stays open and still alerts you. If the friend sends nothing by 20 minutes after the task time, the request becomes *No-show* and your backup is alerted.
+
+Search closes 30 minutes before the task. **Cancel request** and **Change time +30 min** are available while it is open; a time change asks the friend to reconfirm.
+
+## 7 Friends
+
+![Figure 30: Friends](images/37-friends.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Invite** | Name, phone and message language. An invitation is not the same as opting in: they choose whether to be findable, what they help with and when. |
+| 2 | **Friend** | Distance band, usual free time and key arrangement. Tap for their profile. |
+| 3 | **Nearby members** | Switched off until identity checks are approved. |
+
+![Figure 31: Friend profile](images/38-friend-profile.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Comfortable with** | Tasks they chose themselves. |
+| 2 | **History** | Helps and usual reply time in your network, shared with their consent. |
+| 3 | **Ask for help** | Opens Find cover with a request for them. |
+| 4 | **Block / Report** | Block removes them from your searches without telling them why. Report also blocks them and asks the Pawsure team to review within 24 hours. |
+
+### 7.1 What friends can see
+
+**Me → Profile and what friends see** lists what is visible and what is hidden until you confirm someone. Location sharing is *society only* by default; you can widen it to *society + tower*. There is no public map and never an exact pin.
+
+![Figure 32: Profile and privacy](images/39-privacy.jpg)
+
+## 8 Me: wallet, data rights and consents
+
+![Figure 33: Me](images/28-me.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Profile and what friends see** | Section 7.1. |
+| 2 | **Helper and check-ins** | Section 5. |
+| 3 | **Care circle** | Section 10. |
+| 4 | **Wallet and points** | Section 8.1. |
+| 5 | **Your data rights** | Section 8.2. |
+
+### 8.1 Wallet and points
+
+![Figure 34: Wallet and points](images/40-wallet.jpg)
+
+Your helper earns **5 points** for each task with *Confirmed* or *Likely* evidence, up to **125 points a month from your home** (₹5). **500 points = a ₹20 coupon.** There is no cash, and points expire after 6 months. You see points from your home only, never from other homes your helper works in. Points are being tested in half of the pilot homes; if they are off for your home, check-ins work the same.
+
+### 8.2 Your data rights
+
+![Figure 35: Your data rights](images/41-data-rights.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Show my data** | Shows everything Pawsure holds about you (profile, consents, pets, requests). Other people’s details are not included. |
+| 2 | **Make a request** | See, correct, withdraw a consent, delete, or complain. Pawsure aims to reply within 7 days; the legal limit is 90 days. |
+
+Your consents are listed with their versions under **Me**. Withdrawing an optional consent stops future use; records other people rely on (such as an incident) are kept only as long as the law requires.
+
+## 9 Asking a friend: end-to-end example
+
+1. **Find cover** → type *Can someone feed Bruno at 5 pm?* → **Understand my request**.
+2. Check the details → **Search my friends**.
+3. **Ask Priya** → tick **I approve** → **Send on WhatsApp**.
+4. Priya taps **Yes** on WhatsApp (or in her app).
+5. You tap **Confirm**. Priya now sees the flat and key details for this visit.
+6. Priya taps **I’ve arrived** and then **Done**. The request shows *Completed* and access is removed.
+
+## 10 Care circle
+
+![Figure 36: Care circle](images/27-care-circle.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Invite** | Name, phone and role: co-owner, backup, family or viewer. They accept after signing in with their own number. |
+| 2 | **Member** | Their role and what it allows. |
+| 3 | **Remove** | Removes access in the app, WhatsApp alerts and any open look-in links, within 60 seconds. Past actions stay in the history. |
+
+## 11 For backups and family
+
+When you sign in as a backup, family member or viewer, you see your care-circle home: today’s timeline and any open alerts, which you can acknowledge with **I’m on it**.
+
+![Figure 37: Care-circle home (backup)](images/45-circle-home.jpg)
+
+If a check-in is missed and the owner hasn’t responded, a backup gets a **15-minute look-in link** on WhatsApp:
+
+![Figure 38: Backup look-in link](images/43-look-in.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **What was missed** | The task, its due time, and until when the link is open. |
+| 2 | **Pet card** | Allergies, vet, 24x7 clinic and the spare-key note. Medicine is never for backups to give. The address shows only if the owner authorised it. |
+| 3 | **I’m on it** | Tells the owner you’re handling it. |
+
+The link works only for the person it was sent to, every open is logged, and it stops working after 15 minutes or if your access is removed.
+
+## 12 For helpers
+
+Helpers don’t need the app. Everything works on WhatsApp or a basic phone:
+
+- **Invitation:** a WhatsApp message in your language asks whether you want to join. Only the bowl or the pet is ever photographed, never your face. Reply **Yes** or **Not now**.
+- **Method:** photo, voice note, or missed call with the day’s code. Reply **change** to switch.
+- **Task prompts:** a message 10 minutes before each task. Send a photo of the bowl with today’s code from the card, a voice note, or give a missed call and key the code.
+- **Replies:** **points** shows your points; **share** gives a link to your record (counts only, when switched on); **my data** asks what Pawsure holds; **delete my data** asks for deletion and stops check-ins; **stop** stops check-ins; **help** asks a person to call you back.
+- **Problems:** use the problem buttons (pet hurt, water ran out and so on); the owner and backup are told.
+
+![Figure 39: A helper’s WhatsApp messages (demo phone)](images/42-helper-whatsapp.jpg)
+
+If you sign in to the app with your number, you see the helper home with these instructions and your data rights:
+
+![Figure 40: Helper home](images/44-helper-home.jpg)
+
+## 13 For friends
+
+Friends receive requests on WhatsApp in their language and can reply **Yes**, **No**, or suggest another time (for example *5:30*). In the app, a friend sees **Requests for you** and **My settings**.
+
+![Figure 41: A friend’s WhatsApp (demo phone)](images/34-friend-phone.jpg)
+
+After the owner confirms you, **Show address, key and emergency card** reveals the details for that visit only. Tap **I’ve arrived** when you get there and **Done** when finished; tap **Can’t make it** if plans change (the owner is told and the details are removed).
+
+![Figure 42: My helper settings](images/46-friend-settings.jpg)
+
+| # | Item | What it does |
+|---|---|---|
+| 1 | **Friends can find me** | Turning it off removes you from search at once. |
+| 2 | **Pause all requests** | Take a break any time, or pause for the next 6 days. |
+| 3 | **When I’m usually free** | Shown as “usually free”, with when you last updated it. Not a promise. |
+| 4 | **Tasks I’m comfortable with** | Feeding and water, short walks, medicines (only with written instructions), large or anxious dogs. |
+
+Keys, message language, stairs, live location (off by default, only during an accepted visit) and the separate nearby-members opt-in are also here.
+
+## 14 Status reference
+
+| Label | Meaning |
+|---|---|
+| Awaiting evidence | Not due yet, or within its window. |
+| Likely | One good signal, such as a photo with today’s code, a voice note naming the task, or the IVR code after a prompt. |
+| Confirmed | Two independent channels, such as a photo with code plus arrival and exit calls long enough for the tasks. |
+| Not confirmed | Evidence was weak or contradictory, for example a wrong code or a reused photo. |
+| Not confirmed (visit only) | The helper’s visit was recorded but there is no evidence for this task. It escalates like a missed task. |
+| Missed | No evidence by the end of the grace period. |
+| Matched (owner check) | Your return check confirmed it. No helper points. |
+| Mismatch — under review | Your return check contradicted a Likely task. Points held for review; never treated as wrongdoing. |
+| Trusted helper — no check-ins | Trusted Helper mode. |
+| Cancelled / Skipped / Partly done | Changed by you, with a reason. |
+| Reassigned | Moved to a friend who covered it. |
+
+| Day status | Meaning |
+|---|---|
+| Covered so far | Every task due so far has evidence or is resolved. |
+| Covered day | The day closed with every pet’s tasks done or resolved. |
+| Not covered yet / Not covered | At least one task is missed and unresolved. |
+| Unknown | Trusted Helper mode with no **Covered** tap. |
+
+## 15 Glossary
+
+| Term | Meaning |
+|---|---|
+| Acknowledge | Tapping **I’m on it** (or pressing 1 on a call). Stops the next escalation steps. |
+| Covered day | See section 1.4. Stored each night with the rule version used. |
+| IVR | The automated phone line where a helper keys the day’s code. |
+| Look-in link | A 15-minute link for a backup, scoped to one person. |
+| Return check | A 10-second set of questions when you get home. |
+| Trusted Helper mode | A day without monitoring, alerts or points. |
+
+## 16 Appendix A: practise with the demo
+
+The shared demo runs the whole app in your browser with the demo household; nothing is sent anywhere and it resets when you reload. Sign in with these numbers (the code appears on screen):
+
+| Who | Number |
+|---|---|
+| Neha (owner) | 98000 00021 |
+| Rohan (co-owner) | 98000 00022 |
+| Ankita (backup) | 97000 00008 |
+| Sunita (helper) | 90000 00035 |
+| Priya (friend) | 99000 00012 |
+| Arjun (friend, Hindi) | 98000 00077 |
+| Meera (friend, Marathi) | 97000 00090 |
+
+The demo bar at the top lets you move the clock forward (**+5m**, **+15m**, **+1h**), open **Sunita’s phone** or the **friends’ phones** to reply as them, open the **Ops console**, and simulate AI being slow or unavailable.

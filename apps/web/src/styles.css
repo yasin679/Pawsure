@@ -338,7 +338,7 @@ body{background:var(--stage)}
 .meter{height:10px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
 .meter>span{display:block;height:100%;background:var(--accent);border-right:1.5px solid var(--charcoal)}
 .console-shell{min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--bg)}
-.console{display:grid;grid-template-columns:232px 1fr;min-height:100vh;background:var(--bg);color:var(--ink)}
+.console{display:grid;grid-template-columns:232px 1fr;width:100%;max-width:none;gap:0;align-items:stretch;min-height:100vh;background:var(--bg);color:var(--ink)}
 .console-nav{background:var(--surface);border-right:1px solid var(--line);padding:16px 10px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow:auto}
 .console-brand{font-family:var(--f-display);font-size:var(--fs-l);padding:0 10px 4px;display:flex;align-items:center;gap:8px}
 .console-nav button{display:flex;align-items:center;gap:10px;text-align:left;background:none;border:0;border-radius:var(--r-s);padding:9px 10px;font-weight:700;color:var(--ink-2);min-height:40px}
