@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
-const FRIENDS: [string, string, string][] = [['u_priya', 'Priya', '+919900000012'], ['u_arjun', 'Arjun', '+919800000077'], ['u_kavya', 'Kavya', '+919600000045'], ['u_rahul', 'Rahul', '+919300000002']];
+const FRIENDS: [string, string, string][] = [['u_priya', 'Priya', '+919900000012'], ['u_arjun', 'Arjun', '+919800000077'], ['u_kavya', 'Kavya', '+919600000045'], ['u_meera', 'Meera', '+919700000090'], ['u_farhan', 'Farhan', '+919500000031'], ['u_rahul', 'Rahul', '+919300000002']];
 interface Msg { request_id: string | null; direction: string; body: string; buttons: { id: string; label: string }[] | null; at: string }
 
 export function FriendSim({ onChange }: { onChange: () => void }) {

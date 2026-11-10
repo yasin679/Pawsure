@@ -135,7 +135,7 @@ export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor) {
     const stuck = reqs.filter(r => ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(r.state) && now().getTime() - new Date(r.updated_at).getTime() > 10 * 60000);
     const llmLog = await db.query(`select at, action, detail from audit_log where action like 'llm.%' or action like 'webhook%' or action like 'request.late%' order by id desc limit 30`);
     const llm = reqs.filter(r => r.parser === 'llm');
-    return c.json({ counts, stuck: stuck.map(r => ({ id: r.id, state: r.state, minutes: Math.round((now().getTime() - new Date(r.updated_at).getTime()) / 60000) })), correctionRate: { corrected: llm.filter(r => r.corrected_fields.length).length, parsed: llm.length }, recent: reqs.slice(0, 20).map(r => ({ id: r.id, state: r.state, mode: r.doc.mode, parser: r.parser, corrected: r.corrected_fields, recipients: r.doc.recipients.map(x => x.state) })), llmLog });
+    return c.json({ aiConnected: d.adapters.llm.connected, counts, stuck: stuck.map(r => ({ id: r.id, state: r.state, minutes: Math.round((now().getTime() - new Date(r.updated_at).getTime()) / 60000) })), correctionRate: { corrected: llm.filter(r => r.corrected_fields.length).length, parsed: llm.length }, recent: reqs.slice(0, 20).map(r => ({ id: r.id, state: r.state, mode: r.doc.mode, parser: r.parser, corrected: r.corrected_fields, recipients: r.doc.recipients.map(x => x.state) })), llmLog });
   });
 
   /* Feature flags by cohort / household (PS-071). Locked switches can’t be changed here. */
@@ -225,7 +225,7 @@ export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor) {
   /* Breach runbook (PS-120): readiness checklist, rehearsal / incident with the 72 h Board clock. */
   app.get('/admin/breach', async (c) => {
     if (!(await gate(c, 'breach', 'read'))) return deny(c);
-    return c.json({ checklist: await db.query(`select item, done, done_at from breach_checklist order by item`), events: await db.query(`select * from breach_events order by aware_at desc`), rule: 'Notify affected people without delay; Data Protection Board report within 72 h of becoming aware (once the DPDP Rules provision is in force).' });
+    return c.json({ checklist: await db.query(`select item, done, done_at from breach_checklist order by item`), events: (await db.query<{ board_due_at: string }>(`select * from breach_events order by aware_at desc`)).map(e => ({ ...e, hours_left: Math.round((new Date(e.board_due_at).getTime() - now().getTime()) / 3600000) })), rule: 'Notify affected people without delay; Data Protection Board report within 72 h of becoming aware (once the DPDP Rules provision is in force).' });
   });
   app.put('/admin/breach/checklist', async (c) => {
     if (!(await gate(c, 'breach', 'update'))) return deny(c);

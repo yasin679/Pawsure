@@ -13,7 +13,9 @@ const SEV: Record<string, [string, string][]> = {
 const RQ = [['food', 'Food bowl', 'Empty / eaten', 'Untouched'], ['water', 'Water bowl', 'Lower / refilled', 'Same or dry'], ['pad', 'Toilet pad', 'Changed', 'Old'], ['pet', 'Your pets', 'Normal', 'Very hungry or thirsty'], ['damage', 'Anything damaged or wrong?', 'No', 'Yes']] as const;
 type SheetKind = null | 'caring' | 'cantcome' | 'leaving' | 'return' | 'timeline' | 'report' | 'sos' | 'resolve' | 'task' | 'incident' | 'change';
 
-export function Today({ hh, day, pets, incidents, ownerName, reload }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void }) {
+const VERB: Record<string, string> = { feeding: 'feed', walk: 'walk', medicine: 'give medicine to', litter: 'clean the litter tray for', toilet: 'change the toilet pad for', water: 'top up water for' };
+
+export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void }) {
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [task, setTask] = useState<DayTask | null>(null);
   const [inc, setInc] = useState<Incident | null>(null);
@@ -35,6 +37,10 @@ export function Today({ hh, day, pets, incidents, ownerName, reload }: { hh: str
   const byVisit = new Map<string, DayTask[]>();
   day.tasks.forEach(t => { const k = t.visitId ?? 'solo-' + t.id; byVisit.set(k, [...(byVisit.get(k) ?? []), t]); });
   const d = day.day;
+  // Pre-fill Find cover with the next task the helper would have done (owner edits it before anything is sent).
+  const nextTask = day.tasks.find(t => t.due >= day.now - 30 && !['Confirmed', 'Likely', 'Cancelled'].includes(t.ev.state));
+  const coverDraft = nextTask ? `Sunita can’t come today. Can someone ${VERB[nextTask.type] ?? 'look after'} ${petName(nextTask.petId)} at ${fmt(nextTask.due).toLowerCase()}?` : undefined;
+  const needsCover = d.helperUnavailable || d.mode === 'uncovered' || d.mode === 'friend';
 
   return <>
     <AppBar title="Today" right={<button className="btn sm danger" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency">SOS</button>} />
@@ -57,7 +63,8 @@ export function Today({ hh, day, pets, incidents, ownerName, reload }: { hh: str
 
       <div className="card"><div className="row"><div className="grow"><span className="eyebrow">Who’s caring today?</span><h2>{MODE[d.mode] ?? d.mode}</h2></div><button className="btn sm" onClick={() => setSheet('caring')}>Change</button></div>
         {d.mode === 'trusted' && <><div className="small muted">No check-ins, alerts or points today. The day counts as covered only when you tap Covered.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>Covered</button>}</>}
-        {d.helperUnavailable && <Banner kind="warn" icon="!">Sunita can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept. Finding a friend arrives in phase 3.</Banner>}
+        {d.helperUnavailable && <Banner kind="warn" icon="!">Sunita can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
+        {needsCover && <button className="btn primary sm" onClick={() => onFindCover(d.helperUnavailable ? coverDraft : undefined)}><Icon name="search" size={18} />Ask a friend to cover</button>}
         {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn ghost sm" onClick={() => setSheet('cantcome')}>My help can’t come today</button>}
       </div>
       {d.alone.exceeds && <Banner kind="warn" icon="⏱"><b>Alone-window warning.</b> Your pets would be alone {(d.alone.longestMinutes / 60).toFixed(1)} h ({fmt(d.alone.from)}–{fmt(d.alone.to)}). Your limit is {d.alone.limitHours} h. <span className="xs muted">Your own threshold, not medical guidance.</span></Banner>}
@@ -105,8 +112,8 @@ export function Today({ hh, day, pets, incidents, ownerName, reload }: { hh: str
       <p className="xs muted">A missed task counts toward a covered day only if it’s resolved by 11:59 PM.</p></Sheet>}
 
     {sheet === 'caring' && <Sheet onClose={close}><h2>Who’s caring today?</h2>
-      <div className="list">{[['tracked', 'user', 'Own helper — Sunita (tracked)', 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Find cover arrives in phase 3']].map(([k, i, t, s]) =>
-        <button key={k} className="li" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { mode: k } }))}><span className="avatar icon"><Icon name={i!} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div>{d.mode === k && <span className="tag flag-on">Selected</span>}</button>)}</div>
+      <div className="list">{[['tracked', 'user', 'Own helper — Sunita (tracked)', 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Ask your own friends. Nothing is sent until you approve']].map(([k, i, t, s]) =>
+        <button key={k} className="li" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { mode: k } }), k === 'friend' ? () => { close(); onFindCover(coverDraft); } : undefined)}><span className="avatar icon"><Icon name={i!} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div>{d.mode === k && <span className="tag flag-on">Selected</span>}</button>)}</div>
       <div className="list"><div className="li"><span className="avatar icon"><Icon name="home" size={20} /></span><div className="grow"><b>Graded day care · Verified carer</b><div className="small muted">Later releases (P1 / P2) — not available</div></div></div></div></Sheet>}
 
     {sheet === 'cantcome' && <Sheet onClose={close}><h2>Help can’t come today</h2><p>Sunita will be marked unavailable for today. Your original plan stays in the record.</p>
@@ -150,7 +157,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload }: { hh: str
 
     {sheet === 'sos' && <Sheet onClose={close}><h2>Report a problem</h2>
       <Banner kind="alert" icon="☎">In an emergency, call your vet first: <b>{pets[0]?.vet_name}</b> · <span className="mono">{pets[0]?.vet_phone}</span></Banner>
-      {Object.entries(SEV).map(([k, cats]) => <div key={k} className="card"><span className="eyebrow">{k}</span><div className="chips">{cats.map(([id, l]) => <button key={id} className="btn sm" onClick={() => run(() => api(`${H}/incidents`, { body: { category: id, petId: pets[0]?.id } }), () => setMsg('Reported. Open the incident card above to see who is being told and when.'))}>{l}</button>)}</div></div>)}</Sheet>}
+      {Object.entries(SEV).map(([k, cats]) => <div key={k} className="card"><span className="eyebrow">{k}</span><div className="chips">{cats.map(([id, l]) => <button key={id} className="btn sm" onClick={() => run(() => api(`${H}/incidents`, { body: { category: id, petId: pets[0]?.id } }), () => { close(); setMsg('Reported. Open the incident card above to see who is being told and when.'); })}>{l}</button>)}</div></div>)}</Sheet>}
   </>;
 }
 

@@ -25,7 +25,7 @@ export function requestText(l: Lang, v: { friend: string; owner: string; tower: 
     if (t.some(x => ['feed', 'water', 'litter', 'toilet'].includes(x))) parts.push(`${pet} को खाना खिला`);
     if (t.includes('walk')) parts.push(parts.length ? 'थोड़ा नीचे घुमा' : `${pet} को थोड़ा नीचे घुमा`);
     if (t.includes('meds')) parts.push('लिखी हुई दवा दे');
-    return `नमस्ते ${tr(l, f)}! ${tr(l, o)} (${v.tower}) पूछ रही हैं: क्या आप आज ${time} बजे ${parts.join(' और ')} सकते हैं? लगभग ${dur} मिनट।\n${home ? 'घर पर कोई होगा।' : `चाबी: हैंडओवर — पूरी जानकारी ${tr(l, o)} की पुष्टि के बाद ही।`}\nजवाब दें: हाँ / नहीं / दूसरा समय बताएं।`;
+    return `नमस्ते ${tr(l, f)}! ${tr(l, o)} (${v.tower}) पूछ रहे हैं: क्या आप आज ${time} बजे ${parts.join(' और ')} सकते हैं? लगभग ${dur} मिनट।\n${home ? 'घर पर कोई होगा।' : `चाबी: हैंडओवर — पूरी जानकारी ${tr(l, o)} की पुष्टि के बाद ही।`}\nजवाब दें: हाँ / नहीं / दूसरा समय बताएं।`;
   }
   const parts: string[] = [];
   if (t.some(x => ['feed', 'water', 'litter', 'toilet'].includes(x))) parts.push(`${pet}ला जेवण द्याल`);

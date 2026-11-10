@@ -1,7 +1,7 @@
 /** Phase 2 routes: day flows, routine, helper channel, code cards, look-in, incidents, health, care circle, jobs. */
 import type { Hono, Context } from 'hono';
 import { z } from 'zod';
-import { createHash, randomBytes, randomFillSync } from 'node:crypto';
+import { createHash, randomBytes, randomFillSync, timingSafeEqual } from 'node:crypto';
 import { uid, type Db } from '@pawsure/db';
 import { applyReturnCheck, checkCode, generateCard, dueSteps, severityOf, healthState, canOpenLookIn, photoSampleRate, COVERED_DAY_RULE, wallet, expiryFor, rightsDue, type LedgerEntry, type CodeCard, type ReturnAnswers, type Severity, type Resource, type Action, type Role } from '@pawsure/domain';
 import type { Deps } from './app.js';
@@ -18,7 +18,16 @@ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const TYPE_PROFILE: Record<string, 'standard' | 'medicine' | 'walk'> = { medicine: 'medicine', walk: 'walk' };
 const TYPE_MIN: Record<string, number> = { feeding: 5, toilet: 3, medicine: 3, walk: 15, litter: 3, water: 3, other: 5 };
 
+/** Constant-time compare; an unset or empty secret never matches (fail closed). */
+export const secretOk = (given: string | undefined, expected: string | undefined) => {
+  if (!expected || !given) return false;
+  const a = Buffer.from(given), b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+
 export function registerDaily(app: Hono<Env>, x: Ctx) {
+  // Real vendors must send the shared secret (or, once chosen, their signed header, D-06). Demo mode accepts the simulators.
+  const webhookOk = (c: Context<Env>) => x.d.demoMode || secretOk(c.req.header('x-webhook-secret'), process.env.WEBHOOK_SECRET);
   const { db } = x.d; const now = () => x.d.clock.now(); const A = x.d.adapters;
   const upsertDay = (hh: string, date: string, cols: Record<string, unknown>) => {
     const keys = Object.keys(cols);
@@ -184,10 +193,11 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   }
 
   app.get('/v1/households/:hh/helpers', async (c) => {
-    const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'helper_consent', 'read'))) return x.deny(c);
+    const hh = c.req.param('hh'); const role = await x.guard(c, hh, 'helper_consent', 'read'); if (!role) return x.deny(c);
     const rows = await db.query<{ id: string; status: string; method: string | null; paused: boolean; name: string; language: string; invited_at: string }>(`select m.id, m.status, m.method, m.paused, coalesce(m.display_label, u.display_name) as name, coalesce(m.invite_language, u.language) as language, m.invited_at from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper'`, [hh]);
     const out = [];
-    for (const r of rows) { const cst = await consentOf(r.id); out.push({ ...r, consent: !cst ? 'pending' : cst.kind === 'helper_withdrawal' ? 'withdrawn' : cst.granted ? 'yes' : 'notnow' }); }
+    const mine = role === 'helper' ? (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and user_id=$2 and role='helper'`, [hh, c.get('userId')])).map(m => m.id) : null;
+    for (const r of rows) { if (mine && !mine.includes(r.id)) continue; const cst = await consentOf(r.id); out.push({ ...r, consent: !cst ? 'pending' : cst.kind === 'helper_withdrawal' ? 'withdrawn' : cst.granted ? 'yes' : 'notnow' }); }
     return c.json(out);
   });
   app.post('/v1/households/:hh/helpers/invite', async (c) => {
@@ -218,6 +228,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
 
   /* Inbound WhatsApp (BSP webhook): buttons, text, photo, voice. Idempotent; consent-gated; tenant from the template context. */
   app.post('/webhooks/whatsapp', async (c) => {
+    if (!webhookOk(c)) return c.json({ error: 'unauthorized_webhook' }, 401);
     const b = z.object({ messageId: z.string(), from: z.string(), type: z.enum(['button', 'text', 'photo', 'voice']), payload: z.string().optional(), text: z.string().max(500).optional(), taskId: z.string().optional(), mediaRef: z.string().optional(), caption: z.string().max(200).optional(), sentAt: z.string().optional() }).parse(await c.req.json());
     const seen = await db.query(`insert into inbound_messages(message_id, channel, payload) values ($1,'whatsapp',$2) on conflict do nothing returning message_id`, ['wa:' + b.messageId, JSON.stringify({ type: b.type })]);
     if (!seen.length) return c.json({ status: 'duplicate_event' });
@@ -322,6 +333,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
 
   /* IVR: arrival/exit missed calls and keypad code after a task prompt. */
   app.post('/webhooks/ivr', async (c) => {
+    if (!webhookOk(c)) return c.json({ error: 'unauthorized_webhook' }, 401);
     const b = z.object({ callId: z.string(), from: z.string(), event: z.enum(['arrive', 'exit', 'code']), visitId: z.string().optional(), taskId: z.string().optional(), digits: z.string().max(8).optional(), at: z.string().optional() }).parse(await c.req.json());
     const helper = await db.query<{ household_id: string; id: string; paused: boolean }>(`select m.household_id, m.id, m.paused from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status='active'`, [b.from]);
     const target = b.visitId ? (await db.query<{ household_id: string; care_date: string }>('select household_id, care_date::text as care_date from care_visits where id=$1', [b.visitId]))[0] : b.taskId ? (await db.query<{ household_id: string; care_date: string }>('select household_id, care_date::text as care_date from care_tasks where id=$1', [b.taskId]))[0] : undefined;
@@ -569,7 +581,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (x.mon) { x.mon.tickDone(performance.now() - t0); sent.push(...(await raiseAlerts(db, A, await serviceChecks(db, x.mon, now(), x.d.demoMode))).map(k => 'monitor:' + k)); }
     return sent;
   };
-  const jobAuth = (c: Context<Env>) => x.d.demoMode || c.req.header('x-job-secret') === process.env.JOB_SECRET;
+  const jobAuth = (c: Context<Env>) => x.d.demoMode || secretOk(c.req.header('x-job-secret'), process.env.JOB_SECRET);
   app.post('/jobs/tick', async (c) => jobAuth(c) ? c.json({ sent: await tick() }) : c.json({ error: 'forbidden' }, 403));
   app.post('/jobs/backup', async (c) => jobAuth(c) ? c.json((await runBackup(db, now(), { force: true })) ?? { skipped: 'Set BACKUP_DIR and BACKUP_KEY (PGlite deployments only)' }) : c.json({ error: 'forbidden' }, 403));
   app.post('/jobs/escalations', async (c) => jobAuth(c) ? c.json({ sent: await tick() }) : c.json({ error: 'forbidden' }, 403));

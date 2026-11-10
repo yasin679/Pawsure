@@ -1,0 +1,742 @@
+{
+  "areas": {
+    "A": "Sign-in and onboarding",
+    "B": "Pets",
+    "C": "Routine and health calendar",
+    "D": "Today (daily care)",
+    "E": "Helper check-ins and backup look-in",
+    "F": "Care circle",
+    "G": "Find cover (AI Friend Finder)",
+    "H": "Friends (owner side)",
+    "I": "Friend’s own app",
+    "J": "Wallet, data rights, consents",
+    "K": "Operations console",
+    "L": "Cross-cutting",
+    "M": "Login separation and security"
+  },
+  "cases": {
+    "A1": {
+      "role": "New owner",
+      "pre": "Fresh demo; unknown number",
+      "steps": "1. Get started\n2. Enter 98112 22333, Send code\n3. Enter the code shown, Verify\n4. Tick Terms and Privacy, Continue\n5. Enter name, society, tower, Continue",
+      "expected": "Today opens greeting the new owner"
+    },
+    "A2": {
+      "role": "New owner",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in with a new number\n2. Tap Continue without ticking Terms/Privacy",
+      "expected": "Error: please accept the Terms and the Privacy Notice"
+    },
+    "A3": {
+      "role": "Owner",
+      "pre": "Fresh demo",
+      "steps": "1. Enter Neha’s number, Send code\n2. Enter 000000, Verify",
+      "expected": "Error: code doesn’t match"
+    },
+    "A4": {
+      "role": "Owner",
+      "pre": "Fresh demo",
+      "steps": "1. Enter 12345, Send code",
+      "expected": "Error asking for a 10-digit Indian mobile number"
+    },
+    "A5": {
+      "role": "Owner (Neha)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as 98000 00021",
+      "expected": "Today shows Bruno and Misty"
+    },
+    "A6": {
+      "role": "Owner",
+      "pre": "Signed in",
+      "steps": "1. Me → Sign out",
+      "expected": "Welcome screen shown"
+    },
+    "A7": {
+      "role": "Co-owner (Rohan)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as 98000 00022",
+      "expected": "Today greets Rohan and shows the shared pets"
+    },
+    "B1": {
+      "role": "Owner",
+      "pre": "Pet tab",
+      "steps": "1. + Add\n2. Name = Coco only\n3. Save",
+      "expected": "Coco added and shown"
+    },
+    "B2": {
+      "role": "Owner",
+      "pre": "Pet tab, Bruno",
+      "steps": "1. Edit\n2. Allergies = Chicken\n3. Save",
+      "expected": "Allergies show Chicken"
+    },
+    "B3": {
+      "role": "Owner",
+      "pre": "Pet tab",
+      "steps": "1. Open Emergency card",
+      "expected": "Own vet, 24x7 clinic and the not-an-emergency-service notice shown"
+    },
+    "C1": {
+      "role": "Owner",
+      "pre": "Pet → Routine",
+      "steps": "1. Add\n2. Task = Evening walk, type walk\n3. Save",
+      "expected": "Saved, takes effect from tomorrow; task listed"
+    },
+    "C2": {
+      "role": "Owner",
+      "pre": "Pet → Health calendar",
+      "steps": "1. Add\n2. Name Kennel cough, next due 20 Nov\n3. Save\n4. Done",
+      "expected": "Entry shown, then tagged Done"
+    },
+    "C3": {
+      "role": "Owner",
+      "pre": "Health calendar",
+      "steps": "1. Rabies vaccine (overdue) → Snooze 1 day",
+      "expected": "Tag changes Overdue → Snoozed"
+    },
+    "D1": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Who’s caring → Change → Trusted Helper mode\n2. Tap Covered",
+      "expected": "Mode shown; day becomes Covered day"
+    },
+    "D2": {
+      "role": "Owner",
+      "pre": "Today, 9:00 AM",
+      "steps": "1. I’m leaving → tick water → I’m leaving\n2. Clock to 6 PM\n3. I’m back\n4. Answer the 5 return-check questions → Save",
+      "expected": "Out since 9:00 AM shown; Return check saved"
+    },
+    "D3": {
+      "role": "Owner",
+      "pre": "No helper evidence",
+      "steps": "1. Clock to 1:35 PM\n2. Alert for Lunch → I’m on it\n3. Mark resolved with a note",
+      "expected": "Alert shows no evidence; then You’re on it; resolved alert disappears"
+    },
+    "D4": {
+      "role": "Owner",
+      "pre": "No helper evidence",
+      "steps": "1. Clock to 1:20 PM",
+      "expected": "Joint supplement alert says medicine is never passed to the backup"
+    },
+    "D5": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Open Toilet pad task → Change this task\n2. Save without reason\n3. Add reason → Save",
+      "expected": "Reason required; task shows Cancelled"
+    },
+    "D6": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Timeline\n2. Close → Day report",
+      "expected": "Timeline lists the plan; report lists tasks and the Thank Sunita link"
+    },
+    "D7": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. SOS → Pet hurt\n2. Incident card → I’m on it\n3. Open → resolution note → Mark resolved",
+      "expected": "S1 incident created, acknowledged, then closed"
+    },
+    "D8": {
+      "role": "Owner",
+      "pre": "11:00 AM",
+      "steps": "1. My help can’t come today → Mark unavailable\n2. Ask a friend to cover",
+      "expected": "Plan kept, alone-window warning, no phase-3 placeholder; Find cover pre-filled for Bruno 1:00 pm"
+    },
+    "D9": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Clock to 11:59 PM",
+      "expected": "Day closes; covered-day status shown"
+    },
+    "E1": {
+      "role": "Helper (Sunita’s phone)",
+      "pre": "12:50 PM",
+      "steps": "1. Show Sunita’s phone\n2. Arrival call\n3. Photo + today’s code\n4. +15 min → Exit call",
+      "expected": "Prompt received; task Likely after photo; Confirmed after exit call"
+    },
+    "E2": {
+      "role": "Helper",
+      "pre": "12:50 PM",
+      "steps": "1. Photo with wrong code",
+      "expected": "Task Not confirmed"
+    },
+    "E3": {
+      "role": "Helper",
+      "pre": "12:50 PM",
+      "steps": "1. Re-send old photo on two tasks\n2. Open Timeline",
+      "expected": "Helper told the photo was sent before (Marathi); timeline: not counted (reused image)"
+    },
+    "E4": {
+      "role": "Helper",
+      "pre": "12:50 PM",
+      "steps": "1. Voice note for Lunch\n2. IVR code for Litter tray",
+      "expected": "Both tasks Likely"
+    },
+    "E5": {
+      "role": "Helper",
+      "pre": "Today",
+      "steps": "1. Water ran out",
+      "expected": "S3 incident card on owner’s Today"
+    },
+    "E6": {
+      "role": "Helper",
+      "pre": "Today",
+      "steps": "1. Pet hurt\n2. Owner opens the incident",
+      "expected": "S1 incident with call plan and own-vet notice"
+    },
+    "E7": {
+      "role": "Helper + owner",
+      "pre": "Consent given",
+      "steps": "1. Stop\n2. Owner: Helper and check-ins\n3. Start again → Yes (हो)",
+      "expected": "Stopped check-ins, nothing recorded; after re-consent: Consent given"
+    },
+    "E8": {
+      "role": "Owner",
+      "pre": "Me → Helper",
+      "steps": "1. Rotate now → Rotate",
+      "expected": "Code card version 1 → version 2; old codes stop counting"
+    },
+    "E9": {
+      "role": "Owner",
+      "pre": "Me → Helper",
+      "steps": "1. Invite another helper (Lata)",
+      "expected": "Invitation sent; status Waiting for a reply"
+    },
+    "E10": {
+      "role": "Backup (Ankita)",
+      "pre": "Missed tasks, 2:01 PM",
+      "steps": "1. Open the backup’s look-in link\n2. I’m on it\n3. Clock +20 min, reopen link",
+      "expected": "Pet card with ‘not for backups to give’ medicine; thanks message; then link expired"
+    },
+    "F1": {
+      "role": "Owner",
+      "pre": "Me → Care circle",
+      "steps": "1. Invite Kiran as Family",
+      "expected": "Kiran listed as invited"
+    },
+    "F2": {
+      "role": "Owner",
+      "pre": "Care circle",
+      "steps": "1. Remove Ankita → Remove",
+      "expected": "Access removed on every channel, with timings under 60 s"
+    },
+    "F3": {
+      "role": "Owner",
+      "pre": "Care circle",
+      "steps": "1. Look at Rohan",
+      "expected": "Co-owner permissions listed"
+    },
+    "G1": {
+      "role": "Owner + friend (Meera)",
+      "pre": "11:00 AM, helper unavailable",
+      "steps": "1. Ask a friend to cover → Understand → Search\n2. Ask Meera → approve → Send\n3. Meera taps हो\n4. Owner Confirm → Today",
+      "expected": "Marathi message without flat/key; confirmed; only Bruno’s lunch reassigned; medicine and Misty’s litter stay open"
+    },
+    "G2": {
+      "role": "Owner",
+      "pre": "Find cover",
+      "steps": "1. Clear example request → Understand → Search\n2. Open ‘friends not shown’",
+      "expected": "No questions; Priya, Arjun, Kavya in order; exclusions shown as counts"
+    },
+    "G3": {
+      "role": "Owner + Priya + Arjun",
+      "pre": "Find cover",
+      "steps": "1. Ask all 3 → approve → Send\n2. Priya Yes, Arjun हाँ\n3. Confirm Priya",
+      "expected": "Provisional hold; Arjun waiting; after confirm Arjun closed politely"
+    },
+    "G4": {
+      "role": "Owner",
+      "pre": "Find cover",
+      "steps": "1. Medicine + vague time request\n2. Answer each question",
+      "expected": "Search blocked until answered; medicine notice shown"
+    },
+    "G5": {
+      "role": "Owner",
+      "pre": "AI set to unavailable",
+      "steps": "1. Ask → Understand\n2. Simple form: Feed, 5 PM → Search",
+      "expected": "AI unavailable notice; suggestions still found"
+    },
+    "G6": {
+      "role": "Owner",
+      "pre": "AI set to time out",
+      "steps": "1. Ask → Understand",
+      "expected": "After 8 s: AI timed out, simple form offered"
+    },
+    "G7": {
+      "role": "Owner",
+      "pre": "Find cover",
+      "steps": "1. Feed Bruno at 10:30 pm → Search",
+      "expected": "Honest ‘none of your friends can do this’; nearby members Switch OFF"
+    },
+    "G8": {
+      "role": "Owner + Priya",
+      "pre": "Sent to Priya",
+      "steps": "1. Priya replies ‘5:30’\n2. Owner Confirm 5:30",
+      "expected": "Confirmed at 5:30 PM (header shows the agreed time)"
+    },
+    "G9": {
+      "role": "Owner + Priya",
+      "pre": "Sent to Priya",
+      "steps": "1. Priya taps No",
+      "expected": "Nobody accepted; Try again offered"
+    },
+    "G10": {
+      "role": "Owner",
+      "pre": "Sent to Priya",
+      "steps": "1. Look at how the request was understood\n2. Cancel request",
+      "expected": "Says “understood by rules (no AI connected)”, never “parsed by AI”; request Cancelled"
+    },
+    "G11": {
+      "role": "Friend webhook",
+      "pre": "Sent to Priya",
+      "steps": "1. Priya taps Yes\n2. Replay the same webhook",
+      "expected": "Only one acceptance recorded (idempotent)"
+    },
+    "H1": {
+      "role": "Owner",
+      "pre": "Friends tab",
+      "steps": "1. Invite Nikhil",
+      "expected": "Invitation sent; not searchable until they opt in"
+    },
+    "H2": {
+      "role": "Owner",
+      "pre": "Friends tab",
+      "steps": "1. Open Priya → Ask for help",
+      "expected": "Profile shows their own choices; Find cover draft for Priya"
+    },
+    "H3": {
+      "role": "Owner",
+      "pre": "Friends tab",
+      "steps": "1. Kavya → Block → Block\n2. Search a 5 pm request",
+      "expected": "Kavya not in results"
+    },
+    "H4": {
+      "role": "Owner",
+      "pre": "Friends tab",
+      "steps": "1. Arjun → Report → Unsafe behaviour → Report",
+      "expected": "Report sent, friend blocked, ops case created"
+    },
+    "H5": {
+      "role": "Owner",
+      "pre": "Me → Profile and what friends see",
+      "steps": "1. Society + tower",
+      "expected": "Hidden-until-confirmed list; setting saved; nearby switch locked off"
+    },
+    "I1": {
+      "role": "Friend (Priya)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as Priya\n2. My settings → Pause\n3. Turn off Friends can find me",
+      "expected": "Friend view; Saved; removed from search immediately"
+    },
+    "I2": {
+      "role": "Owner + Priya (app)",
+      "pre": "Request sent to Priya",
+      "steps": "1. Priya: Yes in app\n2. Owner: Confirm\n3. Priya: Show address → I’ve arrived → Done\n4. Owner: Find cover",
+      "expected": "Address B-1104 shown only after confirm; owner told of arrival; request Completed"
+    },
+    "J1": {
+      "role": "Owner",
+      "pre": "Me → Wallet",
+      "steps": "1. Open Wallet and points",
+      "expected": "Sunita 60/125 from this home only; no cash; 500 points = ₹20"
+    },
+    "J2": {
+      "role": "Owner",
+      "pre": "Me → Data rights",
+      "steps": "1. Show my data",
+      "expected": "Export shows Neha’s profile and consents"
+    },
+    "J3": {
+      "role": "Owner",
+      "pre": "Me → Data rights",
+      "steps": "1. Correct something → detail → Send request",
+      "expected": "Request DR-… received; listed as Received with reply-by date"
+    },
+    "J4": {
+      "role": "Owner",
+      "pre": "Me",
+      "steps": "1. Look at Consents",
+      "expected": "terms T-1.0 and others listed"
+    },
+    "K1": {
+      "role": "Owner",
+      "pre": "Signed in as owner",
+      "steps": "1. Open #admin",
+      "expected": "This account has no staff role"
+    },
+    "K2": {
+      "role": "Ops",
+      "pre": "Console",
+      "steps": "1. Sign in 98110 00001",
+      "expected": "Only ops sections; 6 gate metrics with n"
+    },
+    "K3": {
+      "role": "Ops",
+      "pre": "Console",
+      "steps": "1. Households",
+      "expected": "Phones masked (+91 •••• ••21)"
+    },
+    "K4": {
+      "role": "Ops",
+      "pre": "Helper asked for help",
+      "steps": "1. Queues → Close… without reason\n2. Add reason → Close",
+      "expected": "Reason required; case closed"
+    },
+    "K5": {
+      "role": "Ops lead",
+      "pre": "Console",
+      "steps": "1. Switches → helperShareRecord Turn on",
+      "expected": "Value true; locked switches disabled"
+    },
+    "K6": {
+      "role": "Ops lead",
+      "pre": "Mismatch hold created",
+      "steps": "1. Rewards holds → Decide… → Release without reason\n2. Add reason → Release",
+      "expected": "Reason required; hold released"
+    },
+    "K7": {
+      "role": "Privacy lead",
+      "pre": "Owner filed a correction",
+      "steps": "1. Rights requests → Handle… → reply → Reply and close",
+      "expected": "Request closed"
+    },
+    "K8": {
+      "role": "Privacy lead",
+      "pre": "Console",
+      "steps": "1. Breach runbook → Start a rehearsal\n2. Affected people notified\n3. Tick a checklist item",
+      "expected": "72 h clock shows hours left; step ticked; readiness 1/7"
+    },
+    "K9": {
+      "role": "Auditor",
+      "pre": "Console",
+      "steps": "1. Audit log → Staff views",
+      "expected": "Entries shown, Export CSV available, no Households section, no raw phones"
+    },
+    "K10": {
+      "role": "Ops lead",
+      "pre": "WhatsApp + SMS outage",
+      "steps": "1. Helper message during outage\n2. Restore SMS, sign in\n3. Service health",
+      "expected": "Message delivery alert; vendor shows simulated outage; ‘gave up’ in deliveries"
+    },
+    "K11": {
+      "role": "Ops lead",
+      "pre": "Console",
+      "steps": "1. Pilot readiness → Assign arms",
+      "expected": "Switches OK; arms check asks for enrolled cohort; assignment refused (too few homes)"
+    },
+    "K12": {
+      "role": "Ops",
+      "pre": "Console",
+      "steps": "1. Method mix",
+      "expected": "Groups under 5 hidden; no helper named"
+    },
+    "K13": {
+      "role": "All 4 staff roles",
+      "pre": "Console",
+      "steps": "1. For each role, open every allowed section",
+      "expected": "Each section opens with its title and no error"
+    },
+    "L1": {
+      "role": "Owner",
+      "pre": "390 px wide",
+      "steps": "1. Visit Today, Find cover, Friends, Pet, Me",
+      "expected": "No sideways scrolling"
+    },
+    "L2": {
+      "role": "Owner",
+      "pre": "Signed in",
+      "steps": "1. Go offline\n2. Back online",
+      "expected": "Offline banner appears then disappears"
+    },
+    "L3": {
+      "role": "Visitor",
+      "pre": "Change made",
+      "steps": "1. Reload\n2. Sign in",
+      "expected": "Fresh demo data (tracked helper again)"
+    },
+    "L4": {
+      "role": "Owner",
+      "pre": "Signed in",
+      "steps": "1. Open Who’s caring sheet and every tab",
+      "expected": "No ‘arrives in phase’ placeholders anywhere"
+    },
+    "L5": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Who’s caring → A friend",
+      "expected": "Find cover opens"
+    },
+    "L6": {
+      "role": "Owner",
+      "pre": "Signed in",
+      "steps": "1. Visit every tab",
+      "expected": "No JavaScript errors in the console"
+    },
+    "M1": {
+      "role": "Helper (Sunita)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as 90000 00035\n2. Open Your data rights",
+      "expected": "Helper home with WhatsApp instructions; no owner tabs, no pet data; data rights reachable"
+    },
+    "M2": {
+      "role": "Backup (Ankita)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as 97000 00008",
+      "expected": "Care-circle home: today’s timeline, ‘never give medicine’; no tabs, no flat number"
+    },
+    "M3": {
+      "role": "Owner → backup",
+      "pre": "Owner reports Pet hurt",
+      "steps": "1. Owner SOS → Pet hurt, sign out\n2. Backup signs in → I’m on it",
+      "expected": "Backup can acknowledge the emergency"
+    },
+    "M4": {
+      "role": "Staff (ops)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in on the owner app with a staff number",
+      "expected": "Sent to the ops console, not owner sign-up"
+    },
+    "M5": {
+      "role": "Owner then co-owner, same phone",
+      "pre": "Owner typed a private draft",
+      "steps": "1. Owner signs out\n2. Re-use the old token\n3. Rohan signs in → Find cover",
+      "expected": "Token removed and refused (401); no trace of the previous person’s draft"
+    },
+    "M6": {
+      "role": "Owner",
+      "pre": "Two sessions",
+      "steps": "1. Me → Sign out of all devices\n2. Use the other session",
+      "expected": "Other session refused (401)"
+    },
+    "M7": {
+      "role": "New user (Eve)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign up\n2. Look at Today, Friends, Find cover",
+      "expected": "Only Eve’s empty home; none of Neha’s pets, friends or requests"
+    },
+    "M8": {
+      "role": "Friend (Priya)",
+      "pre": "Fresh demo",
+      "steps": "1. Sign in as Priya",
+      "expected": "Only requests sent to Priya; no household tabs"
+    },
+    "M9": {
+      "role": "Owner",
+      "pre": "Pet tab",
+      "steps": "1. Add pet named <img src=x onerror=alert(1)>",
+      "expected": "Shown as text; no script runs, no image injected"
+    },
+    "M10": {
+      "role": "Owner → ops lead",
+      "pre": "Signed in as owner",
+      "steps": "1. Open console (refused)\n2. Sign in as ops lead\n3. Sign out of console\n4. Re-use the token",
+      "expected": "Owner refused; console session ended on the server (401)"
+    }
+  },
+  "defects": [
+    [
+      "Find cover",
+      "“Find cover arrives in phase 3” placeholders on Today (banner and Who’s caring option)",
+      "Linked to Find cover with a pre-filled request",
+      "D8, L4, L5"
+    ],
+    [
+      "Find cover",
+      "Confirming a friend reassigned every helper task within an hour, incl. medicine and another pet, so they silently dropped out of the covered-day count",
+      "Only same-pet, same-kind tasks move; others stay open and escalate",
+      "G1 + api cover.test"
+    ],
+    [
+      "Demo",
+      "Meera (only friend free at 1 PM) missing from the simulated friends’ phones",
+      "Added Meera and Farhan",
+      "G1"
+    ],
+    [
+      "Today",
+      "Today didn’t refresh when switching back from Find cover",
+      "Reloads on returning to Today",
+      "G1"
+    ],
+    [
+      "Find cover",
+      "Request header kept the original time after a friend’s proposed time was confirmed",
+      "Header shows the agreed time",
+      "G8"
+    ],
+    [
+      "Ops console",
+      "Breach rehearsal showed ‘Past due’ in the demo (browser clock vs demo clock)",
+      "Hours left computed by the server clock",
+      "K8"
+    ],
+    [
+      "Demo",
+      "Backup look-in link used a page path that can’t open inside the shared demo",
+      "Look-in also opens via #lookin-…; back button added",
+      "E10"
+    ],
+    [
+      "Today",
+      "After an SOS report the confirmation appeared behind the still-open sheet",
+      "Sheet closes, then the message shows",
+      "D7"
+    ],
+    [
+      "Copy",
+      "Helper and owner texts assumed gender (Her language; Hindi ‘पूछ रही हैं’)",
+      "Neutral wording (Their language; ‘पूछ रहे हैं’)",
+      "review"
+    ],
+    [
+      "Find cover",
+      "Request screen said “parsed by AI (structured)” although no AI model is connected (the mock uses the rules parser)",
+      "Server reports whether real AI is connected; label now “understood by rules (no AI connected)”; demo switch renamed “AI (simulated)”",
+      "G10 + api ai-label.test"
+    ],
+    [
+      "Security",
+      "Signing out only cleared the browser: the session token stayed valid on the server, and the offline copy of API responses plus the unsent request text stayed for the next person on the device",
+      "Sign-out now ends the server session, clears the offline cache and all screen state; “Sign out of all devices” added",
+      "M5, M6, M10 + login-isolation.test"
+    ],
+    [
+      "Security",
+      "Job runner was open in production if JOB_SECRET was not set (empty == empty)",
+      "Fails closed; constant-time secret check",
+      "login-isolation.test"
+    ],
+    [
+      "Security",
+      "WhatsApp/IVR webhooks accepted unsigned calls outside demo mode — anyone knowing a helper’s number could post fake evidence",
+      "Shared WEBHOOK_SECRET required (fails closed) until the vendor’s signature check (D-06)",
+      "login-isolation.test"
+    ],
+    [
+      "Security",
+      "zod (high: memory exhaustion on oversized input) and @hono/node-server (moderate) had known vulnerabilities",
+      "Upgraded to zod 4.6.7 and @hono/node-server 2.1.5; 64 KB request limit; security headers added",
+      "npm audit: 0 production vulnerabilities"
+    ],
+    [
+      "Security",
+      "A helper could list every helper in the household",
+      "Helpers see only their own record",
+      "login-isolation.test"
+    ],
+    [
+      "Login",
+      "Helper and backup logins got the owner app stuck on “Loading today…”; staff signing in on the owner app were pushed into owner sign-up",
+      "Helper home, care-circle home, and staff redirect to the console",
+      "M1, M2, M4"
+    ]
+  ],
+  "notes": [
+    "Code-card Print uses the browser print dialog; it works in the hosted PWA but is blocked inside the shared artifact frame (artifact rule).",
+    "Real vendors (WhatsApp, SMS, IVR, push, AI) are mock adapters; tests drive the same webhooks a real vendor would call.",
+    "Run: npm run e2e (Playwright, installed Chrome) and npm test (Vitest)."
+  ],
+  "security": [
+    [
+      "Per-login data access",
+      "All 7 login types × 15 household endpoints + 4 personal endpoints",
+      "Each role reaches exactly its allowed set; no other person’s phone number or the flat number in any response",
+      "login-isolation.test (7 tests)"
+    ],
+    [
+      "Code-card codes",
+      "Every role",
+      "Owner only",
+      "login-isolation.test"
+    ],
+    [
+      "Tenant isolation / IDOR",
+      "35 household routes as another household’s owner; victim ids under own household",
+      "All 403/404, nothing changed",
+      "security.test"
+    ],
+    [
+      "Staff vs household data",
+      "Ops, lead, privacy lead, auditor on owner API",
+      "Refused; console views role-limited and audited; phones masked",
+      "security.test, phase4.test, K1–K13"
+    ],
+    [
+      "Sessions",
+      "Sign-out, sign-out everywhere, expiry, reuse of old token, token entropy",
+      "Revoked server-side; 30-day expiry; 256-bit random tokens",
+      "login-isolation.test, M5, M6, M10"
+    ],
+    [
+      "OTP abuse",
+      "Wrong code, 5-attempt lock, 3-per-15-min, 30 s resend, unknown vs known number",
+      "Locked / rate limited; identical response (no account enumeration); code never returned outside demo",
+      "api.test, security.test, login-isolation.test"
+    ],
+    [
+      "Production lock-down",
+      "DEMO_MODE off",
+      "No demo code, demo routes 404, job runner and webhooks fail closed without secrets",
+      "login-isolation.test"
+    ],
+    [
+      "Webhook spoofing",
+      "Helper of another household posts evidence; unsigned vendor calls",
+      "Rejected",
+      "security.test, login-isolation.test"
+    ],
+    [
+      "Injection",
+      "SQL text in requests; code review of every SQL string",
+      "Parameterised queries; no user input in SQL text",
+      "security.test + review"
+    ],
+    [
+      "XSS",
+      "HTML in pet names and request text; code review",
+      "Rendered as text; only static SVG uses innerHTML",
+      "M9, login-isolation.test + review"
+    ],
+    [
+      "Request size / DoS",
+      "70 KB JSON body; spam limits",
+      "413 refused; 10 requests/hour/household; 20 invites/day",
+      "login-isolation.test, security.test"
+    ],
+    [
+      "Signed links",
+      "Guessed look-in and share tokens; expiry; revocation",
+      "Nothing revealed; expired at 15 min; revoked at once",
+      "security.test, phase2.test, E10"
+    ],
+    [
+      "Audit log",
+      "Update/delete attempts",
+      "Refused (append-only), also after restore",
+      "security.test, phase5.test"
+    ],
+    [
+      "Secrets in repository",
+      "git grep for keys, tokens, private keys",
+      "None (placeholders only)",
+      "manual scan"
+    ],
+    [
+      "Dependencies",
+      "npm audit (production)",
+      "0 vulnerabilities after upgrades",
+      "npm audit"
+    ],
+    [
+      "Dependencies (developer tools only)",
+      "npm audit (dev): vitest, vite (Playwright fixed by upgrading to 1.65)",
+      "Remaining findings in dev-only tools that never ship; upgrade vitest/vite majors before CI exposure",
+      "npm audit — open item"
+    ],
+    [
+      "Security headers",
+      "GET /health",
+      "nosniff, X-Frame-Options SAMEORIGIN, no-referrer",
+      "login-isolation.test"
+    ]
+  ]
+}

@@ -12,7 +12,7 @@ export interface PushAdapter { push(userId: string, title: string, body: string)
  * LLM request parser (PS-055, PS-065, PS-125). Must return the structured ParseResult schema only — it never decides
  * eligibility, sends messages, or invents availability, capability or location. Callers enforce the 8-second timeout.
  */
-export interface LlmAdapter { mode: 'ok' | 'timeout' | 'down' | 'lowconf'; parse(text: string, ctx: ParseContext, signal: AbortSignal): Promise<ParseResult> }
+export interface LlmAdapter { /** true only for a real, approved AI model; the mock is false */ connected: boolean; mode: 'ok' | 'timeout' | 'down' | 'lowconf'; parse(text: string, ctx: ParseContext, signal: AbortSignal): Promise<ParseResult> }
 
 export interface SentRecord { at: string; channel: 'sms' | 'whatsapp' | 'call' | 'push'; to: string; template: string; body: string }
 
@@ -35,6 +35,7 @@ export function mockAdapters() {
      * No real model is called; nothing leaves the machine.
      */
     llm: {
+      connected: false,
       mode: 'ok',
       async parse(text, ctx, signal) {
         if (this.mode === 'down') throw new Error('llm_unavailable');

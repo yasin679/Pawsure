@@ -22,7 +22,7 @@ export function FindCover({ hh, pets, draft, onDraft }: { hh: string; pets: Pet[
   useEffect(() => { if (v.k !== 'request') return; const t = setInterval(() => loadReq(v.id), 5000); return () => clearInterval(t); }, [v]);
   const run = async (fn: () => Promise<void>) => { setErr(null); setBusy(true); try { await fn(); } catch (e) { setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
   const petName = (id: string | null) => pets.find(p => p.id === id)?.name ?? '';
-  const summary = (r: ReqView) => r.parsed ? `${r.parsed.tasks.map(t => TASKS.find(x => x[0] === t)?.[1]).join(' + ')} for ${petName(r.parsed.petId)}${r.parsed.time != null ? ' at ' + fmt(r.parsed.time) : ''}` : (r.text ?? '');
+  const summary = (r: ReqView) => r.parsed ? `${r.parsed.tasks.map(t => TASKS.find(x => x[0] === t)?.[1]).join(' + ')} for ${petName(r.parsed.petId)}${(r.taskTime ?? r.parsed.time) != null ? ' at ' + fmt((r.taskTime ?? r.parsed.time)!) : ''}` : (r.text ?? '');
   const startVoice = () => {
     const SR = (window as unknown as { webkitSpeechRecognition?: new () => { lang: string; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; start(): void } }).webkitSpeechRecognition;
     if (!SR) { setErr('Voice input isn’t available in this browser. Type instead.'); return; }
@@ -101,7 +101,7 @@ export function FindCover({ hh, pets, draft, onDraft }: { hh: string; pets: Pet[
     const act = (path: string, body: unknown = {}) => run(async () => { setReq(await api<ReqView>(`${H}/requests/${req.id}/${path}`, { body })); });
     return <><AppBar title="Request" onBack={() => setV({ k: 'ask' })} /><main className="body">
       <div className="card"><div className="row"><b className="grow">{summary(req)}</b><StateTag s={req.state} /></div>
-        <div className="small muted">{req.mode === 'all3' ? 'Ask all' : 'One friend'} · parsed by {req.parser === 'manual' ? 'simple form' : 'AI (structured)'}{req.correctedFields.length ? ' · you corrected: ' + req.correctedFields.join(', ') : ''}</div>
+        <div className="small muted">{req.mode === 'all3' ? 'Ask all' : 'One friend'} · understood by {req.parsedBy ?? (req.parser === 'manual' ? 'simple form' : 'rules')}{req.correctedFields.length ? ' · you corrected: ' + req.correctedFields.join(', ') : ''}</div>
         {req.state === 'Provisional hold' && req.holdAt != null && <div className="small"><b>Hold ends {fmt(req.holdAt + 10)}.</b> If you don’t confirm, it’s released and others can accept.</div>}
         {req.searchClosesAt != null && ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && <div className="xs muted">Search closes at {fmt(req.searchClosesAt)} (30 min before the task).</div>}</div>
       {req.recipients.length > 0 && <div className="list">{req.recipients.map(r => <div key={r.friendId} className="li"><span className="avatar">{r.name?.[0]}</span><div className="grow"><b>{r.name}</b><div className="small muted">{r.state === 'sent' ? `Waiting · expires ${fmt(r.sentAt + 15)}${r.reminded ? ' · reminded' : ''}` : r.state === 'proposed' ? `Suggested ${fmt(r.proposal!)}` : REC[r.state]}</div></div>

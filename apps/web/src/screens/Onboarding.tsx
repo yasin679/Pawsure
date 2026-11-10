@@ -48,6 +48,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       session.set({ token: r.token, userId: r.userId });
       const me = await api<{ memberships: unknown[]; consents: unknown[] }>('/v1/me');
       if (me.memberships.length) { onDone(); return; }
+      if (await api('/admin/me').then(() => true, () => false)) { location.hash = 'admin'; return; }
       const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
       if (fr.links.length || fr.profile) onDone(); else setStep('consent');
     })}>Verify</button>

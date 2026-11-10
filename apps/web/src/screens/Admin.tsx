@@ -3,7 +3,7 @@
  * The section list below only mirrors the server matrix so staff aren't shown doors they can't open.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { api, ApiError, session } from '../api';
+import { api, ApiError, endSession, session } from '../api';
 import { Icon } from '../ui';
 
 type Section = 'overview' | 'service' | 'release' | 'queues' | 'households' | 'mix' | 'signals' | 'ff' | 'flags' | 'rewards' | 'rights' | 'audit' | 'breach';
@@ -23,7 +23,7 @@ export function AdminApp() {
   const [sec, setSec] = useState<Section>('overview');
   const check = () => api<{ role: string }>('/admin/me').then(r => setRole(r.role)).catch(() => setRole(null)).finally(() => setChecked(true));
   useEffect(() => { if (session.get()) check(); else setChecked(true); }, []);
-  const signOut = () => { session.set(null); setRole(null); };
+  const signOut = () => { void endSession().then(() => setRole(null)); };
   if (!checked) return <div className="console-shell"><div className="empty">Loading…</div></div>;
   if (!role) return <StaffSignIn onDone={check} notStaff={!!session.get()} onSignOut={signOut} />;
   const allowed = ROLE_SECTIONS[role] ?? [];
@@ -124,10 +124,10 @@ function Signals() {
 }
 
 function FF() {
-  const [f, e] = useLoad<{ counts: Record<string, number>; stuck: { id: string; state: string; minutes: number }[]; correctionRate: { corrected: number; parsed: number }; recent: { id: string; state: string; mode: string | null; parser: string | null; corrected: string[]; recipients: string[] }[]; llmLog: { at: string; action: string }[] }>('/admin/friend-finder');
-  return <><Head title="Friend Finder" sub="Request states, stuck requests and AI parsing quality. Message text is not shown." /><Err e={e} />
+  const [f, e] = useLoad<{ aiConnected: boolean; counts: Record<string, number>; stuck: { id: string; state: string; minutes: number }[]; correctionRate: { corrected: number; parsed: number }; recent: { id: string; state: string; mode: string | null; parser: string | null; corrected: string[]; recipients: string[] }[]; llmLog: { at: string; action: string }[] }>('/admin/friend-finder');
+  return <><Head title="Friend Finder" sub={`Request states, stuck requests and parsing quality. ${f && !f.aiConnected ? 'No AI model is connected: requests are understood by rules. ' : ''}Message text is not shown.`} /><Err e={e} />
     {f && <><div className="console-kpis">{Object.entries(f.counts).map(([k, v]) => <div key={k} className="card"><span className="eyebrow">{k}</span><b className="kpi">{v}</b></div>)}
-      <div className="card"><span className="eyebrow">AI corrections</span><b className="kpi">{f.correctionRate.corrected}/{f.correctionRate.parsed}</b><div className="xs muted">Above 10% blocks rollout</div></div></div>
+      <div className="card"><span className="eyebrow">{f.aiConnected ? 'AI corrections' : 'Parsing corrections (simulated AI)'}</span><b className="kpi">{f.correctionRate.corrected}/{f.correctionRate.parsed}</b><div className="xs muted">Above 10% blocks rollout</div></div></div>
       {f.stuck.length > 0 && <div className="card warn"><b>Stuck for more than 10 minutes</b>{f.stuck.map(s => <div key={s.id} className="small mono">{s.id} · {s.state} · {s.minutes} min</div>)}</div>}
       <table className="tbl"><thead><tr><th>Request</th><th>State</th><th>Mode</th><th>Parser</th><th>Corrected</th><th>Friends</th></tr></thead><tbody>{f.recent.map(r => <tr key={r.id}><td className="mono">{r.id}</td><td>{r.state}</td><td>{r.mode ?? '—'}</td><td>{r.parser ?? '—'}</td><td>{r.corrected.join(', ') || '—'}</td><td>{r.recipients.join(', ') || '—'}</td></tr>)}</tbody></table>
       {f.llmLog.length > 0 && <><h2 className="console-h2">AI and webhook log</h2><table className="tbl"><tbody>{f.llmLog.map((l, i) => <tr key={i}><td>{when(l.at)}</td><td className="mono">{l.action}</td></tr>)}</tbody></table></>}</>}
@@ -181,14 +181,15 @@ function Audit({ role }: { role: string }) {
 
 function Breach({ role }: { role: string }) {
   const canRun = role === 'privacy_lead' || role === 'tech_lead';
-  const [b, e, reload] = useLoad<{ checklist: { item: string; done: boolean; done_at: string | null }[]; events: { id: string; kind: string; aware_at: string; board_due_at: string; users_notified_at: string | null; board_reported_at: string | null; closed_at: string | null; summary: string | null }[]; rule: string }>('/admin/breach');
+  const [b, e, reload] = useLoad<{ checklist: { item: string; done: boolean; done_at: string | null }[]; events: { id: string; kind: string; aware_at: string; board_due_at: string; users_notified_at: string | null; board_reported_at: string | null; closed_at: string | null; summary: string | null; hours_left: number }[]; rule: string }>('/admin/breach');
   const [err, setErr] = useState<string | null>(null);
   const run = async (fn: () => Promise<unknown>) => { setErr(null); try { await fn(); reload(); } catch (x) { setErr(x instanceof ApiError && x.status === 403 ? 'Your role can read the runbook but not run it.' : 'Couldn’t save.'); } };
-  const left = (due: string) => { const h = Math.round((Date.parse(due) - Date.now()) / 3600000); return h > 0 ? `${h} h left` : 'Past due'; };
+  // Hours left come from the server's clock (the demo runs on its own clock, not this computer's).
+  const left = (h: number) => (h > 0 ? `${h} h left` : 'Past due');
   return <><Head title="Breach runbook" sub={b?.rule} right={canRun && <button className="btn sm warn" onClick={() => run(() => api('/admin/breach/events', { body: { kind: 'rehearsal', summary: 'Tabletop rehearsal' } }))}>Start a rehearsal</button>} /><Err e={e} />{err && <div className="card warn" role="alert">{err}</div>}
     {b && <><div className="card"><span className="eyebrow">Readiness ({b.checklist.filter(c => c.done).length}/{b.checklist.length})</span>
       {b.checklist.map(c => <label key={c.item} className="row small" style={{ cursor: 'pointer' }}><input type="checkbox" disabled={!canRun} checked={c.done} onChange={() => run(() => api('/admin/breach/checklist', { method: 'PUT', body: { item: c.item, done: !c.done } }))} /><span className="grow">{c.item}</span>{c.done_at && <span className="xs muted">{when(c.done_at)}</span>}</label>)}</div>
-      {b.events.map(ev => <div key={ev.id} className={`card ${ev.kind === 'incident' ? 'danger' : 'info'}`}><div className="row"><b className="grow">{ev.kind === 'incident' ? 'Incident' : 'Rehearsal'} · aware {when(ev.aware_at)}</b>{!ev.board_reported_at && !ev.closed_at && <span className="tag">{left(ev.board_due_at)}</span>}</div>
+      {b.events.map(ev => <div key={ev.id} className={`card ${ev.kind === 'incident' ? 'danger' : 'info'}`}><div className="row"><b className="grow">{ev.kind === 'incident' ? 'Incident' : 'Rehearsal'} · aware {when(ev.aware_at)}</b>{!ev.board_reported_at && !ev.closed_at && <span className="tag">{left(ev.hours_left)}</span>}</div>
         {ev.summary && <div className="small">{ev.summary}</div>}
         <div className="row small">{([['users_notified', 'Affected people notified', ev.users_notified_at], ['board_reported', 'Board report filed', ev.board_reported_at], ['closed', 'Closed', ev.closed_at]] as const).map(([k, l, v]) => <button key={k} className={`btn sm ${v ? 'primary' : ''}`} disabled={!!v || !canRun} onClick={() => run(() => api(`/admin/breach/events/${ev.id}`, { method: 'PUT', body: { step: k } }))}>{v ? '✓ ' : ''}{l}</button>)}</div>
         <div className="xs muted">Board report due {when(ev.board_due_at)}</div></div>)}</>}

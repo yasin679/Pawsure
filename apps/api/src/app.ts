@@ -1,5 +1,7 @@
 /** Pawsure API (Hono). Authorisation is enforced here, per household, using the domain permission matrix. */
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import { secureHeaders } from 'hono/secure-headers';
 import { z } from 'zod';
 import { createHash, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Db } from '@pawsure/db';
@@ -25,6 +27,9 @@ export function createApp(input: Deps) {
   const d: Deps = { ...input, adapters: withFailover(input.adapters, input.db), monitor: input.monitor ?? createMonitor() };
   const mon = d.monitor!;
   const app = new Hono<Env>();
+  // Standard security headers; JSON bodies capped at 64 KB (blocks oversized-input attacks regardless of validator).
+  app.use('*', secureHeaders({ crossOriginResourcePolicy: 'cross-origin' }));
+  app.use('*', bodyLimit({ maxSize: 64 * 1024, onError: (c) => c.json({ error: 'payload_too_large' }, 413) }));
   app.use('*', async (c, next) => { const t0 = performance.now(); await next(); mon.record(c.req.path, c.req.method, c.res.status, performance.now() - t0); });
   const { db } = d;
   const now = () => d.clock.now();
@@ -40,7 +45,7 @@ export function createApp(input: Deps) {
 
   /** Readiness: the database answers and migrations are applied. Used by the host's health check and uptime monitor. */
   app.get('/ready', async (c) => { try { const m = await db.query<{ n: number }>('select count(*)::int as n from schema_migrations'); return c.json({ ok: true, migrations: m[0]!.n }); } catch { return c.json({ ok: false }, 503); } });
-  app.get('/health', (c) => c.json({ ok: true, db: db.kind, demoMode: d.demoMode, time: now().toISOString() }));
+  app.get('/health', (c) => c.json({ ok: true, db: db.kind, demoMode: d.demoMode, aiConnected: d.adapters.llm.connected, time: now().toISOString() }));
 
   /* ---------- Auth: OTP (PS-001). Same response whether or not the number exists (enumeration resistance). ---------- */
   app.post('/auth/otp/request', async (c) => {

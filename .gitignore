@@ -7,3 +7,7 @@ dist/
 coverage/
 backups/
 dist-demo/
+e2e/results/
+e2e/report/
+test-results/
+test-results-smoke/

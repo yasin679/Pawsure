@@ -44,7 +44,7 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'stop' })}>⏹ Stop</button>
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'start' })}>▶ Start again</button>
     </div>
-    {lookin && <a className="btn sm block" href={lookin} target="_blank" rel="noreferrer">Open the backup’s look-in link (Ankita)</a>}
+    {lookin && <button className="btn sm block" onClick={() => { location.hash = 'lookin-' + lookin.replace(/^\/l\//, ''); }}>Open the backup’s look-in link (Ankita)</button>}
     {!prompted.length && <p className="xs">Task prompts arrive 10 minutes before each task. Move the clock forward.</p>}
   </div>;
 }

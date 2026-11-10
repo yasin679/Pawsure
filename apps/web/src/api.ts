@@ -8,6 +8,16 @@ export const session = {
   set(s: Session | null) { try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch { /* private mode */ } }
 };
 
+/**
+ * Ends the session on the server too (a copied token stops working), clears the offline copy of API responses kept
+ * for this device, and forgets the token. Used by every sign-out button.
+ */
+export async function endSession(everywhere = false) {
+  try { if (session.get()) await api(everywhere ? '/v1/auth/logout-all' : '/v1/auth/logout', { body: {} }); } catch { /* offline: the token still expires */ }
+  try { if ('caches' in window) await caches.delete('api'); } catch { /* no cache storage */ }
+  session.set(null);
+}
+
 export class ApiError extends Error { constructor(public status: number, public body: Record<string, unknown>) { super(String(body.error ?? status)); } }
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown; auth?: boolean } = {}): Promise<T> {
@@ -49,7 +59,7 @@ export interface Member { id: string; role: string; status: string; name: string
 /* ---------- Phase 3 shapes ---------- */
 export type FFTask = 'feed' | 'walk' | 'meds' | 'water' | 'litter' | 'toilet';
 export interface Parsed { tasks: FFTask[]; petId: string | null; time: number | null; durationMin: number; access: string | null; lift: string | null; urgency: string; medsInstructions: string | null; sources: Record<string, string> }
-export interface ReqView { id: string; state: string; text?: string; parser: string | null; fallbackReason?: string; parsed: Parsed | null; clarifications: { field: string; question: string; options: { value: string; label: string }[] }[]; blocked: string[]; correctedFields: string[]; taskTime: number | null; mode: string | null; recipients: { friendId: string; state: string; sentAt: number; reminded: boolean; proposal?: number; name: string }[]; holdFriendId?: string; holdAt?: number; confirmedFriendId?: string; confirmedName?: string | null; history: { at: number; state: string; note: string }[]; coverTaskId: string | null; searchClosesAt: number | null; exclude: string[]; needsManualForm?: boolean }
+export interface ReqView { id: string; state: string; text?: string; parser: string | null; parsedBy?: string; aiConnected?: boolean; fallbackReason?: string; parsed: Parsed | null; clarifications: { field: string; question: string; options: { value: string; label: string }[] }[]; blocked: string[]; correctedFields: string[]; taskTime: number | null; mode: string | null; recipients: { friendId: string; state: string; sentAt: number; reminded: boolean; proposal?: number; name: string }[]; holdFriendId?: string; holdAt?: number; confirmedFriendId?: string; confirmedName?: string | null; history: { at: number; state: string; note: string }[]; coverTaskId: string | null; searchClosesAt: number | null; exclude: string[]; needsManualForm?: boolean }
 export interface Suggestion { id: string; name: string; distance: string; language: string; reasons: string[]; message: string }
 export interface SearchResult { request: ReqView; top: Suggestion[]; excludedCounts: Record<string, number>; nearbyFallback: { offered: boolean; reason: string }; laterOptions: string }
 export interface FriendSummary { id: string; name: string; invited: boolean; findable: boolean; distance: string; availability: string; key: string; language: string }

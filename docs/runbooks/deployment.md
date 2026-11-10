@@ -11,7 +11,7 @@ No staging or production environment exists yet (decision D-01 is open). These a
 | `DATABASE_URL` | staging Postgres | pilot Postgres (PITR on) |
 | Vendors | sandbox accounts | contracted accounts |
 
-Required secrets (never in git): `OTP_PEPPER`, `CODE_CARD_KEY`, `JOB_SECRET`, `BACKUP_KEY` (PGlite only), `WEB_ORIGIN`, vendor credentials (vendors.md). With `DEMO_MODE=0` the server refuses to start without `OTP_PEPPER`.
+Required secrets (never in git): `OTP_PEPPER`, `CODE_CARD_KEY`, `JOB_SECRET` (the job runner refuses to run without it), `WEBHOOK_SECRET` (vendor webhooks are refused without it), `BACKUP_KEY` (PGlite only), `WEB_ORIGIN`, vendor credentials (vendors.md). With `DEMO_MODE=0` the server refuses to start without `OTP_PEPPER`.
 
 ## Deploy
 

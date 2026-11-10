@@ -106,7 +106,11 @@ export function makeFriendFinder(d: Deps) {
         await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Planned','owner',$3)`, [tid, hh, 'Created from ' + row.id]);
         const ds = (await db.query<{ helper_unavailable: boolean }>(`select helper_unavailable from day_states where household_id=$1 and care_date=$2`, [hh, date]))[0];
         if (ds?.helper_unavailable) {
-          const helperTasks = await db.query<{ id: string }>(`select t.id from care_tasks t join memberships m on m.id=t.assignee_membership_id where t.household_id=$1 and t.care_date=$2 and m.role='helper' and abs(t.due_minute-$3) <= 60 and t.reassigned_to_task_id is null`, [hh, date, e.time]);
+          // Hand over only what the friend agreed to: same pet, same kind of task, near the same time. Anything else
+          // (another pet, medicine they weren't asked about) stays with the unavailable helper, so it still escalates.
+          const KIND: Record<string, string> = { feed: 'feeding', walk: 'walk', meds: 'medicine', water: 'water', litter: 'litter', toilet: 'toilet' };
+          const kinds = p.tasks.map(t => KIND[t]).filter(Boolean);
+          const helperTasks = await db.query<{ id: string }>(`select t.id from care_tasks t join memberships m on m.id=t.assignee_membership_id where t.household_id=$1 and t.care_date=$2 and m.role='helper' and abs(t.due_minute-$3) <= 60 and t.reassigned_to_task_id is null and t.pet_id=$4 and t.task_type = any($5::text[])`, [hh, date, e.time, p.petId, kinds]);
           for (const ht of helperTasks) { await db.query(`update care_tasks set reassigned_to_task_id=$2 where id=$1`, [ht.id, tid]); await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Reassigned','owner',$3)`, [ht.id, hh, 'To a friend via ' + row.id + '; original kept']); }
           await db.query(`update day_states set mode='friend' where household_id=$1 and care_date=$2`, [hh, date]);
         }
@@ -231,7 +235,9 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   const view = async (row: ReqRow) => {
     const names = Object.fromEntries((await db.query<{ id: string; n: string }>(`select id, coalesce(display_name,'Friend') as n from users where id = any($1)`, [row.doc.recipients.map(r => r.friendId).concat(row.doc.confirmedFriendId ?? [])])).map(r => [r.id, r.n]));
     const p = row.parse;
-    return { id: row.id, state: row.state, text: p?.text, parser: row.parser, fallbackReason: p?.fallbackReason, parsed: p?.parsed, clarifications: (p?.clarifications ?? []), blocked: p?.parsed ? searchBlockedReasons(p.parsed, p.clarifications) : ['missing:parse'], correctedFields: row.corrected_fields, taskTime: row.doc.taskTime, mode: row.doc.mode,
+    const ai = x.d.adapters.llm.connected;
+    const parsedBy = row.parser === 'manual' ? 'simple form' : row.parser === 'llm' && ai ? 'AI (structured)' : ai ? 'rules (AI fallback)' : 'rules (no AI connected)';
+    return { id: row.id, state: row.state, text: p?.text, parser: row.parser, parsedBy, aiConnected: ai, fallbackReason: p?.fallbackReason, parsed: p?.parsed, clarifications: (p?.clarifications ?? []), blocked: p?.parsed ? searchBlockedReasons(p.parsed, p.clarifications) : ['missing:parse'], correctedFields: row.corrected_fields, taskTime: row.doc.taskTime, mode: row.doc.mode,
       recipients: row.doc.recipients.map(r => ({ ...r, name: names[r.friendId] })), holdFriendId: row.doc.holdFriendId, holdAt: row.doc.holdAt, confirmedFriendId: row.doc.confirmedFriendId, confirmedName: row.doc.confirmedFriendId ? names[row.doc.confirmedFriendId] : null,
       history: row.doc.history.map(h => ({ ...h, note: Object.entries(names).reduce((n, [id, nm]) => n.split(id).join(nm.split(' ')[0]!), h.note) })), coverTaskId: row.doc.confirmedFriendId ? 'cover_' + row.id : null, searchClosesAt: row.doc.taskTime != null ? row.doc.taskTime - 30 : null, exclude: row.doc.exclude };
   };
