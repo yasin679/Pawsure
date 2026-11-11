@@ -19,7 +19,7 @@ export async function start() {
   const db = await openDb({ dataDir: 'memory', pglite: { fsBundle } });
   await migrate(db, MIGRATIONS);
   await seedDemo(db);
-  const app = createApp({ db, adapters: mockAdapters(), clock: demoClock('2026-11-06T09:00:00+05:30'), pepper: 'demo-pepper-not-secret', demoMode: true });
+  const app = createApp({ db, adapters: mockAdapters(), clock: demoClock('2026-11-06T09:00:00+05:30', { live: true }), pepper: 'demo-pepper-not-secret', demoMode: true });
   await app.request('/jobs/tick', { method: 'POST' });
   return app;
 }

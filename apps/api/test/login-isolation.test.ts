@@ -117,7 +117,7 @@ describe('hardening', () => {
     expect(r.status).toBe(413);
   });
   it('HTML in user text is stored and returned as plain text', async () => {
-    const r = await api.call<{ id: string }>('POST', '/v1/households/hh_demo/pets', { name: '<img src=x onerror=alert(1)>' }, tok.owner);
+    const r = await api.call<{ id: string }>('POST', '/v1/households/hh_demo/pets', { name: '<img src=x onerror=alert(1)>', food: 'Dry food 150 g at 8 AM and 7 PM', allergies: 'None known', medicines: 'None', vet_name: 'Dr. Rao', vet_phone: '+91 22 5555 0101' }, tok.owner);
     const pets = (await api.call<{ id: string; name: string }[]>('GET', '/v1/households/hh_demo/pets', undefined, tok.owner)).body;
     expect(pets.find(p => p.id === r.body.id)!.name).toBe('<img src=x onerror=alert(1)>');
   });

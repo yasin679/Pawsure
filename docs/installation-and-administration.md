@@ -69,7 +69,7 @@ npm test
 npm run e2e
 ```
 
-`npm test` runs the API, rules and database tests (204). `npm run e2e` builds and serves the demo (unless it is already running on port 4174) and runs the 86 end-to-end browser tests in Chrome.
+`npm test` runs the API, rules and database tests (211). `npm run e2e` builds and serves the demo (unless it is already running on port 4174) and runs the 90 end-to-end browser tests in Chrome.
 
 ## 3 Configuration
 
@@ -176,7 +176,7 @@ insert into staff_roles(user_id, role) values ('<user id>', 'ops');
 | Tech lead (`tech_lead`) | Overview, service health, pilot readiness, queues, method mix, signals, Friend Finder, switches, audit log, breach runbook. |
 | Auditor (`auditor`) | Overview, service health, queues, method mix, signals, audit log (with export). |
 
-Every console view, and every refused attempt, is written to the append-only audit log. Phone numbers are always masked; photos, addresses and pet details are never shown.
+The console keeps its own sign-in, separate from the owner app on the same device, so signing in to one never signs you out of the other. Every console view, and every refused attempt, is written to the append-only audit log. Phone numbers are always masked; photos, addresses and pet details are never shown.
 
 ### 6.2 Console sections
 

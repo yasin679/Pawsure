@@ -36,15 +36,17 @@ export function App() {
   const [invites, setInvites] = useState<{ id: string; role: string; society: string }[]>([]);
   const [demo, setDemo] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
-  const [isFriend, setIsFriend] = useState(false); const [draft, setDraft] = useState('');
+  const [isFriend, setIsFriend] = useState(false); const [draft, setDraft] = useState(''); const [checked, setChecked] = useState(false);
   const hh = me?.memberships[0]?.household_id;
 
   const load = useCallback(async () => {
     try {
+      setChecked(false);
       const m = await api<Me>('/v1/me'); setMe(m);
       setInvites(await api('/v1/invitations'));
       const h = m.memberships[0]?.household_id;
-      if (!h) { const f = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend'); setIsFriend(f.links.length > 0 || !!f.profile); return; }
+      if (!h) { const f = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend'); setIsFriend(f.links.length > 0 || !!f.profile); setChecked(true); return; }
+      setChecked(true);
       if (['helper', 'backup', 'family', 'viewer'].includes(m.memberships[0]?.role ?? '')) return;
       const [p, d, i] = await Promise.all([api<Pet[]>(`/v1/households/${h}/pets`), api<DayView>(`/v1/households/${h}/today`), api<Incident[]>(`/v1/households/${h}/incidents`).catch(() => [])]);
       setPets(p); setDay(d); setIncidents(i);
@@ -61,6 +63,7 @@ export function App() {
   const signOut = async (everywhere = false) => { await endSession(everywhere); setAuthed(false); setMe(null); setDay(null); setPets([]); setIncidents([]); setInvites([]); setIsFriend(false); setDraft(''); setTab('today'); setSub(null); };
   const signOutAll = () => signOut(true);
   if (!hh && isFriend) return <div className="pwa">{demo && <DemoBar hh="" day={null} onChange={load} friendOnly />}<FriendHome name={me?.user.display_name ?? ''} onSignOut={() => signOut()} /></div>;
+  if (me && checked && !hh && !isFriend) return <div className="pwa"><Onboarding start="consent" onDone={() => load()} /></div>;
   if (me && role === 'helper') return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <HelperHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
   if (me && role && ['backup', 'family', 'viewer'].includes(role)) return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <CircleHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
   const go = (t: Tab) => { setTab(t); setSub(null); if (t === 'today') load(); };

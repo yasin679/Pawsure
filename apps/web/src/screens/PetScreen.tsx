@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { api, ApiError, type Pet } from '../api';
 import { AppBar, Banner, Icon, PetAvatar } from '../ui';
 
-const FIELDS: [keyof Pet, string, string?][] = [['name', 'Name'], ['breed', 'Breed'], ['age', 'Age'], ['food', 'Food'], ['allergies', 'Allergies'], ['medicines', 'Medicine instructions', 'Copy your vet’s written instructions. Pawsure never suggests doses.'], ['fears', 'Fears and habits'], ['notes', 'Emergency notes'], ['vet_name', 'Your vet'], ['vet_phone', 'Vet phone'], ['clinic24_name', 'Nearest 24x7 clinic'], ['clinic24_phone', '24x7 clinic phone'], ['backup_name', 'Backup person'], ['backup_phone', 'Backup phone']];
+const FIELDS: [keyof Pet, string, string?][] = [['name', 'Name'], ['breed', 'Breed'], ['age', 'Age'], ['food', 'Food and feeding', 'What, how much and when. Shown to whoever feeds your pet.'], ['allergies', 'Allergies', 'Write “None known” if there are none.'], ['medicines', 'Medicine instructions', 'Copy your vet’s written instructions, or write “None”. Pawsure never suggests doses.'], ['fears', 'Fears and habits'], ['notes', 'Emergency notes'], ['vet_name', 'Your vet'], ['vet_phone', 'Vet phone'], ['clinic24_name', 'Nearest 24x7 clinic'], ['clinic24_phone', '24x7 clinic phone'], ['backup_name', 'Backup person'], ['backup_phone', 'Backup phone']];
+
+const REQUIRED: (keyof Pet)[] = ['name', 'food', 'allergies', 'medicines', 'vet_name', 'vet_phone'];
 
 export function PetScreen({ hh, pets, reload, onOpen }: { hh: string; pets: Pet[]; reload: () => void; onOpen: (v: 'routine' | 'health') => void }) {
   const [active, setActive] = useState(pets[0]?.id ?? 'new');
@@ -15,16 +17,17 @@ export function PetScreen({ hh, pets, reload, onOpen }: { hh: string; pets: Pet[
   const save = async () => {
     setErr(null);
     const body: Record<string, unknown> = {}; FIELDS.forEach(([k]) => { const v = form[k]; if (typeof v === 'string' && v.trim() !== '') body[k] = v.trim(); }); body.species = form.species ?? 'Dog';
-    if (!body.name) { setErr('Add a name — everything else is optional.'); return; }
+    const missing = FIELDS.filter(([k]) => REQUIRED.includes(k) && !body[k]).map(([, l]) => l);
+    if (missing.length) { setErr(`Please fill in: ${missing.join(', ')}. These go on the emergency card and are shown to whoever cares for your pet.`); return; }
     try { if (pet && active !== 'new') await api(`/v1/households/${hh}/pets/${pet.id}`, { method: 'PATCH', body }); else { const r = await api<{ id: string }>(`/v1/households/${hh}/pets`, { body }); setActive(r.id); } setMode('view'); reload(); }
     catch (e) { setErr(e instanceof ApiError && e.status === 403 ? 'Your role can’t edit pet details.' : 'Couldn’t save. Check the fields and try again.'); }
   };
 
   if (mode === 'edit') return <><AppBar title={pet && active !== 'new' ? `Edit ${pet.name}` : 'Add a pet'} onBack={() => setMode('view')} /><main className="body">
     <div className="field"><label htmlFor="sp">Species</label><select id="sp" className="input" value={form.species} onChange={e => setForm({ ...form, species: e.target.value })}><option>Dog</option><option>Cat</option><option>Other</option></select></div>
-    {FIELDS.map(([k, l, hint]) => <div key={k} className="field"><label htmlFor={'f-' + k}>{l}</label><input id={'f-' + k} className="input" value={(form[k] as string) ?? ''} onChange={e => setForm({ ...form, [k]: e.target.value })} />{hint && <span className="hint">{hint}</span>}</div>)}
+    {FIELDS.map(([k, l, hint]) => <div key={k} className="field"><label htmlFor={'f-' + k}>{l}{REQUIRED.includes(k) && <span aria-hidden="true" style={{ color: 'var(--alert)' }}> *</span>}{REQUIRED.includes(k) && <span className="sr"> (required)</span>}</label><input id={'f-' + k} className="input" value={(form[k] as string) ?? ''} onChange={e => setForm({ ...form, [k]: e.target.value })} />{hint && <span className="hint">{hint}</span>}</div>)}
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" onClick={save}>Save</button><p className="xs muted">Only the name is required. Saved as owner-provided with today’s date.</p>
+    <button className="btn primary block" onClick={save}>Save</button><p className="xs muted">* Required: name, food and feeding, allergies, medicine instructions, and your vet’s name and phone. Saved as owner-provided with today’s date.</p>
   </main></>;
 
   if (mode === 'card' && pet) return <><AppBar title="Emergency card" onBack={() => setMode('view')} /><main className="body">

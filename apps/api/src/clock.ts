@@ -5,9 +5,15 @@ export interface Clock { now(): Date }
 export const systemClock: Clock = { now: () => new Date() };
 
 /** Fixed/adjustable clock for demos and tests. Only wired in when DEMO_MODE=1; never in production. */
-export function demoClock(startIso: string): Clock & { set(iso: string): void; advance(min: number): void } {
-  let t = new Date(startIso).getTime();
-  return { now: () => new Date(t), set: (iso) => { t = new Date(iso).getTime(); }, advance: (m) => { t += m * 60000; } };
+/**
+ * Demo clock. Frozen by default (tests need exact times). With { live: true } it also moves with real time, so
+ * real-world waits work in the demo (for example the 30-second wait before resending a sign-in code), while
+ * set() and advance() still jump it for walkthroughs.
+ */
+export function demoClock(startIso: string, opts: { live?: boolean } = {}): Clock & { set(iso: string): void; advance(min: number): void } {
+  let t = new Date(startIso).getTime(), base = Date.now();
+  const read = () => (opts.live ? t + (Date.now() - base) : t);
+  return { now: () => new Date(read()), set: (iso) => { t = new Date(iso).getTime(); base = Date.now(); }, advance: (m) => { t = read() + m * 60000; base = Date.now(); } };
 }
 
 export function istDate(d: Date): string {

@@ -64,6 +64,8 @@ Numbered markers on a screenshot point to the item described in the matching row
 
 Open Pawsure in your phone’s browser and tap **Add to Home Screen** to install it like an app. It works on recent Android and iPhone browsers.
 
+If you leave part-way through setting up, signing in again continues where you left off.
+
 ![Figure 2: The welcome screen](images/01-welcome.jpg)
 
 | # | Item | What it does |
@@ -85,7 +87,7 @@ Open Pawsure in your phone’s browser and tap **Add to Home Screen** to install
 |---|---|---|
 | 1 | **6-digit code** | The code from the SMS. It expires after 5 minutes. After 5 wrong tries you must ask for a new code. |
 | 2 | **Verify** | Signs you in. |
-| 3 | **Resend code** | Sends a new code. |
+| 3 | **Resend code** | Sends a new code once 30 seconds have passed. Codes you have used don’t count toward the limits, so signing out and straight back in works. |
 
 > [!NOTE]
 > In the demo, no SMS is sent: the code is shown on screen.
@@ -253,7 +255,7 @@ The day report lists each task with its label, the calls you placed, points earn
 
 | # | Item | What it does |
 |---|---|---|
-| 1 | **Pets** | Switch between pets, or **+ Add** a pet. Only the name is required. |
+| 1 | **Pets** | Switch between pets, or **+ Add** a pet. Required: name, food and feeding, allergies, medicine instructions, and your vet’s name and phone (*None* is a valid answer). Breed, age, fears, notes, 24x7 clinic and backup are optional. |
 | 2 | **Edit** | Food, allergies, medicine instructions, fears, vet, 24x7 clinic, backup contact. Saved as owner-provided with the date. |
 | 3 | **Emergency card** | Allergies, medicine, vet, 24x7 clinic and backup on one screen. |
 | 4 | **Routine** | The daily tasks (section 4.2). |

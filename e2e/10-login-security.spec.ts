@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials } from './helpers';
 
 test.describe('M. Login separation and security (on screen)', () => {
   test('M1 Helper login → helper home only (WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
@@ -90,6 +90,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     await boot(page); await signInOwner(page); await tab(page, 'Pet');
     await page.getByRole('button', { name: '+ Add' }).click();
     await page.locator('#f-name').fill('<img src=x onerror=alert(1)>');
+    await fillPetEssentials(page);
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' })).toBeVisible();
     await page.waitForTimeout(500);
@@ -97,16 +98,17 @@ test.describe('M. Login separation and security (on screen)', () => {
     expect(await page.locator('img[src="x"]').count()).toBe(0);
   });
 
-  test('M10 Staff console: owner session can’t open it; signing out of the console ends that session', async ({ page }) => {
+  test('M10 Staff console: the owner’s session never opens it; signing out of the console ends that session only', async ({ page }) => {
     await boot(page); await signInOwner(page);
     await page.evaluate(() => { location.hash = 'admin'; });
-    await expect(page.getByText('This account has no staff role.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Staff sign-in' })).toBeVisible();
     await page.locator('#sp').fill(PHONE.lead);
     await page.getByRole('button', { name: 'Send code' }).click();
     const code = (await page.locator('span.mono').first().innerText()).trim();
     await page.locator('#sc').fill(code); await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.locator('.console-nav')).toBeVisible();
-    const t = await page.evaluate(() => JSON.parse(localStorage.getItem('pawsure.session')!).token as string);
+    const t = await page.evaluate(() => JSON.parse(localStorage.getItem('pawsure.staff.session')!).token as string);
+    expect(await page.evaluate(() => localStorage.getItem('pawsure.session'))).not.toBeNull(); // owner still signed in
     await page.locator('.console-nav').getByRole('button', { name: 'Sign out' }).click();
     await expect(page.getByRole('heading', { name: 'Staff sign-in' })).toBeVisible();
     const status = await page.evaluate(async ([A, tk]) => (await fetch(A + '/admin/me', { headers: { authorization: 'Bearer ' + tk } })).status, [API, t] as const);

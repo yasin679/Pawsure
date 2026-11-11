@@ -1,12 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, tab } from './helpers';
+import { boot, signInOwner, tab, fillPetEssentials } from './helpers';
 
 test.describe('B. Pets and C. routine and health', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); await tab(page, 'Pet'); });
 
-  test('B1 Add a pet with only a name', async ({ page }) => {
+  test('B1 Add a pet: essential care and medical details are required, then it is saved', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add' }).click();
     await page.locator('#f-name').fill('Coco');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('alert')).toContainText('Please fill in: Food and feeding, Allergies, Medicine instructions, Your vet, Vet phone');
+    await fillPetEssentials(page);
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.locator('.seg').getByRole('button', { name: 'Coco' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Coco' })).toBeVisible();

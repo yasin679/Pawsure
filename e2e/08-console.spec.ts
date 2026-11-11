@@ -20,6 +20,8 @@ test.describe('K. Operations console', () => {
   test('K1 A household owner is refused: no staff role', async ({ page }) => {
     await boot(page); await signInOwner(page);
     await page.evaluate(() => { location.hash = 'admin'; });
+    await page.locator('#sp').fill(PHONE.neha); await page.getByRole('button', { name: 'Send code' }).click();
+    await page.locator('#sc').fill((await page.locator('span.mono').first().innerText()).trim()); await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByText('This account has no staff role.')).toBeVisible();
   });
 

@@ -29,7 +29,7 @@ describe('#1 new owner: pet + routine → Who’s caring today, no optional fiel
     const t = await signIn('+919811444555');
     expect((await call('POST', '/v1/consents', { items: [{ kind: 'terms', version: 'T-1.0', granted: true }, { kind: 'privacy', version: 'PN-1.0', granted: true }], language: 'en' }, t)).status).toBeLessThan(300);
     const hh = (await call<{ id: string }>('POST', '/v1/households', { displayName: 'Asha', language: 'en', society: 'Raheja Vihar, Powai' }, t)).body.id;
-    const pet = (await call<{ id: string }>('POST', `/v1/households/${hh}/pets`, { name: 'Coco' }, t)).body.id;
+    const pet = (await call<{ id: string }>('POST', `/v1/households/${hh}/pets`, { name: 'Coco', food: 'Dry food 150 g at 8 AM and 7 PM', allergies: 'None known', medicines: 'None', vet_name: 'Dr. Rao', vet_phone: '+91 22 5555 0101' }, t)).body.id;
     expect(pet).toBeTruthy();
     expect((await call('POST', `/v1/households/${hh}/routine`, { petId: pet, title: 'Dinner', type: 'feeding', due: 1200, assignee: 'owner', oneOffToday: true }, t)).status).toBeLessThan(300);
     const today = (await call<{ tasks: { title: string }[]; day: { mode: string } }>('GET', `/v1/households/${hh}/today`, undefined, t)).body;

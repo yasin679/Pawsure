@@ -12,7 +12,8 @@
     "J": "Wallet, data rights, consents",
     "K": "Operations console",
     "L": "Cross-cutting",
-    "M": "Login separation and security"
+    "M": "Login separation and security",
+    "N": "Reported issues (regression)"
   },
   "cases": {
     "A1": {
@@ -60,8 +61,8 @@
     "B1": {
       "role": "Owner",
       "pre": "Pet tab",
-      "steps": "1. + Add\n2. Name = Coco only\n3. Save",
-      "expected": "Coco added and shown"
+      "steps": "1. + Add\n2. Name = Coco only → Save\n3. Fill food, allergies, medicine, vet name and phone → Save",
+      "expected": "Error lists the missing essentials; after filling them Coco is saved and shown"
     },
     "B2": {
       "role": "Owner",
@@ -360,8 +361,8 @@
     "K1": {
       "role": "Owner",
       "pre": "Signed in as owner",
-      "steps": "1. Open #admin",
-      "expected": "This account has no staff role"
+      "steps": "1. Open the console\n2. Sign in there with the owner’s number",
+      "expected": "Console asks for its own staff sign-in; the owner number gets “This account has no staff role”"
     },
     "K2": {
       "role": "Ops",
@@ -522,14 +523,38 @@
     "M9": {
       "role": "Owner",
       "pre": "Pet tab",
-      "steps": "1. Add pet named <img src=x onerror=alert(1)>",
+      "steps": "1. Add pet named <img src=x onerror=alert(1)> with the essential details",
       "expected": "Shown as text; no script runs, no image injected"
     },
     "M10": {
       "role": "Owner → ops lead",
       "pre": "Signed in as owner",
-      "steps": "1. Open console (refused)\n2. Sign in as ops lead\n3. Sign out of console\n4. Re-use the token",
-      "expected": "Owner refused; console session ended on the server (401)"
+      "steps": "1. Open console\n2. Sign in as ops lead\n3. Sign out of console\n4. Re-use the token",
+      "expected": "Owner session never opens the console and stays signed in; console session ended on the server (401)"
+    },
+    "N1": {
+      "role": "Owner",
+      "pre": "Fresh demo",
+      "steps": "1. Send code\n2. Wait 31 seconds (real time)\n3. Resend code",
+      "expected": "A new code is sent (no “Please wait” after the 30 seconds)"
+    },
+    "N2": {
+      "role": "Owner + ops lead",
+      "pre": "Owner signed in",
+      "steps": "1. Ops console → staff sign-in\n2. Back to the owner app\n3. Tap every tab",
+      "expected": "Owner app works (Today, Find cover, Friends, Pet, Me all open); owner still signed in"
+    },
+    "N3": {
+      "role": "Owner",
+      "pre": "Signed in",
+      "steps": "1. Sign out\n2. Sign in again straight away with the same number",
+      "expected": "Signs in without a block"
+    },
+    "N4": {
+      "role": "New user",
+      "pre": "Signed in, setup not finished",
+      "steps": "1. Reload part-way through setup",
+      "expected": "Setup continues (terms, profile) instead of a blank screen"
     }
   },
   "defects": [
@@ -628,6 +653,24 @@
       "Helper and backup logins got the owner app stuck on “Loading today…”; staff signing in on the owner app were pushed into owner sign-up",
       "Helper home, care-circle home, and staff redirect to the console",
       "M1, M2, M4"
+    ],
+    [
+      "Sign-in",
+      "Resending a code still said “Please wait 30 seconds” after waiting: the demo clock only moved with the demo buttons; signing out and back in was blocked the same way",
+      "Demo clock runs in real time (demo buttons still jump it); used codes no longer count toward resend limits",
+      "N1, N3 + api regressions.test"
+    ],
+    [
+      "Pets",
+      "A pet could be saved with only a name, without food, allergies, medicine or vet details",
+      "Essential care and medical details required in the app and on the server (“None” allowed)",
+      "B1 + api regressions.test"
+    ],
+    [
+      "Login",
+      "Signing in to the ops console replaced the owner’s sign-in, so returning left a blank owner app with tabs that did nothing",
+      "Owner app and console keep separate sign-ins; an account without a household returns to setup instead of a blank screen",
+      "N2, N4, K1, M10"
     ]
   ],
   "notes": [

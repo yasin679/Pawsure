@@ -14,7 +14,7 @@ The visual design matches the interactive prototype (`../Prototype`): the same t
 | Owner PWA (`apps/web`) | Onboarding; Today (who’s caring, can’t-come, alone-window warning, leaving checklist, I’m back, return check, alerts, incidents, evidence, task changes, timeline, day report); Pet (profile, emergency card, routine editor, health calendar); Me (helper & code card, care circle, invitations); backup look-in page. **Demo only:** clock + Sunita’s simulated phone. Find cover (Ask Pawsure, review, simple form, suggestions, approval, request detail), Friends (list, invite, profile, block/report), Me → what friends see; **friend view** for invited friends (requests, visit details, F7 settings). Demo: clock, Sunita’s phone, friends’ phones, AI mode switch |
 | Vendors | **None connected.** Every vendor is a mock adapter (`apps/api/src/adapters.ts`) |
 
-Tests: **204 passing** (`npm test`): 80 domain, 4 database, 120 API integration, security, login isolation and acceptance. **86 end-to-end browser tests passing** (`npm run e2e`, Playwright with the installed Chrome) drive every screen and login type (owner, co-owner, helper, friend, backup, new user, each staff role) against the demo build. Test cases with steps, expected and actual results: `docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.xlsx` (rebuild with `npm run e2e:sheet`). **All 24 mandatory P0 scenarios** (§13) map to passing tests: see `docs/test-report.md` (`npm run report`).
+Tests: **211 passing** (`npm test`): 80 domain, 4 database, 127 API integration, security, login isolation and acceptance. **90 end-to-end browser tests passing** (`npm run e2e`, Playwright with the installed Chrome) drive every screen and login type (owner, co-owner, helper, friend, backup, new user, each staff role) against the demo build. Test cases with steps, expected and actual results: `docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx` (rebuild with `npm run e2e:sheet`). **All 24 mandatory P0 scenarios** (§13) map to passing tests: see `docs/test-report.md` (`npm run report`).
 
 **Phase 5** adds what a pilot needs to run safely:
 - **Vendor failover:** every message is retried once, then sent by SMS fallback; every attempt is in a delivery log with masked recipients. OTP never fakes success (503).
@@ -34,7 +34,7 @@ Demo staff numbers for `http://localhost:5173/admin`: ops 98110 00001, ops lead 
 
 ## Documentation
 
-The full document set is in [docs/](docs/README.md): User Guide (PS-UG-01), Installation and Administration Guide (PS-IG-02), Quick Start (PS-QS-03), FAQ and Troubleshooting (PS-FAQ-04), Technical Design (PS-TD-05), UAT Test Cases (PS-UAT-06), Release Notes v1.0 (PS-RN-07) and Test Evidence (PS-TE-08), each as Markdown and PDF.
+The full document set is in [docs/](docs/README.md): User Guide (PS-UG-01), Installation and Administration Guide (PS-IG-02), Quick Start (PS-QS-03), FAQ and Troubleshooting (PS-FAQ-04), Technical Design (PS-TD-05), UAT Test Cases (PS-UAT-06), Release Notes v1.0.1 (PS-RN-07) and Test Evidence (PS-TE-08), each as Markdown and PDF.
 
 ## Run it locally
 

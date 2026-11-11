@@ -83,7 +83,7 @@ Records other people rely on, such as an incident, are kept only for as long as 
 
 | Problem | Likely cause | What to do |
 |---|---|---|
-| *Please wait 30 seconds before asking for another code* | Codes can be resent after 30 seconds | Wait, then tap **Resend code**. |
+| *Please wait 30 seconds before asking for another code* | Codes can be resent after 30 seconds | Wait, then tap **Resend code**. Signing out and back in is never blocked by codes you already used. |
 | *Too many codes requested* | 3 codes in 15 minutes | Wait 15 minutes. |
 | *Too many wrong attempts* | 5 wrong codes | Request a new code. |
 | *We could not send the code* | The SMS provider is unavailable | Try again in a few minutes. The operations team sees this on Service health. |
@@ -94,6 +94,7 @@ Records other people rely on, such as an incident, are kept only for as long as 
 | *Answer the highlighted questions first* | Clarification still open | Same as above. |
 | *That friend is no longer eligible* | They paused, opted out or were blocked after the search | Search again. |
 | *Up to 10 cover requests an hour* | Spam limit | Wait, or call support if it is an emergency. |
+| *Please fill in: Food and feeding, Allergies…* when adding a pet | Essential care and medical details are required | Fill them in; write *None* or *None known* where there are none. |
 | *Your role can’t change this* | Co-owners, backups and family have limited permissions | Ask the owner. |
 | The look-in link says *This link has expired* | Links open for 15 minutes | Contact the owner directly. |
 | The look-in link says *This link was switched off* | Your care-circle access was removed | Contact the owner. |

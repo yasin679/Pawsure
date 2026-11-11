@@ -1,23 +1,23 @@
 ---
 id: PS-RN-07
-title: Release Notes v1.0
+title: Release Notes v1.0.1
 subtitle: Pawsure P0 pilot build — what’s included, what was fixed, and what is still open
 audience: Everyone
 ---
 
-# Release Notes v1.0
+# Release Notes v1.0.1
 
 ## 1 About this release
 
-Pawsure 1.0 is the first complete P0 build for the 20-home pilot in Andheri–Powai, Mumbai. It covers own-helper care with an honest evidence layer, the AI Friend Finder, the operations console, privacy rights and the pilot-readiness tooling. It is built from PRD v1.3 and Master Prompt 2.
+Pawsure 1.0 is the first complete P0 build; 1.0.1 fixes the issues reported after the first review (section 6) for the 20-home pilot in Andheri–Powai, Mumbai. It covers own-helper care with an honest evidence layer, the AI Friend Finder, the operations console, privacy rights and the pilot-readiness tooling. It is built from PRD v1.3 and Master Prompt 2.
 
 | Item | Value |
 |---|---|
-| Version | 1.0 (P0 pilot build) |
-| Date | 10 Nov 2026 |
+| Version | 1.0.1 (P0 pilot build) |
+| Date | 11 Nov 2026 (1.0: 10 Nov 2026) |
 | Repository | github.com/yasin679/Pawsure |
 | Shareable demo | A private Claude artifact (the whole app runs in the visitor’s browser) |
-| Tests | 204 API, rules and database tests; 86 end-to-end browser tests; all 24 mandatory P0 scenarios — all passing |
+| Tests | 211 API, rules and database tests; 90 end-to-end browser tests; all 24 mandatory P0 scenarios — all passing |
 
 ## 2 What’s included
 
@@ -75,7 +75,16 @@ Pawsure 1.0 is the first complete P0 build for the 20-home pilot in Andheri–Po
 - `CODE_CARD_KEY` is 32 bytes **base64** (the earlier template said hex).
 - Migrations `001`–`005` run at start-up and only add tables and columns.
 
-## 6 Known limitations
+## 6 Fixes in 1.0.1 (11 Nov 2026)
+
+| Reported issue | Cause | Fix |
+|---|---|---|
+| Couldn’t request another sign-in code after the 30 seconds | The demo’s clock only moved with the demo buttons, so the 30 seconds never passed | The demo clock runs in real time (the buttons still jump it forward) |
+| Blocked from signing in again after logging out | Same clock, plus used codes counted toward the resend limits | Used codes no longer count; verify always checks the newest unused code |
+| A pet could be added with only a name | Only the name was required | Food and feeding, allergies, medicine instructions and the vet’s name and phone are required (*None* allowed), in the app and on the server |
+| Blank owner screen and dead tabs after returning from the Ops console | Signing in to the console replaced the owner’s sign-in on the same device | The owner app and the console keep separate sign-ins; an account without a household returns to setup instead of a blank screen; leaving setup part-way resumes it |
+
+## 7 Known limitations
 
 - No vendor is connected (SMS, WhatsApp, IVR, push, AI, storage are mock adapters); no staging or pilot environment yet.
 - No AI model is connected; requests are understood by rules.

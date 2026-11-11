@@ -31,7 +31,7 @@ This card takes you from signing in to your first covered care day. Full details
 | Step | Where | What you do | Takes |
 |---|---|---|---|
 | 1 | Welcome | **Get started** → your number → **Send code** → enter the code → **Verify**. Accept the Terms and Privacy Notice; enter your name and society. | 2 min |
-| 2 | Pet → **+ Add** | Add each pet. Only the name is required; add allergies, medicine instructions and your vet for the emergency card. | 2 min |
+| 2 | Pet → **+ Add** | Add each pet with its essentials: name, food and feeding, allergies, medicine instructions, and your vet’s name and phone (write *None* where there are none). These go on the emergency card. | 3 min |
 | 3 | Pet → **Routine** → **Add** | Add the daily tasks: what, when, and whether your helper or you do it. Changes start tomorrow. | 3 min |
 | 4 | Me → **Helper and check-ins** → **Invite** | Invite your helper on WhatsApp in their language. Nothing is recorded until they say Yes; they choose photo, voice note or missed call. | 1 min |
 | 5 | Me → **Helper and check-ins** | Print the **code card** and keep it inside the food box. The helper shows the bowl and today’s code. | 2 min |

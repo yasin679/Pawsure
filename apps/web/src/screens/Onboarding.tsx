@@ -1,6 +1,6 @@
 /** Sign-in and onboarding: OTP (PS-001), consent (PS-002), household + owner profile (PS-050 anchor). */
-import { useState } from 'react';
-import { api, ApiError, session } from '../api';
+import { useEffect, useState } from 'react';
+import { api, ApiError, session, setSessionMode } from '../api';
 import { AppBar, Art, Banner, Icon } from '../ui';
 
 type Step = 'welcome' | 'phone' | 'otp' | 'consent' | 'profile';
@@ -11,8 +11,17 @@ const ERR: Record<string, string> = {
   terms_and_privacy_required: 'Please accept the Terms and the Privacy Notice to continue.'
 };
 
-export function Onboarding({ onDone }: { onDone: () => void }) {
-  const [step, setStep] = useState<Step>('welcome');
+export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; start?: Step }) {
+  const [step, setStep] = useState<Step>(start);
+  // Already signed in but setup not finished (for example after leaving and coming back): continue setup.
+  useEffect(() => {
+    if (start !== 'welcome' || !session.get()) return;
+    api<{ memberships: unknown[] }>('/v1/me').then(async me => {
+      if (me.memberships.length) return onDone();
+      const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
+      if (fr.links.length || fr.profile) onDone(); else setStep('consent');
+    }).catch(() => { /* not signed in any more: stay on the welcome screen */ });
+  }, []);
   const [phone, setPhone] = useState(''); const [code, setCode] = useState(''); const [demoCode, setDemoCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [c, setC] = useState({ terms: false, privacy: false, alerts: true, research: false });
@@ -48,7 +57,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       session.set({ token: r.token, userId: r.userId });
       const me = await api<{ memberships: unknown[]; consents: unknown[] }>('/v1/me');
       if (me.memberships.length) { onDone(); return; }
-      if (await api('/admin/me').then(() => true, () => false)) { location.hash = 'admin'; return; }
+      if (await api('/admin/me').then(() => true, () => false)) { const s = session.get(); session.set(null); setSessionMode('staff'); session.set(s); location.hash = 'admin'; return; }
       const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
       if (fr.links.length || fr.profile) onDone(); else setStep('consent');
     })}>Verify</button>

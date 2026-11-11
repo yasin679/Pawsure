@@ -1,11 +1,14 @@
 /** Thin API client. The session token lives in localStorage; nothing sensitive is cached beyond it. */
 export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8787';
-const KEY = 'pawsure.session';
+/** The owner app and the staff console keep separate sign-ins, so opening one never signs you out of the other. */
+let sessionMode: 'app' | 'staff' = 'app';
+export const setSessionMode = (m: 'app' | 'staff') => { sessionMode = m; };
+const KEY_FOR = { app: 'pawsure.session', staff: 'pawsure.staff.session' } as const;
 
 export interface Session { token: string; userId: string }
 export const session = {
-  get(): Session | null { try { return JSON.parse(localStorage.getItem(KEY) ?? 'null'); } catch { return null; } },
-  set(s: Session | null) { try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch { /* private mode */ } }
+  get(): Session | null { try { return JSON.parse(localStorage.getItem(KEY_FOR[sessionMode]) ?? 'null'); } catch { return null; } },
+  set(s: Session | null) { try { s ? localStorage.setItem(KEY_FOR[sessionMode], JSON.stringify(s)) : localStorage.removeItem(KEY_FOR[sessionMode]); } catch { /* private mode */ } }
 };
 
 /**

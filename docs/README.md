@@ -1,6 +1,6 @@
 # Documentation
 
-## Document set (v1.0)
+## Document set (v1.0.1)
 
 | ID | Document | For | Read online | PDF |
 |---|---|---|---|---|
@@ -10,8 +10,8 @@
 | PS-FAQ-04 | FAQ and Troubleshooting | Everyone | [faq-and-troubleshooting.md](faq-and-troubleshooting.md) | [PDF](pdf/PS-FAQ-04_FAQ_and_Troubleshooting.pdf) |
 | PS-TD-05 | Technical Design | Developers, reviewers, security | [technical-design.md](technical-design.md) | [PDF](pdf/PS-TD-05_Technical_Design.pdf) |
 | PS-UAT-06 | UAT Test Cases | Testers, sign-off owners | [uat-test-cases.md](uat-test-cases.md) | [PDF](pdf/PS-UAT-06_UAT_Test_Cases.pdf) |
-| PS-RN-07 | Release Notes v1.0 | Everyone | [release-notes.md](release-notes.md) | [PDF](pdf/PS-RN-07_Release_Notes_v1.0.pdf) |
-| PS-TE-08 | Test Evidence v1.0 | Testers, auditors | — | [Excel](test-evidence/PS-TE-08_Test_Evidence_v1.0.xlsx) |
+| PS-RN-07 | Release Notes v1.0.1 | Everyone | [release-notes.md](release-notes.md) | [PDF](pdf/PS-RN-07_Release_Notes_v1.0.1.pdf) |
+| PS-TE-08 | Test Evidence v1.0.1 | Testers, auditors | — | [Excel](test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx) |
 
 ## Reference
 

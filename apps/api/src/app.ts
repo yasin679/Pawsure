@@ -50,9 +50,9 @@ export function createApp(input: Deps) {
   /* ---------- Auth: OTP (PS-001). Same response whether or not the number exists (enumeration resistance). ---------- */
   app.post('/auth/otp/request', async (c) => {
     const { phone } = z.object({ phone: z.string().regex(E164_IN, 'Use an Indian mobile number in +91 format') }).parse(await c.req.json());
-    const recent = await db.query<{ n: number }>(`select count(*)::int as n from otp_challenges where phone_e164=$1 and created_at > $2`, [phone, new Date(now().getTime() - 15 * 60000).toISOString()]);
+    const recent = await db.query<{ n: number }>(`select count(*)::int as n from otp_challenges where phone_e164=$1 and created_at > $2 and consumed_at is null`, [phone, new Date(now().getTime() - 15 * 60000).toISOString()]);
     if ((recent[0]?.n ?? 0) >= 3) return c.json({ error: 'rate_limited', retryAfterSeconds: 900 }, 429);
-    const last = await db.query<{ created_at: string }>(`select created_at from otp_challenges where phone_e164=$1 order by created_at desc limit 1`, [phone]);
+    const last = await db.query<{ created_at: string }>(`select created_at from otp_challenges where phone_e164=$1 and consumed_at is null order by created_at desc limit 1`, [phone]);
     if (last[0] && now().getTime() - new Date(last[0].created_at).getTime() < 30000) return c.json({ error: 'too_soon', retryAfterSeconds: 30 }, 429);
     const code = String(randomInt(100000, 1000000));
     await db.query(`insert into otp_challenges(id, phone_e164, code_hash, created_at, expires_at) values ($1,$2,$3,$4,$5)`, [uid('otp'), phone, sha(d.pepper + phone + code), now().toISOString(), new Date(now().getTime() + 5 * 60000).toISOString()]);
@@ -62,7 +62,7 @@ export function createApp(input: Deps) {
 
   app.post('/auth/otp/verify', async (c) => {
     const { phone, code } = z.object({ phone: z.string().regex(E164_IN), code: z.string().regex(/^\d{6}$/) }).parse(await c.req.json());
-    const ch = (await db.query<{ id: string; code_hash: string; expires_at: string; attempts: number; consumed_at: string | null }>(`select * from otp_challenges where phone_e164=$1 order by created_at desc limit 1`, [phone]))[0];
+    const ch = (await db.query<{ id: string; code_hash: string; expires_at: string; attempts: number; consumed_at: string | null }>(`select * from otp_challenges where phone_e164=$1 and consumed_at is null order by created_at desc limit 1`, [phone]))[0];
     if (!ch || ch.consumed_at) return c.json({ error: 'invalid_code' }, 400);
     if (new Date(ch.expires_at) < now()) return c.json({ error: 'expired_code' }, 400);
     if (ch.attempts >= 5) return c.json({ error: 'too_many_attempts' }, 429);
@@ -144,7 +144,9 @@ export function createApp(input: Deps) {
   });
 
   /* ---------- Pets (PS-003, PS-004) ---------- */
-  const PetIn = z.object({ name: z.string().min(1).max(40), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: z.string().max(300).optional(), allergies: z.string().max(200).optional(), medicines: z.string().max(300).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: z.string().max(120).optional(), vet_phone: z.string().max(30).optional(), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().max(80).optional(), backup_phone: z.string().max(30).optional() });
+  // Essential care and medical details are required ("None" is a valid answer); the rest is optional.
+  const need = (max: number, what: string) => z.string().trim().min(1, `${what} is required`).max(max);
+  const PetIn = z.object({ name: need(40, 'Name'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().max(80).optional(), backup_phone: z.string().max(30).optional() });
   app.get('/v1/households/:hh/pets', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'pet', 'read'))) return deny(c);
     return c.json(await db.query('select * from pets where household_id=$1 order by name', [hh]));

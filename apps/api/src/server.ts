@@ -11,7 +11,7 @@ const demoMode = process.env.DEMO_MODE !== '0' && process.env.NODE_ENV !== 'prod
 const db = await openDb({ url: process.env.DATABASE_URL, dataDir: process.env.PGLITE_DIR ?? '.data/pglite' });
 const applied = await migrate(db);
 if (demoMode) await seedDemo(db);
-const clock = demoMode ? demoClock(process.env.DEMO_START ?? '2026-11-06T09:00:00+05:30') : systemClock;
+const clock = demoMode ? demoClock(process.env.DEMO_START ?? '2026-11-06T09:00:00+05:30', { live: true }) : systemClock;
 const pepper = process.env.OTP_PEPPER ?? (demoMode ? 'demo-pepper-not-secret' : '');
 if (!pepper) throw new Error('OTP_PEPPER must be set outside demo mode');
 

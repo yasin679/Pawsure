@@ -23,8 +23,8 @@ from pypdf import PdfReader, PdfWriter
 DOCS = Path(__file__).resolve().parent.parent
 OUT = DOCS / "pdf"
 PRODUCT = "Pawsure"
-VERSION = "1.0"
-DATE = "10-Nov-2026"
+VERSION = "1.0.1"
+DATE = "11-Nov-2026"
 AUTHOR = "Yasin Jariwala"
 CLASSIFICATION = "Internal — pilot"
 REPO = "github.com/yasin679/Pawsure"
@@ -36,10 +36,11 @@ DOCUMENTS = [
     ("faq-and-troubleshooting", "PS-FAQ-04_FAQ_and_Troubleshooting"),
     ("technical-design", "PS-TD-05_Technical_Design"),
     ("uat-test-cases", "PS-UAT-06_UAT_Test_Cases"),
-    ("release-notes", "PS-RN-07_Release_Notes_v1.0"),
+    ("release-notes", "PS-RN-07_Release_Notes_v1.0.1"),
 ]
-EXTRA_RELATED = [("PS-TE-08", "Test Evidence v1.0 (Excel workbook)")]
-HISTORY = [("1.0", DATE, AUTHOR, "First release: P0 pilot build (phases 0–5), full test pass, login isolation and security hardening")]
+EXTRA_RELATED = [("PS-TE-08", "Test Evidence v1.0.1 (Excel workbook)")]
+HISTORY = [("1.0", "10-Nov-2026", AUTHOR, "First release: P0 pilot build (phases 0–5), full test pass, login isolation and security hardening"),
+           ("1.0.1", DATE, AUTHOR, "Fixes for reported issues: sign-in code resend and re-login, required pet care details, separate owner and console sign-ins (no blank owner screen)")]
 
 FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">'
 MERMAID = '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{fontFamily:"Nunito, sans-serif",primaryColor:"#FFF1BC",primaryBorderColor:"#20201D",primaryTextColor:"#20201D",lineColor:"#47463E",secondaryColor:"#F4EED8",tertiaryColor:"#FFFDF0"}});</script>'

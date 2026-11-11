@@ -3,7 +3,7 @@
  * The section list below only mirrors the server matrix so staff aren't shown doors they can't open.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { api, ApiError, endSession, session } from '../api';
+import { api, ApiError, endSession, session, setSessionMode } from '../api';
 import { Icon } from '../ui';
 
 type Section = 'overview' | 'service' | 'release' | 'queues' | 'households' | 'mix' | 'signals' | 'ff' | 'flags' | 'rewards' | 'rights' | 'audit' | 'breach';
@@ -19,13 +19,17 @@ const ROLE_LABEL: Record<string, string> = { ops: 'Ops on shift', ops_lead: 'Ops
 const when = (s: string) => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 export function AdminApp() {
+  // Staff use their own sign-in, separate from the owner app on the same device.
+  useState(() => { setSessionMode('staff'); return null; });
+  useEffect(() => () => setSessionMode('app'), []);
   const [role, setRole] = useState<string | null>(null); const [checked, setChecked] = useState(false);
   const [sec, setSec] = useState<Section>('overview');
-  const check = () => api<{ role: string }>('/admin/me').then(r => setRole(r.role)).catch(() => setRole(null)).finally(() => setChecked(true));
+  const [notStaff, setNotStaff] = useState(false); const [form, setForm] = useState(0);
+  const check = () => api<{ role: string }>('/admin/me').then(r => { setRole(r.role); setNotStaff(false); }).catch(() => { setRole(null); setNotStaff(!!session.get()); }).finally(() => setChecked(true));
   useEffect(() => { if (session.get()) check(); else setChecked(true); }, []);
-  const signOut = () => { void endSession().then(() => setRole(null)); };
+  const signOut = () => { void endSession().then(() => { setRole(null); setNotStaff(false); setForm(n => n + 1); }); };
   if (!checked) return <div className="console-shell"><div className="empty">Loading…</div></div>;
-  if (!role) return <StaffSignIn onDone={check} notStaff={!!session.get()} onSignOut={signOut} />;
+  if (!role) return <StaffSignIn key={form} onDone={check} notStaff={notStaff} onSignOut={signOut} />;
   const allowed = ROLE_SECTIONS[role] ?? [];
   return <div className="console">
     <aside className="console-nav" aria-label="Console sections">

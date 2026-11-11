@@ -40,7 +40,15 @@ export async function signOut(page: Page) {
   if (await page.locator('nav.tabbar').isVisible()) await tab(page, 'Me');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Get started' })).toBeVisible();
-  await api(page, 'POST', '/demo/clock', { advance: 1 }); // stays clear of the 30-second resend gap per number
+}
+
+/** The essential care and medical details every new pet needs. */
+export async function fillPetEssentials(page: Page) {
+  await page.locator('#f-food').fill('Dry food 150 g at 8 AM and 7 PM');
+  await page.locator('#f-allergies').fill('None known');
+  await page.locator('#f-medicines').fill('None');
+  await page.locator('#f-vet_name').fill('Dr. Rao, Powai Pet Clinic');
+  await page.locator('#f-vet_phone').fill('+91 22 5555 0101');
 }
 
 /** Sets the demo clock so that one +5m tap from the demo bar lands on HH:MM; the tap also runs the job and refreshes. */

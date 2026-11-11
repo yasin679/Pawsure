@@ -12,13 +12,13 @@ status, titles = {}, {}
 def walk(s):
     for x in s.get('suites', []): walk(x)
     for sp in s.get('specs', []):
-        m = re.match(r'^([A-M]\d+)\s+(.*)$', sp['title'])
+        m = re.match(r'^([A-Z]\d+)\s+(.*)$', sp['title'])
         if m:
             titles[m.group(1)] = m.group(2)
             status[m.group(1)] = 'Pass' if sp['tests'][0]['results'][-1]['status'] == 'passed' else 'Fail'
 for s in pw['suites']: walk(s)
 run = datetime.datetime.fromisoformat(pw['stats']['startTime'].replace('Z', '+00:00')).astimezone(datetime.timezone(datetime.timedelta(hours=5, minutes=30)))
-HIGH = set('ADEGM')
+HIGH = set('ADEGMN')
 cell = lambda t: t.replace('|', '\\|').replace('\n', '<br>')
 key = lambda i: (i[0], int(i[1:]))
 ids = sorted(cat['cases'], key=key)

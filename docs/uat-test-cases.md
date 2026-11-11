@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 86 acceptance test cases with steps, expected results and the latest result
+subtitle: 90 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 10 Nov 2026, 15:25 IST |
-| Result | **86 of 86 passed** |
+| Latest run | 11 Nov 2026, 16:47 IST |
+| Result | **90 of 90 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -41,7 +41,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
-| B1 | M | Add a pet with only a name | 1. + Add<br>2. Name = Coco only<br>3. Save | Coco added and shown | Pass |
+| B1 | M | Add a pet: essential care and medical details are required, then it is saved | 1. + Add<br>2. Name = Coco only → Save<br>3. Fill food, allergies, medicine, vet name and phone → Save | Error lists the missing essentials; after filling them Coco is saved and shown | Pass |
 | B2 | M | Edit a pet: allergies are saved and shown | 1. Edit<br>2. Allergies = Chicken<br>3. Save | Allergies show Chicken | Pass |
 | B3 | M | Emergency card shows vet, 24x7 clinic and the not-an-emergency-service notice | 1. Open Emergency card | Own vet, 24x7 clinic and the not-an-emergency-service notice shown | Pass |
 
@@ -136,7 +136,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
-| K1 | M | A household owner is refused: no staff role | 1. Open #admin | This account has no staff role | Pass |
+| K1 | M | A household owner is refused: no staff role | 1. Open the console<br>2. Sign in there with the owner’s number | Console asks for its own staff sign-in; the owner number gets “This account has no staff role” | Pass |
 | K2 | M | Ops on shift sees only their sections; overview shows each pilot gate with n and status | 1. Sign in 98110 00001 | Only ops sections; 6 gate metrics with n | Pass |
 | K3 | M | Households view masks phone numbers | 1. Households | Phones masked (+91 •••• ••21) | Pass |
 | K4 | M | Queues: a helper callback case can only be closed with a reason | 1. Queues → Close… without reason<br>2. Add reason → Close | Reason required; case closed | Pass |
@@ -173,10 +173,19 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | M6 | H | “Sign out of all devices” ends the owner’s other sessions too | 1. Me → Sign out of all devices<br>2. Use the other session | Other session refused (401) | Pass |
 | M7 | H | A new user sees only their own (empty) home — none of Neha’s pets, friends or requests | 1. Sign up<br>2. Look at Today, Friends, Find cover | Only Eve’s empty home; none of Neha’s pets, friends or requests | Pass |
 | M8 | H | Friend login sees only requests sent to them, never household tabs | 1. Sign in as Priya | Only requests sent to Priya; no household tabs | Pass |
-| M9 | H | HTML typed into a pet name shows as text and never runs | 1. Add pet named <img src=x onerror=alert(1)> | Shown as text; no script runs, no image injected | Pass |
-| M10 | H | Staff console: owner session can’t open it; signing out of the console ends that session | 1. Open console (refused)<br>2. Sign in as ops lead<br>3. Sign out of console<br>4. Re-use the token | Owner refused; console session ended on the server (401) | Pass |
+| M9 | H | HTML typed into a pet name shows as text and never runs | 1. Add pet named <img src=x onerror=alert(1)> with the essential details | Shown as text; no script runs, no image injected | Pass |
+| M10 | H | Staff console: the owner’s session never opens it; signing out of the console ends that session only | 1. Open console<br>2. Sign in as ops lead<br>3. Sign out of console<br>4. Re-use the token | Owner session never opens the console and stays signed in; console session ended on the server (401) | Pass |
 
-## 15 Sign-off
+## 15 Reported issues (regression)
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| N1 | H | After waiting 30 seconds, “Resend code” sends a new code | 1. Send code<br>2. Wait 31 seconds (real time)<br>3. Resend code | A new code is sent (no “Please wait” after the 30 seconds) | Pass |
+| N2 | H | Owner → Ops console (staff sign-in) → back: the owner app and every tab still work | 1. Ops console → staff sign-in<br>2. Back to the owner app<br>3. Tap every tab | Owner app works (Today, Find cover, Friends, Pet, Me all open); owner still signed in | Pass |
+| N3 | H | Sign out, then sign straight back in with the same number | 1. Sign out<br>2. Sign in again straight away with the same number | Signs in without a block | Pass |
+| N4 | H | A new user who reloads part-way through setup continues setup (no blank screen) | 1. Reload part-way through setup | Setup continues (terms, profile) instead of a blank screen | Pass |
+
+## 16 Sign-off
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
