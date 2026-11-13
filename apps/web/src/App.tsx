@@ -21,6 +21,11 @@ import { PRESETS } from './demo/presets';
 
 type Tab = 'today' | 'find' | 'friends' | 'pet' | 'me';
 type Sub = null | 'routine' | 'health' | 'helper' | 'circle' | 'privacy' | 'wallet' | 'rights' | 'backups' | 'builder';
+/** Fade out and remove the HTML splash screen (once; later calls do nothing). */
+export function hideSplash() {
+  const s = document.getElementById('splash'); if (!s || s.classList.contains('gone')) return;
+  s.classList.add('gone'); setTimeout(() => s.remove(), 300);
+}
 const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'search'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
 export function App() {
@@ -56,8 +61,13 @@ export function App() {
       const [p, d, i] = await Promise.all([api<Pet[]>(`/v1/households/${h}/pets`), api<DayView>(`/v1/households/${h}/today`), api<Incident[]>(`/v1/households/${h}/incidents`).catch(() => [])]);
       setPets(p); setDay(d); setIncidents(i);
       api<{ thin: { keyHolders: number; thin: boolean } }>(`/v1/households/${h}/cover`).then(c => setThin(c.thin)).catch(() => undefined);
-    } catch (e) { if (e instanceof ApiError && e.status === 401) { session.set(null); setAuthed(false); } }
+    } catch (e) { if (e instanceof ApiError && e.status === 401) { session.set(null); setAuthed(false); } hideSplash(); }
   }, []);
+  // The splash (in index.html / demo.html) stays until the first screen has its data, so nobody sees an empty Today.
+  useEffect(() => {
+    const role0 = me?.memberships[0]?.role ?? '';
+    if (!authed || isAdmin || taskToken || lookinToken || (checked && (!hh || !!day || ['helper', 'backup', 'family', 'viewer'].includes(role0)))) hideSplash();
+  }, [authed, isAdmin, taskToken, lookinToken, checked, hh, day, me]);
   useEffect(() => { if (authed && !lookinToken && !taskToken && !isAdmin) load(); }, [authed, load, lookinToken, taskToken, isAdmin]);
   useEffect(() => { fetch(API + '/health').then(r => r.json()).then(h => setDemo(!!h.demoMode)).catch(() => setDemo(false)); }, []);
   useEffect(() => { const on = () => setOnline(true), off = () => setOnline(false); addEventListener('online', on); addEventListener('offline', off); return () => { removeEventListener('online', on); removeEventListener('offline', off); }; }, []);

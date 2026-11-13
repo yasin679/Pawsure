@@ -8,6 +8,7 @@ const API = import.meta.env.VITE_API_URL as string;
 const backend = import('./backend').then(m => m.start());
 backend.then(() => document.documentElement.setAttribute('data-demo-ready', '1')).catch(e => {
   console.error(e);
+  document.getElementById('splash')?.remove(); // show the error, not a spinner
   const el = document.getElementById('demo-boot');
   if (el) { el.textContent = 'The demo could not start in this browser. Try a recent Chrome, Edge, Safari or Firefox.'; el.hidden = false; }
 });
