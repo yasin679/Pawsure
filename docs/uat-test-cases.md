@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 111 acceptance test cases with steps, expected results and the latest result
+subtitle: 112 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 13 Nov 2026, 12:36 IST |
-| Result | **111 of 111 passed** |
+| Latest run | 13 Nov 2026, 14:43 IST |
+| Result | **112 of 112 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -52,6 +52,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | C1 | M | Add a routine task: it takes effect from tomorrow and is listed | 1. Add<br>2. Task = Evening walk, type walk<br>3. Save | Saved, takes effect from tomorrow; task listed | Pass |
 | C2 | M | Health calendar: add a vaccine date, then mark it done | 1. Add<br>2. Name Kennel cough, next due 20 Nov<br>3. Save<br>4. Done | Entry shown, then tagged Done | Pass |
 | C3 | M | Health calendar: snooze an overdue reminder | 1. Rabies vaccine (overdue) → Snooze 1 day | Tag changes Overdue → Snoozed | Pass |
+| C4 | M | From Today, Edit routine → Add “Just for today”: it joins today’s plan and doesn’t repeat | 1. Plan & evidence → Edit routine<br>2. Add: Extra play time, walk<br>3. When = Just for today<br>4. Save<br>5. Back to Today | Added to today’s plan, marked “today only”, shown on Today; it does not repeat tomorrow | Pass |
 
 ## 5 Today (daily care)
 

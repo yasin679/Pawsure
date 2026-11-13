@@ -96,6 +96,12 @@
       "steps": "1. Rabies vaccine (overdue) → Snooze 1 day",
       "expected": "Tag changes Overdue → Snoozed"
     },
+    "C4": {
+      "role": "Owner",
+      "pre": "Today",
+      "steps": "1. Plan & evidence → Edit routine\n2. Add: Extra play time, walk\n3. When = Just for today\n4. Save\n5. Back to Today",
+      "expected": "Added to today’s plan, marked “today only”, shown on Today; it does not repeat tomorrow"
+    },
     "D1": {
       "role": "Owner",
       "pre": "Today",

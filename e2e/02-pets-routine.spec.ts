@@ -58,4 +58,20 @@ test.describe('B. Pets and C. routine and health', () => {
     await card.getByRole('button', { name: 'Snooze 1 day' }).click();
     await expect(card.locator('.tag')).toHaveText('Snoozed');
   });
+
+  test('C4 From Today, Edit routine → Add “Just for today”: it joins today’s plan and doesn’t repeat', async ({ page }) => {
+    await tab(page, 'Today');
+    await page.getByRole('button', { name: 'Edit routine' }).click();
+    await expect(page.getByRole('heading', { name: 'Routine' })).toBeVisible();
+    await page.getByRole('button', { name: 'Add' }).click();
+    await page.locator('#rtt').fill('Extra play time');
+    await page.locator('#rty').selectOption('walk');
+    await page.getByLabel('Just for today').check();
+    await expect(page.getByText('Added to today’s plan now. It won’t repeat.')).toBeVisible();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(/Added to today’s plan: Extra play time at 6:00 PM/)).toBeVisible();
+    await expect(page.locator('button.li', { hasText: 'Extra play time' })).toContainText('today only');
+    await page.locator('.appbar', { hasText: 'Routine' }).getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByRole('button', { name: /6:00 Extra play time/ })).toBeVisible();
+  });
 });

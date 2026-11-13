@@ -16,7 +16,7 @@ type SheetKind = null | 'caring' | 'cantcome' | 'leaving' | 'return' | 'timeline
 
 const VERB: Record<string, string> = { feeding: 'feed', walk: 'walk', medicine: 'give medicine to', litter: 'clean the litter tray for', toilet: 'change the toilet pad for', water: 'top up water for' };
 
-export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void }) {
+export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void }) {
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [task, setTask] = useState<DayTask | null>(null);
   const [inc, setInc] = useState<Incident | null>(null);
@@ -76,6 +76,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">Quick return check (10 s)</b><button className="btn primary sm" onClick={() => setSheet('return')}>Start</button></div></div> : null}
 
       <div className="row"><h2 className="grow" style={{ fontSize: 'var(--fs-l)' }}>Plan & evidence</h2>
+        {onEditRoutine && <button className="btn ghost sm" onClick={onEditRoutine}>Edit routine</button>}
         <button className="btn ghost sm" onClick={() => run(async () => { setTimeline(await api<TimelineItem[]>(`${H}/day/timeline`)); setSheet('timeline'); }, () => {})}>Timeline</button>
         <button className="btn ghost sm" onClick={() => run(async () => { setReport(await api<DayReport>(`${H}/day/report`)); setSheet('report'); }, () => {})}>Day report</button></div>
       {[...byVisit.entries()].map(([k, ts]) => { const v = day.visits[k]; return <div key={k} className="stack">

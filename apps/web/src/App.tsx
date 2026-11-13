@@ -78,7 +78,7 @@ export function App() {
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Showing the last saved view; missed-call check-ins still reach Pawsure.</div>}
     {demo && hh && <DemoBar hh={hh} day={day} onChange={load} />}
-    {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
+    {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
     {sub === 'helper' && hh && <HelperScreen hh={hh} onBack={() => setSub(null)} />}
     {sub === 'circle' && hh && <CircleScreen hh={hh} onBack={() => { setSub(null); load(); }} />}
@@ -87,7 +87,7 @@ export function App() {
     {sub === 'rights' && <RightsScreen me={me} onBack={() => setSub(null)} reload={load} />}
     {sub === 'backups' && hh && <BackupsScreen hh={hh} onBack={() => { setSub(null); load(); }} onBuild={() => setSub('builder')} />}
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
-    {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} />}
+    {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen hh={hh} pets={pets} reload={load} onOpen={setSub} />}
     {!sub && tab === 'find' && hh && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}

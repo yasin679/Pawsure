@@ -10,8 +10,9 @@ const useLoad = <T,>(path: string, deps: unknown[] = []) => {
 };
 const errText = (e: unknown) => e instanceof ApiError ? (e.status === 403 ? 'Your role can’t change this.' : String((e.body.issues as string[] | undefined)?.join('; ') ?? e.body.error)) : 'Can’t reach Pawsure.';
 
-export function RoutineScreen({ hh, pets, onBack }: { hh: string; pets: Pet[]; onBack: () => void }) {
+export function RoutineScreen({ hh, pets, onBack, onChanged }: { hh: string; pets: Pet[]; onBack: () => void; onChanged?: () => void }) {
   const [list, reload] = useLoad<RoutineItem[]>(`/v1/households/${hh}/routine`);
+  const [oneOff, setOneOff] = useState(false);
   const [edit, setEdit] = useState<Partial<RoutineItem> & { assignee?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const petName = (id: string) => pets.find(p => p.id === id)?.name ?? id;
@@ -23,17 +24,22 @@ export function RoutineScreen({ hh, pets, onBack }: { hh: string; pets: Pet[]; o
     <div className="field"><label htmlFor="rur">Urgency</label><select id="rur" className="input" value={(edit as { urgency?: string }).urgency ?? (edit.task_type === 'medicine' ? 'MustHappen' : edit.task_type === 'walk' || edit.task_type === 'other' ? 'CanWait' : 'TimeSensitive')} onChange={e => setEdit({ ...edit, urgency: e.target.value } as typeof edit)}><option value="CanWait">Can wait: may be moved or skipped</option><option value="TimeSensitive">Time-sensitive: may be moved, with a warning</option><option value="MustHappen">Must happen: can’t be skipped; alert at +15 min</option></select><span className="hint">Defaults: walk or play can wait; meals are time-sensitive; medicine must happen.</span></div>
     <div className="field"><label htmlFor="ras">Who (one named person per task)</label><select id="ras" className="input" value={edit.assignee ?? 'helper'} onChange={e => setEdit({ ...edit, assignee: e.target.value })}><option value="helper">Helper (tracked)</option><option value="co_owner">Co-owner (gets the same reminder)</option><option value="owner">Me / family</option></select></div>
     <div className="field"><label htmlFor="rin">Instructions</label><textarea id="rin" className="input" value={edit.instructions ?? ''} onChange={e => setEdit({ ...edit, instructions: e.target.value })} /><span className="hint">{edit.task_type === 'medicine' ? 'Copy your vet’s written instructions. Medicine is never passed to your backup.' : 'Shown to whoever does the task.'}</span></div>
+    {!edit.id && <fieldset className="field"><legend>When</legend>
+      <label className="row"><input type="radio" name="rwhen" checked={!oneOff} onChange={() => setOneOff(false)} /> Every day, from tomorrow</label>
+      <label className="row"><input type="radio" name="rwhen" checked={oneOff} onChange={() => setOneOff(true)} /> Just for today</label>
+      <span className="hint">{oneOff ? 'Added to today’s plan now. It won’t repeat. Tasks already planned for today stay as they are.' : 'Today’s plan and history stay as they are.'}</span></fieldset>}
     {err && <span className="errtext" role="alert">{err}</span>}
     <button className="btn primary block" onClick={async () => { setErr(null); try {
-      const body = { petId: edit.pet_id ?? pets[0]?.id, title: edit.title, type: edit.task_type ?? 'feeding', due: edit.due_minute ?? 780, assignee: edit.assignee ?? 'helper', instructions: edit.instructions || undefined, urgency: (edit as { urgency?: string }).urgency };
+      const today = !edit.id && oneOff;
+      const body = { petId: edit.pet_id ?? pets[0]?.id, title: edit.title, type: edit.task_type ?? 'feeding', due: edit.due_minute ?? 780, assignee: edit.assignee ?? 'helper', instructions: edit.instructions || undefined, urgency: (edit as { urgency?: string }).urgency, ...(today ? { oneOffToday: true } : {}) };
       const r = await api<{ effectiveFrom: string }>(`/v1/households/${hh}/routine${edit.id ? '/' + edit.id : ''}`, { method: edit.id ? 'PUT' : 'POST', body });
-      setMsg(`Saved. Takes effect from ${r.effectiveFrom}. Today’s plan and history are unchanged.`); setEdit(null); reload();
+      setMsg(today ? `Added to today’s plan: ${edit.title} at ${fmt(edit.due_minute ?? 780)}. It won’t repeat.` : `Saved. Takes effect from ${r.effectiveFrom}. Today’s plan and history are unchanged.`); setEdit(null); setOneOff(false); reload(); onChanged?.();
     } catch (e) { setErr(errText(e)); } }}>Save</button>
   </main></>;
   return <><AppBar title="Routine" onBack={onBack} right={<button className="btn sm primary" onClick={() => setEdit({ task_type: 'feeding', due_minute: 1080, assignee: 'helper', pet_id: pets[0]?.id })}><Icon name="plus" size={16} />Add</button>} /><main className="body">
     {msg && <Banner kind="info" icon="ℹ">{msg}</Banner>}
-    <div className="list">{(list ?? []).map(r => <button key={r.id} className="li" onClick={() => setEdit({ ...r, assignee: r.assignee_role === 'helper' ? 'helper' : r.assignee_role === 'co_owner' ? 'co_owner' : 'owner' })}><span className="mono small" style={{ minWidth: 52 }}>{fmt(r.due_minute)}</span><div className="grow"><b>{r.title}</b><div className="small muted">{petName(r.pet_id)} · {r.assignee_role === 'helper' ? 'Helper' : 'Family'} · from {r.effective_from}</div></div><span className="tag">{r.escalation_profile === 'medicine' ? 'Alert +15 · no backup' : r.escalation_profile === 'walk' ? 'Alert +45' : 'Alert +30'}</span></button>)}</div>
-    <p className="xs muted">Changes take effect from tomorrow and are visible to your care circle. Past days are never rewritten.</p>
+    <div className="list">{(list ?? []).map(r => <button key={r.id} className="li" onClick={() => setEdit({ ...r, assignee: r.assignee_role === 'helper' ? 'helper' : r.assignee_role === 'co_owner' ? 'co_owner' : 'owner' })}><span className="mono small" style={{ minWidth: 52 }}>{fmt(r.due_minute)}</span><div className="grow"><b>{r.title}</b><div className="small muted">{petName(r.pet_id)} · {r.assignee_role === 'helper' ? 'Helper' : 'Family'} · {(r as RoutineItem & { recurrence?: string }).recurrence === 'once' ? 'today only' : 'from ' + r.effective_from}</div></div><span className="tag">{r.escalation_profile === 'medicine' ? 'Alert +15 · no backup' : r.escalation_profile === 'walk' ? 'Alert +45' : 'Alert +30'}</span></button>)}</div>
+    <p className="xs muted">Changes take effect from tomorrow and are visible to your care circle. Past days are never rewritten. To add something only for today, tap Add and choose Just for today.</p>
   </main></>;
 }
 

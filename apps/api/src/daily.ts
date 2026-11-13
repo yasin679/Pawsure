@@ -149,7 +149,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   /* ================= Routine (PS-010, PS-011) ================= */
   app.get('/v1/households/:hh/routine', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'routine', 'read'))) return x.deny(c);
-    return c.json(await db.query(`select r.*, r.effective_from::text as effective_from, m.role as assignee_role from routine_tasks r left join memberships m on m.id=r.assignee_membership_id where r.household_id=$1 and r.superseded_by is null order by r.due_minute, r.title`, [hh]));
+    return c.json(await db.query(`select r.*, r.effective_from::text as effective_from, m.role as assignee_role from routine_tasks r left join memberships m on m.id=r.assignee_membership_id where r.household_id=$1 and r.superseded_by is null and (r.recurrence <> 'once' or r.effective_from >= $2) order by r.due_minute, r.title`, [hh, istDate(now())]));
   });
   const RoutineIn = z.object({ petId: z.string(), title: z.string().min(1).max(80), type: z.enum(['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other']), due: z.number().int().min(0).max(1439), minMinutes: z.number().int().min(1).max(60).optional(), assignee: z.enum(['helper', 'owner', 'co_owner']), urgency: z.enum(['CanWait', 'TimeSensitive', 'MustHappen']).optional(), instructions: z.string().max(500).optional(), oneOffToday: z.boolean().optional(), enabled: z.boolean().optional() });
   async function writeRoutine(hh: string, userId: string, b: z.infer<typeof RoutineIn>, replaces?: string) {

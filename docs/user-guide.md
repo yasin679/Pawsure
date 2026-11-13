@@ -344,10 +344,12 @@ Helpers see the emergency card during a visit or incident; a confirmed friend se
 
 | # | Item | What it does |
 |---|---|---|
-| 1 | **Add** | A new task: pet, name, type, time, who does it (helper or you), instructions. |
+| 1 | **Add** | A new task: pet, name, type, time, urgency, who does it (helper, co-owner or you), instructions, and **When**: *Every day, from tomorrow* or *Just for today*. |
 | 2 | **Task** | Tap to edit. |
 
-Changes take effect from **tomorrow**. Today’s plan and past days are never rewritten.
+You can also reach this screen from Today: **Edit routine**, next to *Plan & evidence* (owners and co-owners).
+
+Changes take effect from **tomorrow**. Today’s plan and past days are never rewritten. The one exception is a new task marked **Just for today**: it is added to today’s plan at once, is listed as *today only*, and does not repeat. To change a task that is already in today’s plan, tap it on Today → **Change this task**: cancel it for today, mark it partly done or skipped, always with a reason that stays in the history.
 
 ### 4.3 Health calendar
 

@@ -35,6 +35,14 @@ describe('#1 new owner: pet + routine → Who’s caring today, no optional fiel
     const today = (await call<{ tasks: { title: string }[]; day: { mode: string } }>('GET', `/v1/households/${hh}/today`, undefined, t)).body;
     expect(today.tasks.map(x => x.title)).toContain('Dinner');
     expect((await call('PUT', `/v1/households/${hh}/day`, { mode: 'tracked' }, t)).status).toBe(200);
+    // A "just for today" task is today only: it never comes back tomorrow, and the routine list stops showing it.
+    const routine = (await call<{ title: string; recurrence: string }[]>('GET', `/v1/households/${hh}/routine`, undefined, t)).body;
+    expect(routine.find(r => r.title === 'Dinner')?.recurrence).toBe('once');
+    clock.set(at('08:00', D2));
+    const tomorrow = (await call<{ tasks: { title: string }[] }>('GET', `/v1/households/${hh}/today`, undefined, t)).body;
+    expect(tomorrow.tasks.map(x => x.title)).not.toContain('Dinner');
+    expect((await call<{ title: string }[]>('GET', `/v1/households/${hh}/routine`, undefined, t)).body.map(r => r.title)).not.toContain('Dinner');
+    clock.set(at('08:00'));
   });
 });
 

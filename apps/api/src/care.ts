@@ -15,7 +15,7 @@ export const audit = (db: Db, actor: string, household: string | null, action: s
 /** Idempotently create today's care tasks + visits from the active routine. The original plan is never rewritten. */
 export async function materialiseDay(db: Db, householdId: string, careDate: string) {
   const routine = await db.query<{ id: string; pet_id: string; title: string; task_type: string; due_minute: number; min_minutes: number; escalation_profile: string; visit_slot: string | null; assignee_membership_id: string | null; urgency: string | null }>(
-    `select * from routine_tasks where household_id=$1 and enabled and not owner_task and superseded_by is null and effective_from <= $2`, [householdId, careDate]);
+    `select * from routine_tasks where household_id=$1 and enabled and not owner_task and superseded_by is null and effective_from <= $2 and (recurrence <> 'once' or effective_from = $2)`, [householdId, careDate]);
   for (const r of routine) {
     const taskId = `${r.id}_${careDate}`;
     let visitId: string | null = null;

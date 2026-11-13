@@ -51,6 +51,9 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | 4 | The request said “understood by rules (no AI connected)” while the AI switch said “working” | The switch is now “Request parser: rules (no AI connected)”, and its other options say “simulate …” |
 | 5 | The welcome mascot sat on a visible beige box | Uses a transparent image |
 | 6 | Demo layout and developer wording | Simulated phones sit beside the owner app on wide screens; presenter-visible labels no longer mention webhooks |
+| 7 | No way to plan from Today, or to add a task for today only | **Edit routine** next to *Plan & evidence*; new tasks can be **Just for today** (added at once, never repeated) |
+| 8 | A task added for today only would have repeated every day | One-off tasks are planned on their own day only and drop off the routine list afterwards |
+| 9 | “Call your backup” in the shared demo showed “This content is blocked” | In the demo, call and WhatsApp buttons show a simulated notice; the sign-in screen lists every demo number |
 
 ## 4 Upgrade notes
 
