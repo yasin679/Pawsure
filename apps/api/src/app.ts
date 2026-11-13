@@ -37,7 +37,8 @@ export function createApp(input: Deps) {
   const now = () => d.clock.now();
 
   app.onError((err, c) => {
-    if (err instanceof z.ZodError) return c.json({ error: 'invalid_input', issues: err.issues.map(i => i.path.join('.') + ': ' + i.message) }, 400);
+    // `message` carries a plain sentence when the schema gives one (PAW-002); `issues` keeps the technical detail.
+    if (err instanceof z.ZodError) { const plain = err.issues.find(i => /^[A-Z].*\.$/.test(i.message)); return c.json({ error: 'invalid_input', issues: err.issues.map(i => i.path.join('.') + ': ' + i.message), ...(plain ? { message: plain.message } : {}) }, 400); }
     const msg = err instanceof Error ? err.message : String(err);
     if (msg === 'otp_delivery_failed') return c.json({ error: 'sms_unavailable', message: 'We could not send the code. Please try again in a few minutes.' }, 503);
     if (/needs a reason|Cannot move|required/.test(msg)) return c.json({ error: 'invalid_transition', message: msg }, 409);

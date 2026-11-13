@@ -8,6 +8,19 @@ const EXAMPLES: [string, string][] = [['Clear request', 'I am stuck in a meeting
 const STATE_CLS: Record<string, string> = { Draft: 'c-pending', 'Ready for search': 'c-pending', 'Awaiting owner approval': 'c-pending', Sent: 'c-likely', 'Accepted - pending owner confirmation': 'c-notconfirmed', 'Provisional hold': 'c-notconfirmed', Confirmed: 'c-confirmed', Completed: 'c-confirmed', Declined: 'c-cancelled', Expired: 'c-cancelled', Cancelled: 'c-cancelled', 'Cancelled by friend': 'c-mismatch', 'No-show': 'c-missed' };
 export const StateTag = ({ s }: { s: string }) => <span className={`conf ${STATE_CLS[s] ?? 'c-pending'}`}>{s}</span>;
 const REC: Record<string, string> = { sent: 'Waiting', accepted: 'Said yes', waiting: 'Said yes — waiting (no double booking)', proposed: 'Suggested another time', unclear: 'Replied unclearly — asked again', declined: 'Declined', expired: 'No reply — expired', withdrawn: 'Closed politely', released: 'Hold released', confirmed: 'Confirmed', cancelled: 'Cancelled after confirming' };
+/** PAW-012: the exact time of an event, in India time, to the second. */
+const exact = (ts?: string) => ts ? new Date(ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '';
+/** PAW-004: the latest three events, with the rest one tap away. */
+function History({ items }: { items: ReqView['history'] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(-3);
+  return <div className="card flat"><div className="row"><span className="eyebrow grow">Event history</span>{items.length > 3 && <button className="btn ghost sm" aria-expanded={all} onClick={() => setAll(a => !a)}>{all ? 'Show latest 3' : `View all (${items.length})`}</button>}</div>
+    {!all && items.length > 3 && <div className="xs muted">{items.length - 3} earlier events hidden</div>}
+    {shown.map((x, i) => <div key={i} className="row small top"><span className="mono muted" style={{ minWidth: 92 }} title={x.ts}>{exact(x.ts) || hm(x.at)}</span><span className="grow"><b>{x.state}</b>{x.note ? ' — ' + x.note : ''}</span></div>)}</div>;
+}
+/** PAW-013: the simple form survives switching tabs (the typed request text already does). */
+let manualDraft: { tasks: FFTask[]; petId: string; time: number; access: string } | null = null;
+
 type View = { k: 'ask' } | { k: 'review'; id: string } | { k: 'manual'; id?: string; reason?: string } | { k: 'suggest'; id: string } | { k: 'approve'; id: string; ids: string[]; mode: 'one' | 'all3' } | { k: 'request'; id: string };
 
 export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void }) {
@@ -15,13 +28,15 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
   const [reqs, setReqs] = useState<ReqView[]>([]); const [req, setReq] = useState<ReqView | null>(null); const [sr, setSr] = useState<SearchResult | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [approved, setApproved] = useState(false); const [sel, setSel] = useState<string[]>([]);
   useEffect(() => { if (!openRequest) return; (async () => { try { const r = await api<SearchResult>(`/v1/households/${hh}/requests/${openRequest}/search`, { body: {} }); setSr(r); setReq(r.request); setSel([]); setApproved(false); setV({ k: 'suggest', id: openRequest } as View); } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? e.body.error) : 'Can’t reach Pawsure.'); } onOpened?.(); })(); }, [openRequest]);
-  const [manual, setManual] = useState<{ tasks: FFTask[]; petId: string; time: number; access: string }>({ tasks: [], petId: pets[0]?.id ?? '', time: 1080, access: 'Key handover' });
+  const [manual, setManualState] = useState<{ tasks: FFTask[]; petId: string; time: number; access: string }>(manualDraft ?? { tasks: [], petId: pets[0]?.id ?? '', time: 1080, access: 'Key handover' });
+  const setManual = (f: (m: typeof manual) => typeof manual) => setManualState(m => (manualDraft = f(m)));
+  const [dupErr, setDupErr] = useState<string | null>(null);
   const H = `/v1/households/${hh}`;
   const loadList = () => api<ReqView[]>(`${H}/requests`).then(setReqs).catch(() => {});
   const loadReq = async (id: string) => { const r = await api<ReqView>(`${H}/requests/${id}`); setReq(r); return r; };
   useEffect(() => { if (v.k === 'ask') loadList(); if (v.k === 'request' || v.k === 'review') loadReq(v.id); }, [v]);
   useEffect(() => { if (v.k !== 'request') return; const t = setInterval(() => loadReq(v.id), 5000); return () => clearInterval(t); }, [v]);
-  const run = async (fn: () => Promise<void>) => { setErr(null); setBusy(true); try { await fn(); } catch (e) { setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<void>) => { if (busy) return; setErr(null); setDupErr(null); setBusy(true); try { await fn(); } catch (e) { if (e instanceof ApiError && e.body.duplicateOf) setDupErr(String(e.body.duplicateOf)); setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
   const petName = (id: string | null) => pets.find(p => p.id === id)?.name ?? '';
   const summary = (r: ReqView) => r.parsed ? `${r.parsed.tasks.map(t => TASKS.find(x => x[0] === t)?.[1]).join(' + ')} for ${petName(r.parsed.petId)}${(r.taskTime ?? r.parsed.time) != null ? ' at ' + fmt((r.taskTime ?? r.parsed.time)!) : ''}` : (r.text ?? '');
   const startVoice = () => {
@@ -35,6 +50,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
     const patch = (body: unknown) => run(async () => setReq(await api<ReqView>(`${H}/requests/${req.id}`, { method: 'PATCH', body })));
     return <><AppBar title="Check the details" onBack={() => setV({ k: 'ask' })} /><main className="body">
       <div className="card flat small"><span className="eyebrow">You said</span>“{req.text}”</div>
+      {!!req.petChanged?.length && <Banner kind="info" icon="↻"><b>{petName(p?.petId ?? null) || 'Your pet'}’s profile changed since you wrote this</b> ({req.petChanged.join(', ')}). Search uses the latest details from the pet profile.</Banner>}
       {req.clarifications.map(c => <div key={c.field} className="card warn" role="alert"><b>{c.question}</b><div className="chips">{c.options.map(o => <button key={o.value} className="btn sm" onClick={() => patch({ clarify: { field: c.field, value: o.value } })}>{o.label}</button>)}</div></div>)}
       {p && <div className="card"><span className="eyebrow">Pawsure understood — tap to correct</span>
         <div className="chips">{TASKS.map(([k, l]) => <button key={k} className={`tag ${p.tasks.includes(k) ? 'flag-on' : 'flag-off'}`} aria-pressed={p.tasks.includes(k)} onClick={() => patch({ fields: { tasks: p.tasks.includes(k) ? p.tasks.filter(t => t !== k) : [...p.tasks, k] } })}>{p.tasks.includes(k) ? '✓ ' : '+ '}{l}</button>)}</div>
@@ -58,7 +74,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       <div className="field"><label htmlFor="mt">Time</label><select id="mt" className="input" value={manual.time} onChange={e => { const val = Number(e.target.value); setManual(m => ({ ...m, time: val })); }}>{Array.from({ length: 34 }, (_, i) => 420 + i * 30).map(m => <option key={m} value={m}>{fmt(m)}</option>)}</select></div></div>
     <div className="field"><label htmlFor="mk">Key needed?</label><select id="mk" className="input" value={manual.access} onChange={e => { const val = e.target.value; setManual(m => ({ ...m, access: val })); }}><option value="Key handover">Yes — key handover</option><option value="Someone at home">No — someone is home</option></select></div>
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); setSr(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} })); setSel([]); setV({ k: 'suggest', id: r.id }); })}>Search my friends</button>
+    <button className="btn primary block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; setSr(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} })); setSel([]); setV({ k: 'suggest', id: r.id }); })}>Search my friends</button>
   </main></>;
 
   if (v.k === 'suggest' && sr) {
@@ -75,6 +91,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       <p className="xs muted">{sr.laterOptions}</p></main></>;
     return <><AppBar title="Suggestions" onBack={() => setV({ k: 'review', id: sr.request.id })} /><main className="body">
       <div className="card flat small"><b>{summary(sr.request)}</b> · {sr.request.parsed?.access}<br /><span className="xs muted">Your own friends only. Nearest first. No paid placement, ever.</span></div>
+      {sr.request.duplicateOf && <Banner kind="warn" icon="!"><b>You already have a request out to friends for this.</b> Same pet, about the same time. <button className="btn sm" onClick={() => setV({ k: 'request', id: sr.request.duplicateOf! })}>Open it</button></Banner>}
       {sr.top.map((t, i) => <div key={t.id} className="card"><div className="row"><span className="avatar">{t.name[0]}</span><div className="grow"><b>{i + 1}. {t.name}</b><div className="small muted">{t.distance} · {({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</div></div>
         <label className="check" style={{ padding: 0 }}><input type="checkbox" aria-label={'Select ' + t.name} checked={sel.includes(t.id)} onChange={e => { const on = e.target.checked; setSel(s => on ? [...s, t.id] : s.filter(x => x !== t.id)); }} /></label></div>
         <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{t.reasons.map(r => <li key={r}>{r}</li>)}</ul>
@@ -94,6 +111,8 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       <div className="card flat small">Not included until you confirm: flat number, key location, emergency card, when the home is empty.</div>
       <label className="check"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} /><span>I approve sending {list.length > 1 ? `these ${list.length} messages` : 'this message'}</span></label>
       {err && <span className="errtext" role="alert">{err}</span>}
+      {dupErr && <button className="btn sm" onClick={() => setV({ k: 'request', id: dupErr })}>Open the active request</button>}
+      {err && /Search again/.test(err) && <button className="btn sm" onClick={() => run(async () => { setSr(await api<SearchResult>(`${H}/requests/${v.id}/search`, { body: {} })); setSel([]); setV({ k: 'suggest', id: v.id }); })}>Search again</button>}
       <button className="btn primary block" disabled={!approved || busy} onClick={() => run(async () => { await api(`${H}/requests/${v.id}/approve`, { body: { friendIds: v.ids, mode: v.mode, approved: true } }); setV({ k: 'request', id: v.id }); })}>Send on WhatsApp</button>
     </main></>;
   }
@@ -107,7 +126,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
         {req.state === 'Provisional hold' && req.holdAt != null && <div className="small"><b>Hold ends {fmt(req.holdAt + 10)}.</b> If you don’t confirm, it’s released and others can accept.</div>}
         {req.searchClosesAt != null && ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && <div className="xs muted">Search closes at {fmt(req.searchClosesAt)} (30 min before the task).</div>}</div>
       {req.recipients.length > 0 && <div className="list">{req.recipients.map(r => <div key={r.friendId} className="li"><span className="avatar">{r.name?.[0]}</span><div className="grow"><b>{r.name}</b><div className="small muted">{r.state === 'sent' ? `Waiting · expires ${fmt(r.sentAt + 15)}${r.reminded ? ' · reminded' : ''}` : r.state === 'proposed' ? `Suggested ${fmt(r.proposal!)}` : REC[r.state]}</div></div>
-        {['accepted', 'proposed'].includes(r.state) && !req.confirmedFriendId && <button className="btn sm primary" onClick={() => act('confirm', { friendId: r.friendId })}>{r.state === 'proposed' ? 'Confirm ' + hm(r.proposal!) : 'Confirm'}</button>}</div>)}</div>}
+        {['accepted', 'proposed'].includes(r.state) && !req.confirmedFriendId && <button className="btn sm primary" disabled={busy} onClick={() => act('confirm', { friendId: r.friendId })}>{r.state === 'proposed' ? 'Confirm ' + hm(r.proposal!) : 'Confirm'}</button>}</div>)}</div>}
       {req.state === 'Confirmed' && <div className="card"><span className="eyebrow">Shared with {req.confirmedName?.split(' ')[0]} — minimum needed, this visit only</span><div className="small">Flat number, key arrangement, pet food and fears, emergency card during the visit. Removed automatically afterwards.</div></div>}
       {req.state === 'No-show' && <Banner kind="alert" icon="!">No check-in from {req.confirmedName} by {fmt((req.taskTime ?? 0) + 20)}. Your backup has been alerted. This stays private.</Banner>}
       {req.state === 'Cancelled by friend' && <Banner kind="alert" icon="!">{req.confirmedName ?? 'The friend'} cancelled. Access details were removed and a new search was opened without them — see Requests.</Banner>}
@@ -115,10 +134,12 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       {req.state === 'Completed' && <div className="card hero"><b>Done — thank you, {req.confirmedName?.split(' ')[0]}!</b><a className="btn" href={`https://wa.me/?text=${encodeURIComponent('Thank you so much for helping today! 🙏')}`} target="_blank" rel="noreferrer">Thank on WhatsApp</a><div className="small">Thank-you points: switched off until funding is approved.</div></div>}
       {err && <span className="errtext" role="alert">{err}</span>}
       <div className="btnrow">
-        {['Sent', 'Provisional hold', 'Accepted - pending owner confirmation', 'Confirmed', 'Awaiting owner approval', 'Ready for search', 'Draft'].includes(req.state) && <button className="btn" onClick={() => act('cancel')}>Cancel request</button>}
-        {['Confirmed', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && req.taskTime != null && <button className="btn" onClick={() => act('change-time', { time: req.taskTime! + 30 })}>Change time +30 min</button>}
+        {req.editable && <button className="btn primary" onClick={() => setV({ k: 'review', id: req.id })}>Edit request</button>}
+        {['Sent', 'Provisional hold', 'Accepted - pending owner confirmation', 'Confirmed', 'Awaiting owner approval', 'Ready for search', 'Draft'].includes(req.state) && <button className="btn" disabled={busy} onClick={() => act('cancel')}>Cancel request</button>}
+        {['Confirmed', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && req.taskTime != null && <button className="btn" disabled={busy} onClick={() => act('change-time', { time: req.taskTime! + 30 })}>Change time +30 min</button>}
       </div>
-      <div className="card flat"><span className="eyebrow">Event history</span>{req.history.map((x, i) => <div key={i} className="row small top"><span className="mono muted" style={{ minWidth: 48 }}>{hm(x.at)}</span><span className="grow"><b>{x.state}</b>{x.note ? ' — ' + x.note : ''}</span></div>)}</div>
+      {!req.editable && ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation', 'Confirmed'].includes(req.state) && <p className="xs muted">Already sent to friends, so the details can’t be edited. Cancel and ask again, or change the time once a friend has said yes.</p>}
+      <History items={req.history} />
     </main></>;
   }
 
@@ -131,7 +152,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       <button className="btn primary block" disabled={busy || !draft.trim()} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { text: draft } }); if (r.needsManualForm) setV({ k: 'manual', reason: r.fallbackReason }); else { setReq(r); setV({ k: 'review', id: r.id }); } })}>{busy ? 'Understanding… (up to 8 s)' : 'Understand my request'}</button>
       <div className="row"><span className="xs muted grow">Pawsure checks your own friends first and sends nothing until you approve.</span><button className="btn ghost sm" onClick={() => setV({ k: 'manual' })}>Simple form</button></div></div>
     <h2 style={{ fontSize: 'var(--fs-l)' }}>Requests</h2>
-    {reqs.length ? <div className="list">{reqs.map(r => <button key={r.id} className="li" onClick={() => setV(['Draft'].includes(r.state) && r.parsed ? { k: 'review', id: r.id } : { k: 'request', id: r.id })}><div className="grow"><b>{summary(r) || 'Request'}</b><div className="small muted">{r.recipients.map(x => x.name?.split(' ')[0]).join(', ') || 'not sent'}</div></div><StateTag s={r.state} /></button>)}</div>
+    {reqs.length ? <div className="list">{reqs.map(r => <button key={r.id} className="li" onClick={() => setV(r.state === 'Draft' && r.parsed ? { k: 'review', id: r.id } : { k: 'request', id: r.id })}><div className="grow"><b>{summary(r) || 'Request'}</b><div className="small muted">{r.recipients.map(x => x.name?.split(' ')[0]).join(', ') || 'not sent'}</div></div><StateTag s={r.state} /></button>)}</div>
       : <div className="empty"><Art name="sleep" width={170} /><b>No requests yet</b><span>Ask in your own words. Nothing is sent until you approve it.</span></div>}
   </main></>;
 }

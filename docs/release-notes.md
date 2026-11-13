@@ -55,6 +55,25 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | 8 | A task added for today only would have repeated every day | One-off tasks are planned on their own day only and drop off the routine list afterwards |
 | 9 | “Call your backup” in the shared demo showed “This content is blocked” | In the demo, call and WhatsApp buttons show a simulated notice; the sign-in screen lists every demo number |
 
+### 3.1 QA defect tracker (13 Nov 2026)
+
+From *Pawsure_QA_Defect_Tracker.xlsx* (16 items). Each item now has a test: `apps/api/test/qa-defects.test.ts`, `packages/domain/test/friendfinder-idempotent.test.ts` and `e2e/13-qa-defects.spec.ts` (Q1–Q5).
+
+| ID | Finding | Fix |
+|---|---|---|
+| PAW-001, 005 | An unsent request offered only **Cancel**; editability by state was not defined | **Edit request** while Draft, Ready for search or Awaiting owner approval; after sending, a reason is shown and the server refuses edits with a plain message |
+| PAW-002, 008 | A New task with no name showed `title: Invalid input: expected string, received undefined` | The name is the first field and required; “Give the task a name.” by the field before anything is sent; the server gives the same plain message. Medicine tasks need written instructions on both sides |
+| PAW-003 | Repeated Draft → Ready → Awaiting cycles in the history | Re-selecting a value already chosen records nothing; each real edit records one “Owner edited the request” |
+| PAW-004 | History filled the screen | Latest 3 events, **View all (n)** for the rest |
+| PAW-006 | Pet profile changes did not reach an unsent request | The medicine question quotes the current profile; a later change is flagged and search uses the new text |
+| PAW-007 | Two requests could be out for the same visit | A second request for the same pet, day and task within 30 min can’t be sent; Suggestions offers **Open it** |
+| PAW-012 | Times only to the minute, and from the database clock | Every event has an exact time from the app clock, shown to the second |
+| PAW-013 | Leaving New task lost typed work; the simple form reset on a tab switch | Discard prompt on New task; the simple form keeps its values |
+| PAW-014 | A second Confirm, Cancel or Send returned an error, and two at once could both run | Repeats are ignored (200, nothing re-sent); one owner action at a time per request; buttons are disabled while saving |
+| PAW-015 | Switching the pet on a medicine request kept the first pet’s medicine instructions | The new pet’s own instructions are used, or the owner is asked when it has none |
+| PAW-016 | Approving after an edit gave a bare `search_first` | “The request has changed since the suggestions were made. Search again before sending.” with a **Search again** button |
+| PAW-009, 010, 011 | Proposed tests | Passed with no change: start dates by India time (also just after midnight), one must-happen alert at +15 min and none for a task with evidence, co-owner reminder only to the co-owner |
+
 ## 4 Upgrade notes
 
 - Migration `006_cover_continuity.sql` runs at start-up and only adds tables and columns. Rollback: `packages/db/rollback/006_cover_continuity.down.sql` (by hand, after a backup; it removes all cover data).

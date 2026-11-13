@@ -21,7 +21,8 @@ export interface FriendRequest {
   origin?: { jobId: string; text: string };
   /** v1.4 PS-138: first-time carers who ticked "I have read this" on the handling note. */
   noteReadBy?: string[];
-  history: { at: Minutes; state: RequestState; note: string }[];
+  /** `at` is the minute of the care day; `ts` is the exact time the API recorded it (PAW-012). */
+  history: { at: Minutes; state: RequestState; note: string; ts?: string }[];
 }
 
 export interface FFTimers { expiry: number; reminder: number; hold: number; holdReminder: number; closeBeforeTask: number; noShowAfter: number }
@@ -74,6 +75,8 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
       if (req.state !== 'Ready for search') throw new TransitionError('not ready for search');
       go('Awaiting owner approval', 'Suggestions shown'); break;
     case 'owner_approved_send': {
+      // PAW-014: the same Send arriving twice (double tap, network retry) is ignored rather than refused.
+      if (req.state !== 'Awaiting owner approval' && req.recipients.length && req.recipients.length === ev.friendIds.length && ev.friendIds.every(f => rec(f)) && req.mode === ev.mode) return { req: req0, effects: [] };
       if (req.state !== 'Awaiting owner approval') throw new TransitionError('owner approval is only possible after suggestions');
       if (!ev.friendIds.length || (ev.mode === 'one' && ev.friendIds.length !== 1) || ev.friendIds.length > 3) throw new TransitionError('invalid recipients');
       // PS-131: no new request at or after the search cutoff. The owner is told why and the backup list is used instead.
@@ -121,6 +124,7 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
     }
     case 'owner_confirm': {
       const r = rec(ev.friendId);
+      if (req.confirmedFriendId === ev.friendId && r?.state === 'confirmed') return { req: req0, effects: [] }; // PAW-014: repeated Confirm
       if (!r || !['accepted', 'proposed'].includes(r.state) || !OPEN.includes(req.state)) throw new TransitionError('nothing to confirm for this friend');
       if (r.proposal != null) req.taskTime = r.proposal;
       r.state = 'confirmed'; req.confirmedFriendId = r.friendId;
@@ -129,6 +133,7 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
       go('Confirmed', `Owner confirmed ${r.friendId}`); break;
     }
     case 'owner_cancel':
+      if (req.state === 'Cancelled') return { req: req0, effects: [] }; // PAW-014: repeated Cancel
       if (CLOSED.includes(req.state) && req.state !== 'Confirmed') throw new TransitionError('already closed');
       req.recipients.filter(x => !['declined', 'expired', 'withdrawn'].includes(x.state)).forEach(x => { fx.push({ type: 'message_friend', friendId: x.friendId, template: 'cancelled_by_owner' }); if (x.state === 'confirmed') fx.push({ type: 'revoke_access', friendId: x.friendId }); x.state = 'withdrawn'; });
       go('Cancelled', 'Owner cancelled'); break;

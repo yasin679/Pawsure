@@ -454,7 +454,10 @@ With **Ask all 3**, the first valid Yes is held for 10 minutes while you confirm
 | 1 | **State** | *Sent*, *Provisional hold*, *Accepted - pending owner confirmation*, *Confirmed*, *Completed*, *Declined*, *Expired*, *Cancelled*, *No-show*. |
 | 2 | **Friend** | Their reply: waiting, said yes, suggested another time, declined. A request expires after 15 minutes without a reply (reminder at 8). |
 | 3 | **Confirm** | Confirms the friend. If they suggested another time, the button says **Confirm 5:30** and nothing changes until you tap it. |
-| 4 | **Event history** | Every step, in order. |
+| 4 | **Event history** | The latest three steps with their exact time (to the second); **View all** shows every step. |
+| 5 | **Edit request** | Shown until the request is sent: opens *Check the details* again. After it is sent, cancel and ask again, or use **Change time** once a friend has said yes. |
+
+Tapping a button twice, or a retry on a slow connection, never sends anything twice. If you already have a request out to friends for the same pet at about the same time, Suggestions says so and offers **Open it**; a second one can’t be sent. If you change the pet’s profile (for example the medicine instructions) before the request is sent, *Check the details* says so and the search uses the new details. Changing the pet on a medicine request uses that pet’s own instructions, never the previous pet’s.
 
 ![Figure 35: Confirmed: what is shared](images/36-confirmed.jpg)
 

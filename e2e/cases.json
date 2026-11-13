@@ -15,7 +15,8 @@
     "M": "Login separation and security",
     "N": "Reported issues (regression)",
     "O": "Cover continuity (v1.4)",
-    "P": "Fixes from demo testing (v1.1.0)"
+    "P": "Fixes from demo testing (v1.1.0)",
+    "Q": "QA defect tracker (v1.1.0)"
   },
   "cases": {
     "A1": {
@@ -689,6 +690,36 @@
       "pre": "Fresh demo, owner signed in",
       "steps": "1. Demo bar → v1.4 scenario… → pick each of O1 to O14",
       "expected": "Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state"
+    },
+    "Q1": {
+      "role": "Owner",
+      "pre": "Find cover",
+      "steps": "1. Ask: feed Bruno at 6 pm\n2. Search, then Back\n3. Open the request (Awaiting owner approval) → Edit request\n4. Change time, search, send to Priya",
+      "expected": "Edit request opens Check the details while unsent; after sending, Edit is gone and the reason is shown (PAW-001, PAW-005)"
+    },
+    "Q2": {
+      "role": "Owner",
+      "pre": "A sent request",
+      "steps": "1. Look at Event history\n2. View all",
+      "expected": "Latest 3 events with exact times (h:mm:ss); View all shows every event (PAW-004, PAW-012)"
+    },
+    "Q3": {
+      "role": "Owner",
+      "pre": "Unsent medicine request",
+      "steps": "1. Change Bruno’s medicine in the pet profile\n2. Reopen the request\n3. Answer the medicine question\n4. Change the profile again and reopen",
+      "expected": "The question quotes the current profile; after answering, a later change is flagged and search uses the new text (PAW-006)"
+    },
+    "Q4": {
+      "role": "Owner",
+      "pre": "Today → Edit routine → Add",
+      "steps": "1. Save with no name\n2. Type: medicine, name Eye drops, no instructions → Save",
+      "expected": "“Give the task a name.” by the field, nothing saved; medicine needs written instructions (PAW-002, PAW-008)"
+    },
+    "Q5": {
+      "role": "Owner",
+      "pre": "New task / Simple form",
+      "steps": "1. Type a task name → Back\n2. Keep editing\n3. Simple form: tick Feed → switch tabs → reopen",
+      "expected": "Discard prompt before losing edits; the simple form keeps its ticks (PAW-013)"
     }
   },
   "defects": [

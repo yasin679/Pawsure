@@ -49,7 +49,11 @@ describe('F4/F5: parse, search, approve (PS-055–059)', () => {
     expect(adapters.outbox.filter(o => o.template.startsWith('FF-REQ')).length).toBe(0);
     const r = await call<View>('POST', `${HH}/requests/${id}/approve`, { friendIds: ['u_priya'], mode: 'one', approved: true }, owner);
     expect(r.body.state).toBe('Sent');
-    expect((await call('POST', `${HH}/requests/${id}/approve`, { friendIds: ['u_priya'], mode: 'one', approved: true }, owner)).status).toBe(409);
+    // QA PAW-014: the same Send again is ignored (200, nothing re-sent); a different recipient list is still refused.
+    const sentBefore = adapters.outbox.filter(o => o.template.startsWith('FF-REQ')).length;
+    expect((await call('POST', `${HH}/requests/${id}/approve`, { friendIds: ['u_priya'], mode: 'one', approved: true }, owner)).status).toBe(200);
+    expect(adapters.outbox.filter(o => o.template.startsWith('FF-REQ')).length).toBe(sentBefore);
+    expect((await call('POST', `${HH}/requests/${id}/approve`, { friendIds: ['u_arjun'], mode: 'one', approved: true }, owner)).status).toBe(409);
   });
   it('friend Yes is idempotent; access stays hidden until the owner confirms', async () => {
     await reply(PHONE.priya, `ff_yes:${id}`, undefined, 'dup-1');

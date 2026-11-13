@@ -8,7 +8,15 @@ const useLoad = <T,>(path: string, deps: unknown[] = []) => {
   useEffect(() => { api<T>(path).then(setData).catch(() => setData(null)); }, [path, n, ...deps]);
   return [data, () => setN(x => x + 1)] as const;
 };
-const errText = (e: unknown) => e instanceof ApiError ? (e.status === 403 ? 'Your role can’t change this.' : String((e.body.issues as string[] | undefined)?.join('; ') ?? e.body.error)) : 'Can’t reach Pawsure.';
+const errText = (e: unknown) => e instanceof ApiError ? (e.status === 403 ? 'Your role can’t change this.' : String(e.body.message ?? (e.body.issues as string[] | undefined)?.join('; ') ?? e.body.error)) : 'Can’t reach Pawsure.';
+/** PAW-002 / PAW-008: the same rules as the server, checked before anything is sent. */
+export const routineProblems = (t: { title?: string | null; task_type?: string | null; instructions?: string | null }) => {
+  const p: { field: 'rtt' | 'rin'; text: string }[] = [];
+  if (!t.title?.trim()) p.push({ field: 'rtt', text: 'Give the task a name.' });
+  else if (t.title.trim().length > 80) p.push({ field: 'rtt', text: 'Keep the task name under 80 characters.' });
+  if ((t.task_type ?? 'feeding') === 'medicine' && !t.instructions?.trim()) p.push({ field: 'rin', text: 'Add the vet’s written instructions for a medicine task.' });
+  return p;
+};
 
 export function RoutineScreen({ hh, pets, onBack, onChanged }: { hh: string; pets: Pet[]; onBack: () => void; onChanged?: () => void }) {
   const [list, reload] = useLoad<RoutineItem[]>(`/v1/households/${hh}/routine`);
@@ -16,24 +24,31 @@ export function RoutineScreen({ hh, pets, onBack, onChanged }: { hh: string; pet
   const [edit, setEdit] = useState<Partial<RoutineItem> & { assignee?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const petName = (id: string) => pets.find(p => p.id === id)?.name ?? id;
-  if (edit) return <><AppBar title={edit.id ? 'Edit task' : 'New task'} onBack={() => setEdit(null)} /><main className="body">
-    <div className="field"><label htmlFor="rp">Pet</label><select id="rp" className="input" value={edit.pet_id ?? pets[0]?.id} onChange={e => setEdit({ ...edit, pet_id: e.target.value })}>{pets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-    <div className="field"><label htmlFor="rtt">Task</label><input id="rtt" className="input" value={edit.title ?? ''} onChange={e => setEdit({ ...edit, title: e.target.value })} /></div>
-    <div className="grid2"><div className="field"><label htmlFor="rty">Type</label><select id="rty" className="input" value={edit.task_type ?? 'feeding'} onChange={e => setEdit({ ...edit, task_type: e.target.value })}>{['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other'].map(t => <option key={t}>{t}</option>)}</select></div>
-      <div className="field"><label htmlFor="rdu">Due</label><select id="rdu" className="input" value={edit.due_minute ?? 780} onChange={e => setEdit({ ...edit, due_minute: Number(e.target.value) })}>{Array.from({ length: 34 }, (_, i) => 420 + i * 30).map(m => <option key={m} value={m}>{fmt(m)}</option>)}</select></div></div>
-    <div className="field"><label htmlFor="rur">Urgency</label><select id="rur" className="input" value={(edit as { urgency?: string }).urgency ?? (edit.task_type === 'medicine' ? 'MustHappen' : edit.task_type === 'walk' || edit.task_type === 'other' ? 'CanWait' : 'TimeSensitive')} onChange={e => setEdit({ ...edit, urgency: e.target.value } as typeof edit)}><option value="CanWait">Can wait: may be moved or skipped</option><option value="TimeSensitive">Time-sensitive: may be moved, with a warning</option><option value="MustHappen">Must happen: can’t be skipped; alert at +15 min</option></select><span className="hint">Defaults: walk or play can wait; meals are time-sensitive; medicine must happen.</span></div>
-    <div className="field"><label htmlFor="ras">Who (one named person per task)</label><select id="ras" className="input" value={edit.assignee ?? 'helper'} onChange={e => setEdit({ ...edit, assignee: e.target.value })}><option value="helper">Helper (tracked)</option><option value="co_owner">Co-owner (gets the same reminder)</option><option value="owner">Me / family</option></select></div>
-    <div className="field"><label htmlFor="rin">Instructions</label><textarea id="rin" className="input" value={edit.instructions ?? ''} onChange={e => setEdit({ ...edit, instructions: e.target.value })} /><span className="hint">{edit.task_type === 'medicine' ? 'Copy your vet’s written instructions. Medicine is never passed to your backup.' : 'Shown to whoever does the task.'}</span></div>
+  const [shown, setShown] = useState<{ field: string; text: string }[]>([]);
+  const [dirty, setDirty] = useState(false); const [leaving, setLeaving] = useState(false);
+  const change = (next: typeof edit) => { setEdit(next); setDirty(true); if (shown.length) setShown(routineProblems(next ?? {})); };
+  const close = () => { setEdit(null); setShown([]); setDirty(false); setLeaving(false); setErr(null); };
+  const fieldErr = (f: string) => shown.find(s => s.field === f)?.text;
+  if (edit) return <><AppBar title={edit.id ? 'Edit task' : 'New task'} onBack={() => dirty ? setLeaving(true) : close()} /><main className="body">
+    {/* PAW-013: leaving with unsaved changes asks first */}
+    {leaving && <div className="card warn" role="alertdialog" aria-label="Discard changes?"><b>Discard your changes to this task?</b><div className="btnrow"><button className="btn" onClick={() => setLeaving(false)}>Keep editing</button><button className="btn dark" onClick={close}>Discard</button></div></div>}
+    <div className="field"><label htmlFor="rtt">Task name (required)</label><input id="rtt" className="input" autoFocus={!edit.id} required maxLength={80} aria-invalid={!!fieldErr('rtt')} aria-describedby={fieldErr('rtt') ? 'rtt-err' : undefined} placeholder="e.g. Evening walk" value={edit.title ?? ''} onChange={e => change({ ...edit, title: e.target.value })} />{fieldErr('rtt') && <span id="rtt-err" className="errtext" role="alert">{fieldErr('rtt')}</span>}</div>
+    <div className="field"><label htmlFor="rp">Pet</label><select id="rp" className="input" value={edit.pet_id ?? pets[0]?.id} onChange={e => change({ ...edit, pet_id: e.target.value })}>{pets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+    <div className="grid2"><div className="field"><label htmlFor="rty">Type</label><select id="rty" className="input" value={edit.task_type ?? 'feeding'} onChange={e => change({ ...edit, task_type: e.target.value })}>{['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other'].map(t => <option key={t}>{t}</option>)}</select></div>
+      <div className="field"><label htmlFor="rdu">Due</label><select id="rdu" className="input" value={edit.due_minute ?? 780} onChange={e => change({ ...edit, due_minute: Number(e.target.value) })}>{Array.from({ length: 34 }, (_, i) => 420 + i * 30).map(m => <option key={m} value={m}>{fmt(m)}</option>)}</select></div></div>
+    <div className="field"><label htmlFor="rur">Urgency</label><select id="rur" className="input" value={(edit as { urgency?: string }).urgency ?? (edit.task_type === 'medicine' ? 'MustHappen' : edit.task_type === 'walk' || edit.task_type === 'other' ? 'CanWait' : 'TimeSensitive')} onChange={e => change({ ...edit, urgency: e.target.value } as typeof edit)}><option value="CanWait">Can wait: may be moved or skipped</option><option value="TimeSensitive">Time-sensitive: may be moved, with a warning</option><option value="MustHappen">Must happen: can’t be skipped; alert at +15 min</option></select><span className="hint">Defaults: walk or play can wait; meals are time-sensitive; medicine must happen.</span></div>
+    <div className="field"><label htmlFor="ras">Who (one named person per task)</label><select id="ras" className="input" value={edit.assignee ?? 'helper'} onChange={e => change({ ...edit, assignee: e.target.value })}><option value="helper">Helper (tracked)</option><option value="co_owner">Co-owner (gets the same reminder)</option><option value="owner">Me / family</option></select></div>
+    <div className="field"><label htmlFor="rin">Instructions{edit.task_type === 'medicine' ? ' (required for medicine)' : ''}</label><textarea id="rin" className="input" aria-invalid={!!fieldErr('rin')} value={edit.instructions ?? ''} onChange={e => change({ ...edit, instructions: e.target.value })} /><span className="hint">{edit.task_type === 'medicine' ? 'Copy your vet’s written instructions. Medicine is never passed to your backup.' : 'Shown to whoever does the task.'}</span>{fieldErr('rin') && <span className="errtext" role="alert">{fieldErr('rin')}</span>}</div>
     {!edit.id && <fieldset className="field"><legend>When</legend>
       <label className="row"><input type="radio" name="rwhen" checked={!oneOff} onChange={() => setOneOff(false)} /> Every day, from tomorrow</label>
       <label className="row"><input type="radio" name="rwhen" checked={oneOff} onChange={() => setOneOff(true)} /> Just for today</label>
       <span className="hint">{oneOff ? 'Added to today’s plan now. It won’t repeat. Tasks already planned for today stay as they are.' : 'Today’s plan and history stay as they are.'}</span></fieldset>}
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" onClick={async () => { setErr(null); try {
+    <button className="btn primary block" onClick={async () => { setErr(null); const probs = routineProblems(edit); setShown(probs); if (probs.length) { document.getElementById(probs[0]!.field)?.focus(); return; } try {
       const today = !edit.id && oneOff;
-      const body = { petId: edit.pet_id ?? pets[0]?.id, title: edit.title, type: edit.task_type ?? 'feeding', due: edit.due_minute ?? 780, assignee: edit.assignee ?? 'helper', instructions: edit.instructions || undefined, urgency: (edit as { urgency?: string }).urgency, ...(today ? { oneOffToday: true } : {}) };
+      const body = { petId: edit.pet_id ?? pets[0]?.id, title: edit.title?.trim(), type: edit.task_type ?? 'feeding', due: edit.due_minute ?? 780, assignee: edit.assignee ?? 'helper', instructions: edit.instructions || undefined, urgency: (edit as { urgency?: string }).urgency, ...(today ? { oneOffToday: true } : {}) };
       const r = await api<{ effectiveFrom: string }>(`/v1/households/${hh}/routine${edit.id ? '/' + edit.id : ''}`, { method: edit.id ? 'PUT' : 'POST', body });
-      setMsg(today ? `Added to today’s plan: ${edit.title} at ${fmt(edit.due_minute ?? 780)}. It won’t repeat.` : `Saved. Takes effect from ${r.effectiveFrom}. Today’s plan and history are unchanged.`); setEdit(null); setOneOff(false); reload(); onChanged?.();
+      setMsg(today ? `Added to today’s plan: ${edit.title} at ${fmt(edit.due_minute ?? 780)}. It won’t repeat.` : `Saved. Takes effect from ${r.effectiveFrom}. Today’s plan and history are unchanged.`); close(); setOneOff(false); reload(); onChanged?.();
     } catch (e) { setErr(errText(e)); } }}>Save</button>
   </main></>;
   return <><AppBar title="Routine" onBack={onBack} right={<button className="btn sm primary" onClick={() => setEdit({ task_type: 'feeding', due_minute: 1080, assignee: 'helper', pet_id: pets[0]?.id })}><Icon name="plus" size={16} />Add</button>} /><main className="body">

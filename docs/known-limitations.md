@@ -10,6 +10,7 @@ Honest list for the pilot hand-over. Nothing below is represented as done anywhe
 - **Live location:** start/stop only, no coordinates (D-23).
 - **Coupon redemption:** points accrue; no coupon vendor.
 - **Job runner sharding:** one runner visits every home each minute. With cover continuity this takes about 9 s for 200 homes in-process, and about 30 s in the 8 PM run when every home has an early task tomorrow (docs/runbooks/load-test.md). Split it by household shard before about 400 homes, sooner than the 1,000 planned for 1.0.
+- **One owner action at a time per request (PAW-014)** is enforced inside the API process. With more than one API instance it also needs a database row lock or an idempotency key from the app.
 - **Owner UI languages:** owner app is English; helper and friend messages are en/hi/mr.
 - **Developer-tool dependencies:** npm audit still reports issues in Vitest and Vite (developer machines only; they never ship). Upgrade their major versions before running them in shared CI.
 - **Accessibility:** no automated accessibility audit yet (the Playwright suite covers flows, not WCAG).

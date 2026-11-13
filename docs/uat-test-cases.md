@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 112 acceptance test cases with steps, expected results and the latest result
+subtitle: 117 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 13 Nov 2026, 14:43 IST |
-| Result | **112 of 112 passed** |
+| Latest run | 13 Nov 2026, 21:02 IST |
+| Result | **117 of 117 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -217,7 +217,17 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
 | P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
 
-## 18 Sign-off
+## 18 QA defect tracker (v1.1.0)
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| Q1 | M | PAW-001/005 an unsent request can be edited from its screen; once sent, Edit is gone and the reason is shown | 1. Ask: feed Bruno at 6 pm<br>2. Search, then Back<br>3. Open the request (Awaiting owner approval) → Edit request<br>4. Change time, search, send to Priya | Edit request opens Check the details while unsent; after sending, Edit is gone and the reason is shown (PAW-001, PAW-005) | Pass |
+| Q2 | M | PAW-004/012 history shows the latest 3 with exact times; View all shows the rest | 1. Look at Event history<br>2. View all | Latest 3 events with exact times (h:mm:ss); View all shows every event (PAW-004, PAW-012) | Pass |
+| Q3 | M | PAW-006 a pet profile change shows on an unsent request | 1. Change Bruno’s medicine in the pet profile<br>2. Reopen the request<br>3. Answer the medicine question<br>4. Change the profile again and reopen | The question quotes the current profile; after answering, a later change is flagged and search uses the new text (PAW-006) | Pass |
+| Q4 | M | PAW-002/008 New task: Save without a name shows a plain error by the field and saves nothing | 1. Save with no name<br>2. Type: medicine, name Eye drops, no instructions → Save | “Give the task a name.” by the field, nothing saved; medicine needs written instructions (PAW-002, PAW-008) | Pass |
+| Q5 | M | PAW-013 unsaved work: leaving New task asks first; the simple form survives a tab switch | 1. Type a task name → Back<br>2. Keep editing<br>3. Simple form: tick Feed → switch tabs → reopen | Discard prompt before losing edits; the simple form keeps its ticks (PAW-013) | Pass |
+
+## 19 Sign-off
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
