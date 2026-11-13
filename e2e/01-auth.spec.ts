@@ -13,6 +13,7 @@ test.describe('A. Sign-in and onboarding', () => {
     await page.locator('#sc').fill('Raheja Vihar, Powai');
     await page.locator('#tw').fill('C');
     await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Asha/ })).toBeVisible();
   });
 

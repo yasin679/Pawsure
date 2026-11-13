@@ -39,10 +39,12 @@ export interface CareTask {
   visitId: string | null;
   assignee: string;
   profile: EscalationProfile;
+  /** v1.4 PS-132: must-happen tasks alert at due + 15 min whatever their profile. */
+  graceOverride?: number;
   signals: TaskSignal[];
   lifecycle: LifecycleEvent[];
   returnCheck?: { at: Minutes; matched?: boolean; contradicted?: string };
-  escalation: { ackAt?: Minutes; ackBy?: string; resolvedAt?: Minutes; resolvedNote?: string; forceBackup?: boolean };
+  escalation: { ackAt?: Minutes; ackBy?: string; resolvedAt?: Minutes; resolvedNote?: string; forceBackup?: boolean; /** v1.4 (PRD 10.4): cover continuity already ran before the task, so steps 2 and 3 are not repeated. */ coverHandled?: boolean };
   reassignedToTaskId?: string;
 }
 

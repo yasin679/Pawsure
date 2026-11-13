@@ -8,14 +8,14 @@ import { z } from 'zod';
 import { uid, type Db } from '@pawsure/db';
 import { assignArms, releaseCheck, can, safeCuts, maskPhone, decideHold, rightsDue, boardReportDue, wallet, streak, MIN_GROUP, type Role, type Resource, type Action, type LedgerEntry } from '@pawsure/domain';
 import type { Deps } from './app.js';
-import { istDate } from './clock.js';
+import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit, loadDay } from './care.js';
 import { serviceChecks, RETENTION, type Monitor } from './ops.js';
 
 type Env = { Variables: { userId: string } };
 const STAFF: Role[] = ['ops', 'ops_lead', 'privacy_lead', 'tech_lead', 'auditor'];
 
-export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor) {
+export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor, cover?: import('./cover.js').CoverService) {
   const db = d.db; const now = () => d.clock.now(); const A = d.adapters;
   const staffRole = async (c: Context<Env>) => (await db.query<{ role: Role }>(`select role from staff_roles where user_id=$1 and active`, [c.get('userId')]))[0]?.role ?? null;
   async function gate(c: Context<Env>, resource: Resource, action: Action): Promise<Role | null> {
@@ -302,5 +302,33 @@ export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor) {
     const days = (await db.query<{ d: string }>(`select distinct to_char(created_at,'YYYY-MM-DD') as d from reward_ledger where helper_user_id=$1 and state in ('earned','released')`, [link.helper_user_id])).map(r => r.d);
     const since = (await db.query<{ m: string }>(`select min(month) as m from reward_ledger where helper_user_id=$1`, [link.helper_user_id]))[0]?.m;
     return c.json({ verifiedVisitRecords: verified, streakDays: streak(days, istDate(now())), activeSince: since, note: 'Counts only. No household names, addresses, pets, or anything under review.' });
+  });
+
+  /* ================= v1.1.0 cover continuity (PS-135, PRD 16.3, PS-118) ================= */
+  app.get('/admin/cover-metrics', async (c) => {
+    if (!(await gate(c, 'metrics', 'read')) || !cover) return deny(c);
+    return c.json({ pilot: await cover.metrics(), reviewLine: 0.10, note: 'Cover-not-found above 10% of at-risk tasks: review that cluster (PRD 16.3).' });
+  });
+  app.get('/admin/templates', async (c) => {
+    if (!(await gate(c, 'metrics', 'read'))) return deny(c);
+    const { templateCatalogue } = await import('./coverTemplates.js');
+    return c.json(templateCatalogue());
+  });
+  app.get('/admin/advisories', async (c) => {
+    if (!(await gate(c, 'cluster_advisory', 'read'))) return deny(c);
+    const clusters = (await db.query<{ cluster: string | null; n: number }>(`select cluster, count(*)::int as n from households group by cluster order by cluster`)).filter(r => r.cluster);
+    return c.json({ clusters, sent: await db.query(`select id, cluster, reason, body, sent_by, sent_at, remind_at, for_date::text as for_date from cluster_advisory order by sent_at desc limit 20`) });
+  });
+  /** Evening-before advisory: owners are told, and tomorrow's reminders go out that evening (PS-135, PS-127). */
+  app.post('/admin/advisories', async (c) => {
+    const role = await gate(c, 'cluster_advisory', 'create'); if (!role) return deny(c);
+    const b = z.object({ cluster: z.string().min(1).max(80), reason: z.enum(['red rain alert', 'strike', 'festival day', 'other']), note: z.string().max(120).optional() }).parse(await c.req.json());
+    const { renderCover } = await import('./coverTemplates.js');
+    const nowD = now(), date = istDate(nowD), minute = minutesOnDay(nowD, date), at = minute >= 1080 ? nowD : atMinute(date, 1080);
+    const forDate = istDate(new Date(Date.parse(date + 'T12:00:00+05:30') + 86400000));
+    const reason = b.reason === 'other' ? (b.note || 'local disruption') : b.reason, id = uid('adv');
+    await db.query(`insert into cluster_advisory(id, cluster, reason, body, sent_by, sent_at, remind_at, for_date) values ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, b.cluster, reason, renderCover('cluster_advisory', 'en', { reason }), 'staff:' + c.get('userId'), nowD.toISOString(), at.toISOString(), forDate]);
+    await audit(db, 'staff:' + c.get('userId'), null, 'advisory.sent', { id, cluster: b.cluster, reason, role, remindAt: at.toISOString() });
+    return c.json({ id, remindAt: at.toISOString(), forDate, households: (await db.query(`select id from households where cluster=$1 or $1='All clusters'`, [b.cluster])).length }, 201);
   });
 }

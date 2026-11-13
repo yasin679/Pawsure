@@ -10,10 +10,11 @@ export const StateTag = ({ s }: { s: string }) => <span className={`conf ${STATE
 const REC: Record<string, string> = { sent: 'Waiting', accepted: 'Said yes', waiting: 'Said yes — waiting (no double booking)', proposed: 'Suggested another time', unclear: 'Replied unclearly — asked again', declined: 'Declined', expired: 'No reply — expired', withdrawn: 'Closed politely', released: 'Hold released', confirmed: 'Confirmed', cancelled: 'Cancelled after confirming' };
 type View = { k: 'ask' } | { k: 'review'; id: string } | { k: 'manual'; id?: string; reason?: string } | { k: 'suggest'; id: string } | { k: 'approve'; id: string; ids: string[]; mode: 'one' | 'all3' } | { k: 'request'; id: string };
 
-export function FindCover({ hh, pets, draft, onDraft }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void }) {
+export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void }) {
   const [v, setV] = useState<View>({ k: 'ask' });
   const [reqs, setReqs] = useState<ReqView[]>([]); const [req, setReq] = useState<ReqView | null>(null); const [sr, setSr] = useState<SearchResult | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [approved, setApproved] = useState(false); const [sel, setSel] = useState<string[]>([]);
+  useEffect(() => { if (!openRequest) return; (async () => { try { const r = await api<SearchResult>(`/v1/households/${hh}/requests/${openRequest}/search`, { body: {} }); setSr(r); setReq(r.request); setSel([]); setApproved(false); setV({ k: 'suggest', id: openRequest } as View); } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? e.body.error) : 'Can’t reach Pawsure.'); } onOpened?.(); })(); }, [openRequest]);
   const [manual, setManual] = useState<{ tasks: FFTask[]; petId: string; time: number; access: string }>({ tasks: [], petId: pets[0]?.id ?? '', time: 1080, access: 'Key handover' });
   const H = `/v1/households/${hh}`;
   const loadList = () => api<ReqView[]>(`${H}/requests`).then(setReqs).catch(() => {});
@@ -101,6 +102,7 @@ export function FindCover({ hh, pets, draft, onDraft }: { hh: string; pets: Pet[
     const act = (path: string, body: unknown = {}) => run(async () => { setReq(await api<ReqView>(`${H}/requests/${req.id}/${path}`, { body })); });
     return <><AppBar title="Request" onBack={() => setV({ k: 'ask' })} /><main className="body">
       <div className="card"><div className="row"><b className="grow">{summary(req)}</b><StateTag s={req.state} /></div>
+        {req.origin && <div className="small origin"><b>{req.origin.text}</b></div>}
         <div className="small muted">{req.mode === 'all3' ? 'Ask all' : 'One friend'} · understood by {req.parsedBy ?? (req.parser === 'manual' ? 'simple form' : 'rules')}{req.correctedFields.length ? ' · you corrected: ' + req.correctedFields.join(', ') : ''}</div>
         {req.state === 'Provisional hold' && req.holdAt != null && <div className="small"><b>Hold ends {fmt(req.holdAt + 10)}.</b> If you don’t confirm, it’s released and others can accept.</div>}
         {req.searchClosesAt != null && ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && <div className="xs muted">Search closes at {fmt(req.searchClosesAt)} (30 min before the task).</div>}</div>

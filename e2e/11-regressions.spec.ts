@@ -56,6 +56,7 @@ test.describe('N. Reported issues (regression)', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.locator('#nm').fill('Kiran'); await page.locator('#sc').fill('Hiranandani, Powai');
     await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Kiran/ })).toBeVisible();
   });
 });

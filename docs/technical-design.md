@@ -89,9 +89,11 @@ flowchart LR
 
 Only an explicit acknowledgement stops later steps. A friend no-show (no signal by task time + 20 minutes) forces the backup step, or cover suggestions for medicine.
 
-### 3.3 Covered day (`covered-day-v1.3`)
+### 3.3 Covered day (`covered-day-v1.4`)
 
 A pet’s day is covered when every non-cancelled task is Confirmed, Likely or Matched, or missed but escalated and resolved before midnight. The household is covered when every pet is. In Trusted Helper mode, the owner’s **Covered** tap decides; no tap means *Unknown*. Results are stored at 11:59 PM with the rule version as part of the key, so a new rule never rewrites old days.
+
+v1.4 adds one rule: a task whose cover ended as **No cover planned** or **Cover not found** (or was skipped after cover not found) is not covered unless it is later done with evidence or matched by the return check. A resolved escalation does not rescue it. The rule version is stored with each day.
 
 ### 3.4 Emergencies
 
@@ -127,6 +129,38 @@ Parsing returns a structured result (tasks, pet, time, duration, access, urgency
 ### 3.6 Rewards
 
 5 points per Confirmed or Likely helper task, capped at 125 per helper per household per month (₹5); 500 points = ₹20 coupon; expiry 6 months; mismatches put points on hold for a human decision within 7 days with a reason the helper reads. Points accrue live and are written to the ledger at day close, once per task (unique index). The arm is on for half the cohort, assigned by stratified shuffle from a recorded seed.
+
+### 3.7 Cover continuity (v1.4, rule `cover-v1.4`)
+
+Cover (who is expected to do a task) is tracked separately from evidence (whether it was done). The rules are pure functions in `packages/domain/src/cover/`; `apps/api/src/cover.ts` persists state and runs them on the minute job.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Assigned
+  Assigned --> ConfirmedByCaregiver: Yes
+  Assigned --> AtRisk: can't make it / no reply by task − 45
+  Assigned --> SubstituteProposed: send someone else
+  ConfirmedByCaregiver --> AtRisk: can't come
+  SubstituteProposed --> CoveredByReplacement: owner approves
+  SubstituteProposed --> AtRisk: declined / not approved in time
+  AtRisk --> AskingBackups: backup list (pairs, 10 min)
+  AskingBackups --> CoveredByReplacement: yes + owner confirms (or auto for must happen)
+  AskingBackups --> FriendFinder: list ends, before task − 30
+  AskingBackups --> CoverNotFound: list ends, after task − 30
+  FriendFinder --> CoverNotFound: no yes
+  CoverNotFound --> OwnerHandling: I'll handle it / move
+  AtRisk --> NoCoverPlanned: leave anyway
+  CoveredByReplacement --> AtRisk: replacement can't come
+```
+
+| Module | Rule |
+|---|---|
+| `config.ts` | All timings with the PRD defaults (`COVER_V1`), overridable per household and per task (`coverConfig`); urgency defaults; Friend Finder gate; cover-not-found options; the 15-minute care-circle call |
+| `stateMachine.ts` | `coverTransition(from, event, guards)` with reason codes; guards for the Friend Finder cutoff and urgency; property tests check every state has a next step and can reach a settled state |
+| `planner.ts` | `planReminder` (90 min / 8 PM the evening before / advisory), `atRiskReason`, `orderBackups` and `nextBackupAction` (pairs, hold, auto-confirm, exhausted), `preDepartureCheck`, `planDelay` / `splitExtension`, `thinCircle`, `checklistReminderDue`, `isCantCome` (en/hi/mr), `parseSubstitute`, `coverMetrics` |
+| `permissions.ts` | Roles `substitute` and `adhoc_visitor` (task-scoped one-time link; details only after acceptance and owner approval); `outreachAllowed` limits standing approval to the backup list |
+
+One at-risk **job** per visit holds who was asked, when, replies, the hold and a log (`cover_jobs`). The job applies one domain action at a time until the runner says *wait*, so every run of the minute job is idempotent. After cover continuity has run for a task, the missed-task ladder still alerts the owner but does not repeat the backup and cover steps (PRD 10.4).
 
 ## 4 Data model
 
@@ -210,10 +244,10 @@ Errors are JSON `{ error, note? }`: 400 invalid input, 401 no session, 403 not a
 
 | Suite | Count | What it proves |
 |---|---|---|
-| Rules (`packages/domain/test`) | 80 | Evidence, escalation, covered day, emergency, lifecycle, rewards, ledger, Friend Finder, cohort |
+| Rules (`packages/domain/test`) | 143 | Evidence, escalation, covered day, emergency, lifecycle, rewards, ledger, Friend Finder (with the v1.4 cutoff), cohort, cover continuity (state machine with property tests, reminders, at risk, backup runner, urgency, pre-departure, delay, permissions, metrics) |
 | Database | 4 | Migrations, append-only, idempotency, multi-household helper |
-| API, security, login isolation, acceptance, regressions | 127 | Every flow end to end at the API, all 24 mandatory P0 scenarios, red-team and per-login data access |
-| End-to-end browser (Playwright, Chrome) | 90 | Every screen and login type against the demo build |
+| API, security, login isolation, acceptance, regressions, cover continuity | 154 | Every flow end to end at the API, all 24 mandatory P0 scenarios, red-team and per-login data access |
+| End-to-end browser (Playwright, Chrome) | 110 | Every screen and login type against the demo build, the 14 new v1.4 scenarios and the six demo fixes |
 
 Results and evidence: UAT Test Cases (PS-UAT-06) and Test Evidence (PS-TE-08).
 

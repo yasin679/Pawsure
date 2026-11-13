@@ -11,13 +11,13 @@ export interface EscalationConfig { backupAfter: number; coverAfterBackup: numbe
 export const ESCALATION_V1: EscalationConfig = { backupAfter: 30, coverAfterBackup: 15, lookInMinutes: 15 };
 
 export type EscalationStepKind = 'owner_alert' | 'backup_lookin' | 'cover_suggestions';
-export interface EscalationStep { n: 1 | 2 | 3; kind: EscalationStepKind; at: Minutes; fired: boolean; stoppedByAck: boolean }
+export interface EscalationStep { n: 1 | 2 | 3; kind: EscalationStepKind; at: Minutes; fired: boolean; stoppedByAck: boolean; /** v1.4: cover continuity already asked the backups before the task. */ notRepeated?: boolean }
 export interface EscalationState { open: boolean; resolved: boolean; acknowledged: boolean; steps: EscalationStep[]; backupExcluded: boolean }
 
 /** D-10 (agreed 9 Nov 2026): backups never give medicine, so medicine tasks have no backup look-in step. */
 export const backupAllowed = (task: Pick<CareTask, 'profile'>) => task.profile !== 'medicine';
 
-export function escalationTimes(task: Pick<CareTask, 'due' | 'profile'>, r: TrustRules = RULES_V1, c: EscalationConfig = ESCALATION_V1) {
+export function escalationTimes(task: Pick<CareTask, 'due' | 'profile'> & { graceOverride?: number }, r: TrustRules = RULES_V1, c: EscalationConfig = ESCALATION_V1) {
   const s1 = task.due + graceFor(task, r);
   return { s1, s2: s1 + c.backupAfter, s3: s1 + c.backupAfter + c.coverAfterBackup };
 }
@@ -31,7 +31,8 @@ export function escalationState(task: CareTask, ev: TaskEvaluation, now: Minutes
   const mk = (n: 1 | 2 | 3, kind: EscalationStepKind, at: Minutes): EscalationStep => {
     const stoppedByAck = n > 1 && ack != null && ack <= at;
     const due = now >= at || (force && n <= forcedUpTo);
-    return { n, kind, at, fired: due && !stoppedByAck, stoppedByAck };
+    const notRepeated = n > 1 && !!task.escalation.coverHandled && !force;
+    return { n, kind, at, fired: due && !stoppedByAck && !notRepeated, stoppedByAck, ...(notRepeated ? { notRepeated } : {}) };
   };
   const steps = [mk(1, 'owner_alert', t.s1), ...(withBackup ? [mk(2, 'backup_lookin', t.s2)] : []), mk(3, 'cover_suggestions', t.s3)];
   const resolved = task.escalation.resolvedAt != null;

@@ -121,7 +121,7 @@ The full procedure, with rollback, is in `docs/runbooks/deployment.md`. In short
 
 ### 5.1 The job runner
 
-`POST /jobs/tick` runs every minute. Each run is idempotent: it sends helper prompts 10 minutes before tasks, fires escalation steps, runs incident call plans, health reminders and Friend Finder timers, closes the day at 11:59 PM, makes each month’s code card, sends the Sunday points message, runs retention once a day, takes the nightly backup (PGlite), and evaluates the service checks. A late run catches up without sending anything twice.
+`POST /jobs/tick` runs every minute. Each run is idempotent: it sends cover reminders (90 min before a visit, or 8 PM the evening before), marks tasks at risk, runs the backup list, the Friend Finder cutoff, holds and auto-confirms, cover-not-found calls and the 15-minute care-circle call, gate-and-key reminders, the weekly thin-circle check and advisories; it sends helper prompts 10 minutes before tasks, fires escalation steps, runs incident call plans, health reminders and Friend Finder timers, closes the day at 11:59 PM, makes each month’s code card, sends the Sunday points message, runs retention once a day, takes the nightly backup (PGlite), and evaluates the service checks. A late run catches up without sending anything twice.
 
 ### 5.2 Backups and restore
 
@@ -196,6 +196,8 @@ The console keeps its own sign-in, separate from the owner app on the same devic
 | Signals | Today’s evidence labels across households and recent signal events. |
 | Friend Finder | Request states, stuck requests, parsing corrections, and the AI and webhook log. |
 | Switches | Feature switches by default and per household. Locked switches can’t be changed here. |
+| Cover continuity | The six v1.4 metrics with the 10% cover-not-found review line, and the WhatsApp template catalogue with each template’s approval status. All roles. |
+| Cluster advisory | Ops and ops lead: choose a cluster and reason (red rain alert, strike, festival day), read the preview, send. Owners are told; helpers get tomorrow’s reminder that evening. |
 | Pilot readiness | Checks the switches match the pilot plan and assigns the rewards arm to half the cohort from a recorded seed. |
 | Rewards holds | Points held after a mismatch. Release or reverse within 7 days, with a reason the helper reads on WhatsApp. |
 | Rights requests | See, correct, withdraw, delete and complaint requests with 7-day target and 90-day limit. Reply and close. |
@@ -213,6 +215,7 @@ The console keeps its own sign-in, separate from the owner app on the same devic
 | `helperRewards` | On for 10 of 20 homes (assigned in Pilot readiness) |
 | `helperShareRecord` | Off at start; may be turned on after week 2 |
 | `nearbyMemberFallback` | Off and locked until identity checks are approved |
+| `sameSocietyFallback` | Off and locked until the verification rule is decided (PS-141) |
 | `friendThankYouPoints` | Off until funding is approved |
 | `ownerCameraLookIn` | Off |
 | `dayCare`, `verifiedCarers` | Off and locked (later releases) |
@@ -246,6 +249,9 @@ Start a rehearsal before the pilot and keep the seven readiness items ticked. Fo
 | Audit log | Append-only (database trigger), survives backup and restore |
 
 ## 8 Upgrading and rolling back
+
+**1.0.1 → 1.1.0:** deploy as in section 4. Migration `006_cover_continuity.sql` runs at start-up and only adds tables and columns, so an app-only rollback to 1.0.1 is safe (the new tables are ignored). To remove the 1.1.0 data as well, take a backup and run `packages/db/rollback/006_cover_continuity.down.sql` by hand, in one transaction. Per-household cover timings can be set in `households.cover_config` (JSON, for example `{"reminderLeadMin": 120}`); unknown keys and negative numbers are ignored.
+
 
 Deploy the new version as in section 4. Because migrations only add, an app-only rollback is safe: redeploy the previous build. For a bad migration or data problem, restore the pre-deploy snapshot and redeploy the previous build; vendors re-send events on retry and duplicate events are ignored.
 

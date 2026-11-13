@@ -143,7 +143,7 @@ test('find cover', async ({ page }) => {
   await page.getByText(/I approve sending/).click(); await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
   await hideDemoBar(page, false);
   await page.getByRole('button', { name: 'Show friends’ phones' }).click();
-  const sim = page.locator('.sheet', { hasText: 'Demo: friends’ phones' });
+  const sim = page.locator('.sheet', { hasText: 'Friends’ phones (simulated)' });
   await sim.locator('.qr').getByRole('button', { name: 'Yes', exact: true }).last().waitFor();
   await shot(page, '34-friend-phone');
   await sim.locator('.qr').getByRole('button', { name: 'Yes', exact: true }).last().click(); await page.waitForTimeout(600);
@@ -173,7 +173,7 @@ test('helper phone, look-in, helper and circle homes, friend app', async ({ page
   await boot(page); await signInOwner(page);
   await clockTo(page, '12:50');
   await page.getByRole('button', { name: 'Show Sunita’s phone' }).click();
-  const ph = page.locator('.sheet', { hasText: 'Demo: Sunita’s phone' });
+  const ph = page.locator('.sheet', { hasText: 'Sunita’s phone (simulated)' });
   await ph.getByRole('button', { name: '📷 Photo + today’s code' }).click(); await page.waitForTimeout(600);
   await shot(page, '42-helper-whatsapp');
   await clockTo(page, '14:01');

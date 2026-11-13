@@ -13,6 +13,8 @@ import { audit, loadDay, ingestSignal } from './care.js';
 import { registerDaily } from './daily.js';
 import { makeFriendFinder, registerFriends } from './friends.js';
 import { registerAdmin } from './admin.js';
+import { makeCover } from './cover.js';
+import { registerCover } from './coverRoutes.js';
 import { withFailover } from './delivery.js';
 import { createMonitor, serviceChecks, type Monitor } from './ops.js';
 
@@ -146,7 +148,7 @@ export function createApp(input: Deps) {
   /* ---------- Pets (PS-003, PS-004) ---------- */
   // Essential care and medical details are required ("None" is a valid answer); the rest is optional.
   const need = (max: number, what: string) => z.string().trim().min(1, `${what} is required`).max(max);
-  const PetIn = z.object({ name: need(40, 'Name'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().max(80).optional(), backup_phone: z.string().max(30).optional() });
+  const PetIn = z.object({ name: need(40, 'Name'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), handling_note: z.string().trim().max(400).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().max(80).optional(), backup_phone: z.string().max(30).optional() });
   app.get('/v1/households/:hh/pets', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'pet', 'read'))) return deny(c);
     return c.json(await db.query('select * from pets where household_id=$1 order by name', [hh]));
@@ -233,9 +235,13 @@ export function createApp(input: Deps) {
     });
   }
   const ff = makeFriendFinder(d);
-  const ctx = { d, guard, deny, careDate, ff, mon };
+  const cover = makeCover(d);
+  ff.hooks.onCoverConfirmed = (hh, reqId, origin, taskId, name) => cover.coveredByFriend(hh, reqId, origin, taskId, name);
+  ff.hooks.onBackupRunner = async (hh, taskId, name, friendId) => { await cover.friendCancelledAfterCutoff(hh, taskId, name, friendId); };
+  const ctx = { d, guard, deny, careDate, ff, mon, cover };
   registerDaily(app, ctx);
   registerFriends(app, ctx, ff);
-  registerAdmin(app, d, mon);
+  registerCover(app, ctx, cover);
+  registerAdmin(app, d, mon, cover);
   return app;
 }

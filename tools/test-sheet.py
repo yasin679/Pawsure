@@ -1,5 +1,5 @@
 """
-Builds docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx from the latest test runs:
+Builds docs/test-evidence/PS-TE-08_Test_Evidence_v1.1.0.xlsx from the latest test runs:
   e2e/results/results.json (Playwright), .data/vitest.json (Vitest), e2e/cases.json (steps / expected), docs/test-report.md (P0 scenarios).
 Run after `npm run e2e` and `npx vitest run --reporter=json --outputFile=.data/vitest.json`:  python tools/test-sheet.py
 """
@@ -107,7 +107,7 @@ style_table(wsx, 1, 5, len(cat.get('security', [])), [5, 26, 46, 52, 30])
 
 # ---------- summary (formulas over the other sheets) ----------
 s = wb.create_sheet('Summary', 0)
-s['A1'] = 'PS-TE-08 Test Evidence v1.0.1 — Pawsure P0 test execution summary'; s['A1'].font = Font(name=FONT, bold=True, size=16)
+s['A1'] = 'PS-TE-08 Test Evidence v1.1.0 — Pawsure P0 test execution summary'; s['A1'].font = Font(name=FONT, bold=True, size=16)
 s['A2'] = f'Run on {run_at:%d %b %Y, %H:%M} IST · demo build (real app, API and database in the browser) · Chrome via Playwright 1.48 · Vitest 2'; s['A2'].font = Font(name=FONT, size=10, italic=True)
 s.append([])
 s.append(['Area', 'Test cases', 'Passed', 'Failed', 'Pass rate'])
@@ -148,7 +148,7 @@ for n in cat['notes']:
 s.column_dimensions['A'].width = 44
 for col in 'BCDE': s.column_dimensions[col].width = 13
 wb.calculation.fullCalcOnLoad = True  # Excel computes the summary formulas on open
-out = ROOT / 'docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx'
+out = ROOT / 'docs/test-evidence/PS-TE-08_Test_Evidence_v1.1.0.xlsx'
 out.parent.mkdir(exist_ok=True)
 wb.save(out)
 print(json.dumps({'file': str(out), 'e2e': n_e2e, 'e2e_passed': sum(c['status'] == 'Passed' for c in e2e), 'api': n_api, 'api_passed': sum(r[4] == 'Passed' for r in rows), 'scenarios': len(scen), 'scen_passed': sum(1 for l in scen if '| Pass |' in l), 'missing_catalog': [c['id'] for c in e2e if c['id'] not in cat['cases']]}))

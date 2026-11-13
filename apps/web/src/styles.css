@@ -364,3 +364,24 @@ body{background:var(--stage)}
   .console-nav .console-out{margin-top:0}
   .console-main{padding:16px}
 }
+
+/* v1.1.0 cover continuity */
+.coverline{display:flex;gap:8px;align-items:center;font-size:var(--fs-xs);padding:5px 9px;border-radius:var(--r-s);background:var(--surface-2);color:var(--ink-2);border:1px solid transparent;text-align:left}
+.coverline .eyebrow{font-size:.62rem;flex:none}
+.coverline.risk{background:var(--marigold-soft);color:var(--marigold);border-color:var(--marigold);font-weight:700}
+.coverline.none{background:var(--alert-soft);color:var(--alert);border-color:var(--alert);font-weight:700}
+.coverline.ok{background:var(--ok-soft);color:var(--ok)}
+.card.atrisk{border-width:2px}
+.hnote{background:#FFF5C4;color:#3b3200;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:.85rem}
+.hnote .check{padding:6px 0 0}
+.small.origin{color:var(--marigold)}
+.bub .gloss{font-size:.72rem;opacity:.7;border-top:1px solid rgba(0,0,0,.1);margin-top:4px;padding-top:3px;font-style:italic}
+/* fix #6: the simulated phones sit beside the owner app on wide screens, and below it on a phone */
+.simdock{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.simdock > .sheet{flex:1 1 340px;max-width:440px}
+@media (min-width:960px){
+  .pwa:has(.simdock){margin-left:calc(50% - 470px)}
+  .pwa:has(.simdock) > .simdock{position:fixed;top:12px;left:calc(50% + 30px);width:440px;max-height:calc(100vh - 24px);overflow:auto;flex-direction:column;flex-wrap:nowrap;z-index:5}
+  .simdock > .sheet{max-height:none;max-width:none;flex:0 0 auto}
+}
+.hero-ill img.mascot{display:block;margin:0 auto;background:transparent;max-width:100%;height:auto}

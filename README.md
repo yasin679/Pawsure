@@ -1,6 +1,6 @@
 # Pawsure: P0 pilot application
 
-*Be sure, whoever's caring.* This is the working implementation of Pawsure P0, built from PRD v1.3 and Master Prompt 2. It is a real build, not a mock-up: the owner PWA talks to a real API and database, and the rules engine behind every confidence label is unit-tested.
+*Be sure, whoever's caring.* This is the working implementation of Pawsure P0, built from PRD v1.3 and Master Prompt 2, and updated to PRD v1.4 (cover continuity) in release 1.1.0. It is a real build, not a mock-up: the owner PWA talks to a real API and database, and the rules engine behind every confidence label is unit-tested.
 
 The visual design matches the interactive prototype (`../Prototype`): the same tokens, components, icons and mascot illustrations.
 
@@ -14,7 +14,7 @@ The visual design matches the interactive prototype (`../Prototype`): the same t
 | Owner PWA (`apps/web`) | Onboarding; Today (who’s caring, can’t-come, alone-window warning, leaving checklist, I’m back, return check, alerts, incidents, evidence, task changes, timeline, day report); Pet (profile, emergency card, routine editor, health calendar); Me (helper & code card, care circle, invitations); backup look-in page. **Demo only:** clock + Sunita’s simulated phone. Find cover (Ask Pawsure, review, simple form, suggestions, approval, request detail), Friends (list, invite, profile, block/report), Me → what friends see; **friend view** for invited friends (requests, visit details, F7 settings). Demo: clock, Sunita’s phone, friends’ phones, AI mode switch |
 | Vendors | **None connected.** Every vendor is a mock adapter (`apps/api/src/adapters.ts`) |
 
-Tests: **211 passing** (`npm test`): 80 domain, 4 database, 127 API integration, security, login isolation and acceptance. **90 end-to-end browser tests passing** (`npm run e2e`, Playwright with the installed Chrome) drive every screen and login type (owner, co-owner, helper, friend, backup, new user, each staff role) against the demo build. Test cases with steps, expected and actual results: `docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx` (rebuild with `npm run e2e:sheet`). **All 24 mandatory P0 scenarios** (§13) map to passing tests: see `docs/test-report.md` (`npm run report`).
+Tests: **301 passing** (`npm test`): 143 domain, 4 database, 154 API integration, security, login isolation, acceptance and cover continuity. **111 end-to-end browser tests passing** (`npm run e2e`, Playwright with the installed Chrome) drive every screen and login type (owner, co-owner, helper, friend, backup, new user, each staff role) against the demo build. Test cases with steps, expected and actual results: `docs/test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx` (rebuild with `npm run e2e:sheet`). **All 24 mandatory P0 scenarios** (§13) map to passing tests: see `docs/test-report.md` (`npm run report`).
 
 **Phase 5** adds what a pilot needs to run safely:
 - **Vendor failover:** every message is retried once, then sent by SMS fallback; every attempt is in a delivery log with masked recipients. OTP never fakes success (503).

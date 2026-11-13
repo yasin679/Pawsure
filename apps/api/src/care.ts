@@ -4,7 +4,7 @@ import type { Db } from '@pawsure/db';
 import { uid } from '@pawsure/db';
 import {
   evaluateTask, evaluateVisit, escalationState, coveredDay, pointsFor, COVERED_DAY_RULE, RULES_V1,
-  aloneWindow, returnCheckNeeded, type CareTask, type CareVisit, type TaskSignal, type VisitSignal, type LifecycleState, type TaskEvaluation, type EscalationState, type TaskOutcome
+  aloneWindow, returnCheckNeeded, defaultUrgency, isUrgency, alertGrace, graceFor, COVER_RULE, COVER_LABEL, type CoverState, type Urgency, type CareTask, type CareVisit, type TaskSignal, type VisitSignal, type LifecycleState, type TaskEvaluation, type EscalationState, type TaskOutcome
 } from '@pawsure/domain';
 import { minutesOnDay, atMinute } from './clock.js';
 import type { Adapters } from './adapters.js';
@@ -14,8 +14,8 @@ export const audit = (db: Db, actor: string, household: string | null, action: s
 
 /** Idempotently create today's care tasks + visits from the active routine. The original plan is never rewritten. */
 export async function materialiseDay(db: Db, householdId: string, careDate: string) {
-  const routine = await db.query<{ id: string; pet_id: string; title: string; task_type: string; due_minute: number; min_minutes: number; escalation_profile: string; visit_slot: string | null; assignee_membership_id: string | null }>(
-    `select * from routine_tasks where household_id=$1 and enabled and superseded_by is null and effective_from <= $2`, [householdId, careDate]);
+  const routine = await db.query<{ id: string; pet_id: string; title: string; task_type: string; due_minute: number; min_minutes: number; escalation_profile: string; visit_slot: string | null; assignee_membership_id: string | null; urgency: string | null }>(
+    `select * from routine_tasks where household_id=$1 and enabled and not owner_task and superseded_by is null and effective_from <= $2`, [householdId, careDate]);
   for (const r of routine) {
     const taskId = `${r.id}_${careDate}`;
     let visitId: string | null = null;
@@ -23,16 +23,34 @@ export async function materialiseDay(db: Db, householdId: string, careDate: stri
       visitId = `${householdId}_${careDate}_${r.visit_slot}`;
       await db.query(`insert into care_visits(id, household_id, care_date, slot, helper_membership_id) values ($1,$2,$3,$4,$5) on conflict (id) do nothing`, [visitId, householdId, careDate, r.visit_slot, r.assignee_membership_id]);
     }
-    const ins = await db.query(`insert into care_tasks(id, household_id, pet_id, routine_task_id, care_date, title, task_type, due_minute, min_minutes, escalation_profile, visit_id, assignee_membership_id)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict (id) do nothing returning id`, [taskId, householdId, r.pet_id, r.id, careDate, r.title, r.task_type, r.due_minute, r.min_minutes, r.escalation_profile, visitId, r.assignee_membership_id]);
+    const ins = await db.query(`insert into care_tasks(id, household_id, pet_id, routine_task_id, care_date, title, task_type, due_minute, min_minutes, escalation_profile, visit_id, assignee_membership_id, urgency)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) on conflict (id) do nothing returning id`, [taskId, householdId, r.pet_id, r.id, careDate, r.title, r.task_type, r.due_minute, r.min_minutes, r.escalation_profile, visitId, r.assignee_membership_id, r.urgency]);
     if (ins.length) await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Planned','routine',$3)`, [taskId, householdId, 'From routine ' + r.id]);
   }
 }
 
+/**
+ * v1.4: every care task has a cover row (who is expected), separate from its evidence. Idempotent; friend cover tasks
+ * start as Confirmed by caregiver because the friend said yes and the owner confirmed.
+ */
+export async function ensureCover(db: Db, householdId: string, careDate: string, now: Date) {
+  await db.query(`insert into task_cover(task_id, household_id, state, person_kind, person_id, person_name, original_assignee, rule_version, confirmed_at)
+    select t.id, t.household_id,
+      case when t.assignee_friend_user_id is not null then 'ConfirmedByCaregiver' else 'Assigned' end,
+      case when t.assignee_friend_user_id is not null then 'friend' when m.role='helper' then 'helper' when m.role='co_owner' then 'co_owner' else 'owner' end,
+      coalesce(t.assignee_friend_user_id, t.assignee_membership_id),
+      coalesce(fu.display_name, m.display_label, mu.display_name, 'You'),
+      t.assignee_membership_id, $3, case when t.assignee_friend_user_id is not null then $4::timestamptz end
+    from care_tasks t left join memberships m on m.id=t.assignee_membership_id left join users mu on mu.id=m.user_id left join users fu on fu.id=t.assignee_friend_user_id
+    where t.household_id=$1 and t.care_date=$2 and not exists (select 1 from task_cover c where c.task_id=t.id)
+    on conflict (task_id) do nothing`, [householdId, careDate, COVER_RULE, now.toISOString()]);
+}
+export interface TaskCoverView { state: CoverState; label: string; personKind: string | null; personId: string | null; personName: string | null; originalAssignee: string | null; reason: string | null; lostBy: string | null; confirmedAt: number | null; jobId: string | null; skipped: boolean; handledPre: boolean }
+
 interface Row { [k: string]: unknown }
 export interface DayView {
   careDate: string; now: number;
-  tasks: (CareTask & { ev: TaskEvaluation; esc: EscalationState | null; points: ReturnType<typeof pointsFor> })[];
+  tasks: (CareTask & { ev: TaskEvaluation; esc: EscalationState | null; points: ReturnType<typeof pointsFor>; urgency: Urgency; cover: TaskCoverView | null; movedFrom: number | null })[];
   visits: Record<string, ReturnType<typeof evaluateVisit> & { id: string }>;
   covered: ReturnType<typeof coveredDay>;
   trusted: boolean;
@@ -41,16 +59,20 @@ export interface DayView {
 
 export async function loadDay(db: Db, householdId: string, careDate: string, now: Date): Promise<DayView> {
   await materialiseDay(db, householdId, careDate);
+  await ensureCover(db, householdId, careDate, now);
   const nowMin = minutesOnDay(now, careDate);
   const [tasks, events, signals, visits, pets, hh, mode] = await Promise.all([
-    db.query<Row>(`select * from care_tasks where household_id=$1 and care_date=$2 order by due_minute, id`, [householdId, careDate]),
+    db.query<Row>(`select t.*, coalesce(t.urgency, r.urgency) as urgency_set from care_tasks t left join routine_tasks r on r.id=t.routine_task_id where t.household_id=$1 and t.care_date=$2 order by t.due_minute, t.id`, [householdId, careDate]),
     db.query<Row>(`select * from task_events where household_id=$1 and task_id in (select id from care_tasks where household_id=$1 and care_date=$2) order by id`, [householdId, careDate]),
     db.query<Row>(`select * from checkin_signals where household_id=$1 and (task_id in (select id from care_tasks where care_date=$2 and household_id=$1) or visit_id in (select id from care_visits where care_date=$2 and household_id=$1))`, [householdId, careDate]),
     db.query<Row>(`select * from care_visits where household_id=$1 and care_date=$2`, [householdId, careDate]),
     db.query<Row>(`select id from pets where household_id=$1`, [householdId]),
-    db.query<Row>(`select rewards_arm, out_from, out_to, alone_limit_hours, gate_app from households where id=$1`, [householdId]),
+    db.query<Row>(`select rewards_arm, out_from, out_to, alone_limit_hours, gate_app, hot_day from households where id=$1`, [householdId]),
     db.query<Row>(`select * from day_states where household_id=$1 and care_date=$2`, [householdId, careDate])
   ]);
+  const coverRows = await db.query<Row>(`select * from task_cover where household_id=$1 and task_id in (select id from care_tasks where household_id=$1 and care_date=$2)`, [householdId, careDate]);
+  const coverOf = new Map(coverRows.map(c => [c.task_id as string, c]));
+  const urgencyOf = (t: Row): Urgency => isUrgency(t.urgency_set) ? t.urgency_set : defaultUrgency(t.task_type as CareTask['type'], { hotDay: !!hh[0]?.hot_day });
   const helperIds = new Set((await db.query<{ id: string }>(`select id from memberships where household_id=$1 and role='helper'`, [householdId])).map(r => r.id));
   const ds = mode[0] ?? {};
   const trusted = ds.mode === 'trusted';
@@ -68,10 +90,11 @@ export async function loadDay(db: Db, householdId: string, careDate: string, now
   const domainTasks: CareTask[] = tasks.map(t => ({
     id: t.id as string, petId: t.pet_id as string, title: t.title as string, type: t.task_type as CareTask['type'], due: t.due_minute as number, minMinutes: t.min_minutes as number,
     visitId: (t.visit_id as string) ?? null, assignee: (t.assignee_membership_id as string) ?? 'owner', profile: t.escalation_profile as CareTask['profile'],
+    ...(urgencyOf(t) === 'MustHappen' ? { graceOverride: alertGrace('MustHappen', graceFor({ profile: t.escalation_profile as CareTask['profile'] })) } : {}),
     signals: signals.filter(s => s.task_id === t.id).map(toTaskSignal),
     lifecycle: events.filter(e => e.task_id === t.id).map(e => ({ at: m(e.at), state: e.state as LifecycleState, actor: e.actor as string, note: (e.note as string) ?? undefined })),
     returnCheck: (t.return_check as CareTask['returnCheck']) ?? undefined,
-    escalation: { ackAt: t.ack_at ? m(t.ack_at) : undefined, ackBy: (t.ack_by as string) ?? undefined, resolvedAt: t.resolved_at ? m(t.resolved_at) : undefined, resolvedNote: (t.resolved_note as string) ?? undefined, forceBackup: !!t.force_backup },
+    escalation: { ackAt: t.ack_at ? m(t.ack_at) : undefined, ackBy: (t.ack_by as string) ?? undefined, resolvedAt: t.resolved_at ? m(t.resolved_at) : undefined, resolvedNote: (t.resolved_note as string) ?? undefined, forceBackup: !!t.force_backup, coverHandled: !!coverOf.get(t.id as string)?.handled_pre },
     reassignedToTaskId: (t.reassigned_to_task_id as string) ?? undefined
   }));
   const visitEval: DayView['visits'] = {};
@@ -83,14 +106,17 @@ export async function loadDay(db: Db, householdId: string, careDate: string, now
   }
   let monthEarned = (await db.query<{ n: number }>(`select coalesce(sum(points),0)::int as n from reward_ledger where household_id=$1 and month=$2 and state in ('earned','released') and (task_id is null or task_id not in (select id from care_tasks where household_id=$1 and care_date=$3))`, [householdId, careDate.slice(0, 7), careDate]))[0]?.n ?? 0;
   const out = domainTasks.map(t => {
-    const isHelper = helperIds.has(t.assignee);
+    const cv0 = coverOf.get(t.id);
+    const isHelper = helperIds.has(t.assignee) && !(cv0 && (cv0.lost_by || (cv0.person_kind && cv0.person_kind !== 'helper')));
     const ev = evaluateTask(t, { now: nowMin, visit: t.visitId ? visitEval[t.visitId] ?? null : null, trustedHelperDay: trusted && isHelper, trustedCovered: trustedTap });
     const esc = escalationState(t, ev, nowMin);
     const points = pointsFor(ev.state, { armOn: !!hh[0]?.rewards_arm, isHelperTask: isHelper, monthEarnedInHousehold: monthEarned });
     if (points.kind === 'earn') monthEarned += points.points;
-    return { ...t, ev, esc, points };
+    const c = coverOf.get(t.id), row = tasks.find(r => r.id === t.id)!;
+    const cover: TaskCoverView | null = c ? { state: c.state as CoverState, label: COVER_LABEL[c.state as CoverState], personKind: (c.person_kind as string) ?? null, personId: (c.person_id as string) ?? null, personName: (c.person_name as string) ?? null, originalAssignee: (c.original_assignee as string) ?? null, reason: (c.reason as string) ?? null, lostBy: (c.lost_by as string) ?? null, confirmedAt: c.confirmed_at ? m(c.confirmed_at) : null, jobId: (c.job_id as string) ?? null, skipped: !!c.skipped, handledPre: !!c.handled_pre } : null;
+    return { ...t, ev, esc, points, urgency: urgencyOf(row), cover, movedFrom: (row.moved_from_minute as number) ?? null };
   });
-  const outcomes: TaskOutcome[] = out.map(t => ({ taskId: t.id, petId: t.petId, ev: t.ev, esc: t.esc, trusted: t.ev.state === 'Trusted' }));
+  const outcomes: TaskOutcome[] = out.map(t => ({ taskId: t.id, petId: t.petId, ev: t.ev, esc: t.esc, trusted: t.ev.state === 'Trusted', cover: t.cover?.state ?? null, coverSkipped: !!t.cover?.skipped }));
   const covered = coveredDay({ petIds: pets.map(p => p.id as string), outcomes, trustedCoveredTap: trustedTap, dayClosed: nowMin >= 1439 });
   const h0 = hh[0] ?? {};
   const outFrom = ds.left_at ? minutesOnDay(new Date(ds.left_at as string), careDate) : (h0.out_from as number) ?? 540;

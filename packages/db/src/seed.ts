@@ -56,5 +56,22 @@ export async function seedDemo(db: Db) {
     ['ownerCameraLookIn', false, false, 'PS-008/PS-037: OFF'], ['dayCare', false, true, 'P1'], ['verifiedCarers', false, true, 'P2']
   ];
   for (const [k, v, locked, note] of flags) await q('insert into feature_flags(key, default_value, locked, note) values ($1,$2,$3,$4) on conflict do nothing', [k, JSON.stringify(v), locked, note]);
+  // v1.1.0 cover continuity (fictional): ordered backup list, handling notes, urgency, the owner's own evening tasks.
+  await q(`update households set standing_backup_approval=true, cluster='Powai · Lake Vista CHS' where id=$1`, [DEMO.household]);
+  await q(`update routine_tasks set urgency = case task_type when 'medicine' then 'MustHappen' when 'walk' then 'CanWait' else 'TimeSensitive' end where household_id=$1`, [DEMO.household]);
+  await q(`update pets set handling_note='Nervous with strangers for the first minute: let him sniff your hand. Slips out at the main door, so close it before unclipping the lead. Pulls on the lead near the gate.' where id='bruno'`);
+  await q(`update pets set handling_note='Hides under the bed with visitors. Do not chase her. Keep the balcony door closed.' where id='misty'`);
+  const backups: [string, string | null, string, string, string, number, string, boolean, boolean, boolean, boolean][] = [
+    ['bk_desai', null, 'Mrs Desai', '+919800000040', 'en', 1, 'Neighbour · B-1102', true, false, false, false],
+    ['bk_ritu', null, 'Ritu Kulkarni', '+919800000011', 'mr', 2, 'Family (mother-in-law)', false, false, false, false],
+    ['bk_ankita', 'u_ankita', 'Ankita Joshi', '+919700000008', 'en', 3, 'Family (sister)', true, false, false, true],
+    ['bk_rohan', 'u_rohan', 'Rohan Kulkarni', '+919800000022', 'en', 4, 'Co-owner', true, true, false, true],
+    ['bk_vikram', null, 'Vikram (dog walker)', '+919600000073', 'hi', 5, 'Own paid walker or sitter', false, false, true, true]
+  ];
+  for (const b of backups) await q(`insert into backup_contact(id, household_id, user_id, name, phone_e164, language, rank, relationship, holds_key, can_give_medicine, owner_arranged, cared_before) values ($1,'${DEMO.household}',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, b);
+  await q(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, escalation_profile, visit_slot, assignee_membership_id, effective_from, urgency, owner_task, instructions) values
+    ('r5',$1,'bruno','Evening walk','walk',1170,15,'walk','e1','m_neha','2026-11-01','CanWait',true,'Short walk in the society garden. Lead on before the door opens.'),
+    ('r6',$1,'bruno','Dinner + water','feeding',1230,10,'standard','e2','m_neha','2026-11-01','TimeSensitive',true,'1 cup kibble. Refill the water bowl.')`, [DEMO.household]);
+  await q(`update routine_tasks set instructions = case id when 'r1' then '1 cup kibble + curd rice. Refill the water bowl.' when 'r2' then '1 chewable with lunch, as on the vet’s card.' when 'r3' then 'One sachet. Scoop the tray. Keep the balcony door shut.' when 'r4' then 'Pads are under the sink.' else instructions end where household_id=$1`, [DEMO.household]);
   return true;
 }

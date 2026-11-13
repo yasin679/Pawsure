@@ -110,7 +110,7 @@ describe('day flows (PS-007, PS-014, PS-033, PS-012)', () => {
     const tl = (await call<{ at: number }[]>('GET', `${HH}/day/timeline`, undefined, owner)).body;
     expect(tl.map(e => e.at)).toEqual([...tl.map(e => e.at)].sort((a, b) => a - b));
     const rep = (await call<{ tasks: unknown[]; covered: { rule: string } }>('GET', `${HH}/day/report`, undefined, owner)).body;
-    expect(rep.tasks.length).toBe(4); expect(rep.covered.rule).toBe('covered-day-v1.3');
+    expect(rep.tasks.length).toBe(4); expect(rep.covered.rule).toBe('covered-day-v1.4');
   });
   it('closing the day stores PS-111 results once, with the rule version', async () => {
     await call('POST', `${HH}/day/close`, {}, owner); await call('POST', `${HH}/day/close`, {}, owner);

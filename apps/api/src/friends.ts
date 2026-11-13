@@ -24,6 +24,10 @@ interface ReqRow { id: string; household_id: string; state: string; parse: { par
 export function makeFriendFinder(d: Deps) {
   const { db } = d; const A = d.adapters; const now = () => d.clock.now();
   const today = () => istDate(now()); const nowMin = () => minutesOnDay(now(), today());
+  /** Minutes on the request's own care day (a request for tomorrow morning is measured against tomorrow). */
+  const rowNow = (row: { parse: { careDate?: string } | null }) => minutesOnDay(now(), row.parse?.careDate ?? today());
+  const hooks: { onCoverConfirmed?: (hh: string, reqId: string, origin: { jobId: string }, taskId: string, friendName: string) => Promise<void>; onBackupRunner?: (hh: string, taskId: string, friendName: string, friendId: string) => Promise<void> } = {};
+  const firstTime = async (hh: string, fid: string) => ((await db.query<{ n: number }>(`select help_count as n from friend_links where household_id=$1 and friend_user_id=$2`, [hh, fid]))[0]?.n ?? 0) === 0;
 
   async function loadFriends(hh: string): Promise<(FriendProfile & { userId: string; phone: string })[]> {
     const rows = await db.query<Record<string, unknown>>(`select l.friend_user_id, l.status, l.distance_band, l.help_count, l.checked_in_count, coalesce(l.display_label, u.display_name) as name, u.language, u.phone_e164,
@@ -78,15 +82,17 @@ export function makeFriendFinder(d: Deps) {
     for (const e of effects) {
       if (e.type === 'send_request') {
         const m = await messageFor(hh, row, e.friendId);
-        const btns = [{ id: `ff_yes:${row.id}`, label: BTN.yes![m.lang] }, { id: `ff_no:${row.id}`, label: BTN.no![m.lang] }];
-        await friendSay(hh, row.id, e.friendId, e.reminder ? FRIEND_MSG.reminder![m.lang] + '\n\n' + m.text : m.text, e.reminder ? 'FF-REQ-REMINDER' : 'FF-REQ-1', btns);
+        // PS-138: someone covering for the first time sees the handling note and must confirm reading it before Yes.
+        const note = (await firstTime(hh, e.friendId)) ? (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [row.parse!.parsed.petId]))[0]?.n : null;
+        const btns = [{ id: `ff_yes:${row.id}`, label: BTN.yes![m.lang] }, { id: `ff_no:${row.id}`, label: BTN.no![m.lang] }, ...(note ? [{ id: `ff_read:${row.id}`, label: 'I have read this' }] : [])];
+        await friendSay(hh, row.id, e.friendId, (e.reminder ? FRIEND_MSG.reminder![m.lang] + '\n\n' + m.text : m.text) + (note && !e.reminder ? `\n\nHandling note, please read first: ${note}` : ''), e.reminder ? 'FF-REQ-REMINDER' : 'FF-REQ-1', btns);
         await audit(db, e.reminder ? 'system' : 'owner', hh, e.reminder ? 'friend.request.reminder' : 'message.sent', { request: row.id, friend: e.friendId, language: m.lang });
       } else if (e.type === 'message_friend') {
         const l = await langOf(e.friendId);
         await friendSay(hh, row.id, e.friendId, FRIEND_MSG[e.template]![l], 'FF-' + e.template.toUpperCase(), e.template === 'reconfirm' ? [{ id: `ff_yes:${row.id}`, label: BTN.yes![l] }, { id: `ff_no:${row.id}`, label: BTN.no![l] }] : undefined);
       } else if (e.type === 'notify_owner') {
         const n = e.friendId ? (await db.query<{ n: string }>(`select coalesce(display_name,'A friend') as n from users where id=$1`, [e.friendId]))[0]?.n.split(' ')[0] : '';
-        const text: Record<string, string> = { friend_yes: `${n} said yes. Confirm to share access details.`, friend_declined: `${n} can’t help this time.`, friend_proposed: `${n} suggested another time. Confirm before anything changes.`, hold_reminder: `${n} is waiting for you to confirm (hold ends in 5 min).`, none_accepted: 'Nobody accepted. See safe next steps.', friend_cancelled: `${n} had to cancel. Access details removed; search reopened without them.`, no_show: `No check-in from ${n} yet. Your backup is being alerted.`, search_closed: 'Search closed 30 minutes before the task.' };
+        const text: Record<string, string> = { friend_cancelled_after_cutoff: `${n} cancelled. Too close to the task for Friend Finder: your backups are being asked instead.`, friend_yes: `${n} said yes. Confirm to share access details.`, friend_declined: `${n} can’t help this time.`, friend_proposed: `${n} suggested another time. Confirm before anything changes.`, hold_reminder: `${n} is waiting for you to confirm (hold ends in 5 min).`, none_accepted: 'Nobody accepted. See safe next steps.', friend_cancelled: `${n} had to cancel. Access details removed; search reopened without them.`, no_show: `No check-in from ${n} yet. Your backup is being alerted.`, search_closed: 'Search closed 30 minutes before the task.' };
         await A.push.push('owner:' + hh, 'Find cover', text[e.template] ?? e.template);
       } else if (e.type === 'disclose_access') {
         const o = await ownerInfo(hh); const p = row.parse!.parsed;
@@ -104,6 +110,10 @@ export function makeFriendFinder(d: Deps) {
         await db.query(`insert into care_tasks(id, household_id, pet_id, care_date, title, task_type, due_minute, min_minutes, escalation_profile, assignee_friend_user_id, cover_request_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict (id) do nothing`,
           [tid, hh, p.petId, date, p.tasks.map(t => ({ feed: 'Feed', walk: 'Short walk', meds: 'Medicine', water: 'Water', litter: 'Litter', toilet: 'Toilet pad' } as Record<string, string>)[t]).join(' + ') + ' (friend cover)', type, e.time, Math.min(30, p.durationMin), type === 'medicine' ? 'medicine' : type === 'walk' ? 'walk' : 'standard', e.friendId, row.id]);
         await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Planned','owner',$3)`, [tid, hh, 'Created from ' + row.id]);
+        // PS-137: a friend new to this household gets the gate and key checklist on the owner's Today.
+        const fname = (await db.query<{ n: string }>(`select coalesce(display_name,'Friend') as n from users where id=$1`, [e.friendId]))[0]!.n;
+        if (await firstTime(hh, e.friendId)) await db.query(`insert into visit_access_checklist(task_id, household_id, person_name) values ($1,$2,$3) on conflict do nothing`, [tid, hh, fname]);
+        if (row.doc.origin && hooks.onCoverConfirmed) { await hooks.onCoverConfirmed(hh, row.id, row.doc.origin, tid, fname); continue; }
         const ds = (await db.query<{ helper_unavailable: boolean }>(`select helper_unavailable from day_states where household_id=$1 and care_date=$2`, [hh, date]))[0];
         if (ds?.helper_unavailable) {
           // Hand over only what the friend agreed to: same pet, same kind of task, near the same time. Anything else
@@ -117,10 +127,13 @@ export function makeFriendFinder(d: Deps) {
       } else if (e.type === 'resume_escalation_backup') {
         await db.query(`update care_tasks set force_backup=true where cover_request_id=$1`, [row.id]);
         await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Missed','system','Friend no-show (private record)')`, ['cover_' + row.id, hh]);
+      } else if (e.type === 'backup_runner') {
+        const n = (await db.query<{ n: string }>(`select coalesce(display_name,'Your friend') as n from users where id=$1`, [e.friendId]))[0]!.n;
+        if (hooks.onBackupRunner) await hooks.onBackupRunner(hh, 'cover_' + row.id, n, e.friendId);
       } else if (e.type === 'reopen_search') {
         const id = 'ffr_' + uid('x').slice(2, 12);
-        const fresh = newRequest(id, nowMin()); fresh.exclude = e.exclude;
-        const { req } = reduce(fresh, { type: 'parse_confirmed', taskTime: row.parse!.parsed.time! }, nowMin());
+        const fresh = newRequest(id, rowNow(row)); fresh.exclude = e.exclude; if (row.doc.origin) fresh.origin = row.doc.origin;
+        const { req } = reduce(fresh, { type: 'parse_confirmed', taskTime: row.parse!.parsed.time! }, rowNow(row));
         await db.query(`insert into friend_requests(id, household_id, state, parse, parser, doc, created_by) values ($1,$2,$3,$4,$5,$6,'system')`, [id, hh, req.state, JSON.stringify(row.parse), row.parser, JSON.stringify(req)]);
         await audit(db, 'system', hh, 'request.reopened', { from: row.id, to: id, excluded: e.exclude });
       }
@@ -128,7 +141,7 @@ export function makeFriendFinder(d: Deps) {
   }
 
   async function step(hh: string, row: ReqRow, ev: FFEvent) {
-    const { req, effects } = reduce(row.doc, ev, nowMin());
+    const { req, effects } = reduce(row.doc, ev, rowNow(row));
     await saveReq(row, req);
     await runEffects(hh, row, effects);
     return { req, effects };
@@ -146,8 +159,13 @@ export function makeFriendFinder(d: Deps) {
     const BTN_LABEL: Record<string, string> = { ff_yes: 'Yes', ff_no: 'No', ff_arrived: 'I’ve arrived', ff_cancel: 'Can’t make it' };
     await db.query(`insert into friend_messages(id, request_id, friend_user_id, household_id, direction, body, at) values ($1,$2,$3,$4,'in',$5,$6)`, [uid('fm'), row.id, user.id, row.household_id, b.type === 'text' ? b.text ?? '' : (BTN_LABEL[kind ?? ''] ?? kind ?? ''), now().toISOString()]);
     if (kind === 'ff_arrived') { await friendArrived(row, user.id); return { status: 200, body: { status: 'arrived' } }; }
+    if (kind === 'ff_read') { const doc = { ...row.doc, noteReadBy: [...new Set([...(row.doc.noteReadBy ?? []), user.id])] }; await saveReq(row, doc); await friendSay(row.household_id, row.id, user.id, 'Thank you. You can now reply Yes or No.', 'FF-NOTE-OK'); return { status: 200, body: { status: 'note_read' } }; }
     if (kind === 'ff_cancel') { if (row.state === 'Confirmed' && row.doc.confirmedFriendId === user.id) await step(row.household_id, row, { type: 'friend_cancel' }); return { status: 200, body: { status: row.state } }; }
     const reply = kind === 'ff_yes' ? 'yes' : kind === 'ff_no' ? 'no' : /^(yes|haan|ha|ho|हाँ|हो|ok)\b/i.test((b.text ?? '').trim()) && !/\d/.test(b.text ?? '') ? 'yes' : /^(no|nahi|नहीं|नाही|sorry)\b/i.test((b.text ?? '').trim()) ? 'no' : 'propose';
+    if (reply === 'yes' && !(row.doc.noteReadBy ?? []).includes(user.id) && (await firstTime(row.household_id, user.id)) && (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [row.parse?.parsed?.petId]))[0]?.n) {
+      await friendSay(row.household_id, row.id, user.id, 'Before you say yes, please read the handling note above and tick “I have read this”.', 'FF-READ-FIRST', [{ id: `ff_read:${row.id}`, label: 'I have read this' }]);
+      return { status: 200, body: { status: 'needs_note' } };
+    }
     const { req } = await step(row.household_id, row, { type: 'friend_reply', friendId: user.id, messageId: b.messageId, reply, proposedTime: reply === 'propose' ? parseProposedTime(b.text ?? '') : undefined });
     return { status: 200, body: { status: req.state } };
   }
@@ -160,12 +178,12 @@ export function makeFriendFinder(d: Deps) {
 
   async function tick() {
     const open = await db.query<ReqRow>(`select * from friend_requests where state in ('Sent','Provisional hold','Accepted - pending owner confirmation','Confirmed')`);
-    for (const row of open) { const before = JSON.stringify(row.doc); const { req, effects } = reduce(row.doc, { type: 'tick' }, nowMin()); if (JSON.stringify(req) !== before || effects.length) { await saveReq(row, req); await runEffects(row.household_id, row, effects); } }
+    for (const row of open) { const before = JSON.stringify(row.doc); const { req, effects } = reduce(row.doc, { type: 'tick' }, rowNow(row)); if (JSON.stringify(req) !== before || effects.length) { await saveReq(row, req); await runEffects(row.household_id, row, effects); } }
     // Live location deleted 24 h after the visit (retention, §9).
     await db.query(`delete from live_location_sessions where delete_after < $1`, [now().toISOString()]);
   }
 
-  return { loadFriends, getReq, saveReq, step, runEffects, inbound, tick, messageFor, friendSay, ownerInfo, fmt, nowMin, today, friendArrived, langOf };
+  return { hooks, loadFriends, getReq, saveReq, step, runEffects, inbound, tick, messageFor, friendSay, ownerInfo, fmt, nowMin, rowNow, today, friendArrived, langOf };
 }
 export type FriendFinder = ReturnType<typeof makeFriendFinder>;
 
@@ -236,10 +254,11 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const names = Object.fromEntries((await db.query<{ id: string; n: string }>(`select id, coalesce(display_name,'Friend') as n from users where id = any($1)`, [row.doc.recipients.map(r => r.friendId).concat(row.doc.confirmedFriendId ?? [])])).map(r => [r.id, r.n]));
     const p = row.parse;
     const ai = x.d.adapters.llm.connected;
-    const parsedBy = row.parser === 'manual' ? 'simple form' : row.parser === 'llm' && ai ? 'AI (structured)' : ai ? 'rules (AI fallback)' : 'rules (no AI connected)';
+    // v1.1.0 fix #4: no real model is connected, so the label always says rules; the demo switch now names the same thing.
+    const parsedBy = row.parser === 'manual' ? (p?.parsed?.sources?.time === 'from the task' ? 'pre-filled from the at-risk task' : 'simple form') : row.parser === 'llm' && ai ? 'AI (structured)' : ai ? 'rules (AI fallback)' : 'rules (no AI connected)';
     return { id: row.id, state: row.state, text: p?.text, parser: row.parser, parsedBy, aiConnected: ai, fallbackReason: p?.fallbackReason, parsed: p?.parsed, clarifications: (p?.clarifications ?? []), blocked: p?.parsed ? searchBlockedReasons(p.parsed, p.clarifications) : ['missing:parse'], correctedFields: row.corrected_fields, taskTime: row.doc.taskTime, mode: row.doc.mode,
       recipients: row.doc.recipients.map(r => ({ ...r, name: names[r.friendId] })), holdFriendId: row.doc.holdFriendId, holdAt: row.doc.holdAt, confirmedFriendId: row.doc.confirmedFriendId, confirmedName: row.doc.confirmedFriendId ? names[row.doc.confirmedFriendId] : null,
-      history: row.doc.history.map(h => ({ ...h, note: Object.entries(names).reduce((n, [id, nm]) => n.split(id).join(nm.split(' ')[0]!), h.note) })), coverTaskId: row.doc.confirmedFriendId ? 'cover_' + row.id : null, searchClosesAt: row.doc.taskTime != null ? row.doc.taskTime - 30 : null, exclude: row.doc.exclude };
+      history: row.doc.history.map(h => ({ ...h, note: Object.entries(names).reduce((n, [id, nm]) => n.split(id).join(nm.split(' ')[0]!), h.note) })), coverTaskId: row.doc.confirmedFriendId ? 'cover_' + row.id : null, searchClosesAt: row.doc.taskTime != null ? row.doc.taskTime - 30 : null, exclude: row.doc.exclude, origin: row.doc.origin ?? null, careDate: p?.careDate, searchOpen: row.doc.taskTime == null || ff.rowNow(row) < row.doc.taskTime - 30, noteReadBy: row.doc.noteReadBy ?? [] };
   };
   app.post('/v1/households/:hh/requests', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'create'))) return x.deny(c);
@@ -322,7 +341,8 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     if (row.state !== 'Awaiting owner approval') return c.json({ error: row.doc.recipients.length ? 'already_sent' : 'search_first' }, 409);
     const eligible = matchFriends(row.parse.parsed, await ff.loadFriends(hh), { maxBand: row.parse.maxBand ?? 3, exclude: row.doc.exclude }).top.map(t => t.friend.id);
     if (b.friendIds.some(f => !eligible.includes(f))) return c.json({ error: 'not_eligible' }, 409);
-    await ff.step(hh, row, { type: 'owner_approved_send', friendIds: b.friendIds, mode: b.mode });
+    try { await ff.step(hh, row, { type: 'owner_approved_send', friendIds: b.friendIds, mode: b.mode }); }
+    catch (e) { return c.json({ error: 'too_close', message: (e as Error).message }, 409); }
     await audit(db, c.get('userId'), hh, 'request.approved', { id: row.id, recipients: b.friendIds.length, mode: b.mode });
     return c.json(await view(row));
   });
@@ -351,7 +371,9 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     return c.json({ profile, links, language: lang, messages, requests: await Promise.all(reqs.map(async r => {
       const me = r.doc.recipients.find(x => x.friendId === uidv)!;
       const grant = (await db.query(`select expires_at from access_grants where request_id=$1 and friend_user_id=$2 and revoked_at is null and expires_at > $3`, [r.id, uidv, now().toISOString()]))[0];
-      return { id: r.id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text };
+      const ftime = ((await db.query<{ n: number }>(`select help_count as n from friend_links where household_id=$1 and friend_user_id=$2`, [r.household_id, uidv]))[0]?.n ?? 0) === 0;
+      const note = ftime ? (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [r.parse?.parsed?.petId]))[0]?.n ?? null : null;
+      return { id: r.id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text, handlingNote: note, noteRead: (r.doc.noteReadBy ?? []).includes(uidv) };
     })) });
   });
   app.put('/v1/me/friend', async (c) => {
@@ -387,7 +409,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   const myRequest = async (c: Context<Env>) => { const row = await ff.getReq(c.req.param('id')!); return row && row.doc.recipients.some(r => r.friendId === c.get('userId')) ? row : undefined; };
   app.post('/v1/me/requests/:id/reply', async (c) => {
     const row = await myRequest(c); if (!row) return c.json({ error: 'not_found' }, 404);
-    const b = z.object({ reply: z.enum(['yes', 'no', 'propose']), text: z.string().max(200).optional() }).parse(await c.req.json());
+    const b = z.object({ reply: z.enum(['yes', 'no', 'propose', 'read']), text: z.string().max(200).optional() }).parse(await c.req.json());
     const u = (await db.query<{ phone_e164: string }>(`select phone_e164 from users where id=$1`, [c.get('userId')]))[0]!;
     const r = await ff.inbound({ messageId: 'app-' + uid('m'), from: u.phone_e164, type: b.reply === 'propose' ? 'text' : 'button', payload: b.reply === 'propose' ? undefined : `ff_${b.reply}:${row.id}`, text: b.text });
     return c.json(r.body, r.status as 200);
@@ -397,6 +419,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const action = c.req.param('action');
     if (action === 'arrived') await ff.friendArrived(row, c.get('userId'));
     if (action === 'cancel') await ff.step(row.household_id, row, { type: 'friend_cancel' });
+    if (action === 'done') await db.query(`delete from visit_access_checklist where task_id=$1`, ['cover_' + row.id]);
     if (action === 'done') {
       const { ingestSignal } = await import('./care.js');
       await ingestSignal(db, { householdId: row.household_id, idempotencyKey: `friend-done:${row.id}`, kind: 'friend_photo', taskId: 'cover_' + row.id, channel: 'app', imageHash: undefined, eventTime: now(), receivedTime: now(), actor: 'friend:' + c.get('userId') });

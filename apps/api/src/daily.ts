@@ -12,7 +12,7 @@ import { render, BUTTONS, type Lang } from './templates.js';
 import { runRetention, serviceChecks, raiseAlerts, runBackup } from './ops.js';
 
 type Env = { Variables: { userId: string } };
-export interface Ctx { mon?: import('./ops.js').Monitor; ff?: import('./friends.js').FriendFinder; d: Deps; guard: (c: Context<Env>, hh: string, r: Resource, a: Action) => Promise<Role | null>; deny: (c: Context<Env>) => Response; careDate: (c: Context<Env>) => string }
+export interface Ctx { cover?: import('./cover.js').CoverService; mon?: import('./ops.js').Monitor; ff?: import('./friends.js').FriendFinder; d: Deps; guard: (c: Context<Env>, hh: string, r: Resource, a: Action) => Promise<Role | null>; deny: (c: Context<Env>) => Response; careDate: (c: Context<Env>) => string }
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const TYPE_PROFILE: Record<string, 'standard' | 'medicine' | 'walk'> = { medicine: 'medicine', walk: 'walk' };
@@ -43,6 +43,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (b.mode) cols.mode = b.mode;
     if (b.helperUnavailable != null) { cols.helper_unavailable = b.helperUnavailable; cols.unavailable_reason = b.reason ?? null; if (b.helperUnavailable) cols.mode = 'uncovered'; }
     await upsertDay(hh, x.careDate(c), cols);
+    if (b.helperUnavailable != null && x.cover) await x.cover.helperUnavailable(hh, x.careDate(c), b.helperUnavailable, c.get('userId'));
     await audit(db, c.get('userId'), hh, 'day.updated', { date: x.careDate(c), ...b, note: b.helperUnavailable ? 'original plan preserved' : undefined });
     return c.json({ ok: true });
   });
@@ -54,8 +55,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   });
   app.post('/v1/households/:hh/day/leaving', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'task', 'update'))) return x.deny(c);
-    const b = z.object({ checklist: z.object({ water: z.boolean(), doors: z.boolean(), pads: z.boolean() }).nullable(), returnAt: z.number().int().min(0).max(1439) }).parse(await c.req.json());
-    await upsertDay(hh, x.careDate(c), { leaving: JSON.stringify(b.checklist ?? { skipped: true }), left_at: now().toISOString(), return_at: b.returnAt });
+    const b = z.object({ checklist: z.object({ water: z.boolean(), doors: z.boolean(), pads: z.boolean() }).nullable(), returnAt: z.number().int().min(0).max(1439), planB: z.string().max(80).nullable().optional() }).parse(await c.req.json());
+    await upsertDay(hh, x.careDate(c), { leaving: JSON.stringify(b.checklist ?? { skipped: true }), left_at: now().toISOString(), return_at: b.returnAt, plan_b: b.planB ?? null });
     await audit(db, c.get('userId'), hh, 'day.leaving', { skipped: !b.checklist, returnAt: b.returnAt });
     return c.json({ ok: true, note: 'Reminder list only — it does not check the home or pet.' });
   });
@@ -150,13 +151,13 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'routine', 'read'))) return x.deny(c);
     return c.json(await db.query(`select r.*, r.effective_from::text as effective_from, m.role as assignee_role from routine_tasks r left join memberships m on m.id=r.assignee_membership_id where r.household_id=$1 and r.superseded_by is null order by r.due_minute, r.title`, [hh]));
   });
-  const RoutineIn = z.object({ petId: z.string(), title: z.string().min(1).max(80), type: z.enum(['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other']), due: z.number().int().min(0).max(1439), minMinutes: z.number().int().min(1).max(60).optional(), assignee: z.enum(['helper', 'owner']), instructions: z.string().max(500).optional(), oneOffToday: z.boolean().optional(), enabled: z.boolean().optional() });
+  const RoutineIn = z.object({ petId: z.string(), title: z.string().min(1).max(80), type: z.enum(['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other']), due: z.number().int().min(0).max(1439), minMinutes: z.number().int().min(1).max(60).optional(), assignee: z.enum(['helper', 'owner', 'co_owner']), urgency: z.enum(['CanWait', 'TimeSensitive', 'MustHappen']).optional(), instructions: z.string().max(500).optional(), oneOffToday: z.boolean().optional(), enabled: z.boolean().optional() });
   async function writeRoutine(hh: string, userId: string, b: z.infer<typeof RoutineIn>, replaces?: string) {
     const date = istDate(now()); const tomorrow = istDate(new Date(now().getTime() + 86400000));
-    const assignee = (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and role=$2 and status in ('active','invited') order by role limit 1`, [hh, b.assignee === 'helper' ? 'helper' : 'owner']))[0]?.id ?? null;
-    const id = uid('rt'), slot = b.assignee === 'helper' ? (b.due < 900 ? 'v1' : b.due < 1080 ? 'v2' : 'v3') : null;
-    await db.query(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, recurrence, assignee_membership_id, escalation_profile, instructions, visit_slot, enabled, effective_from)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [id, hh, b.petId, b.title, b.type, b.due, b.minMinutes ?? TYPE_MIN[b.type], b.oneOffToday ? 'once' : 'daily', assignee, TYPE_PROFILE[b.type] ?? 'standard', b.instructions ?? null, slot, b.enabled ?? true, b.oneOffToday ? date : tomorrow]);
+    const assignee = (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and role=$2 and status in ('active','invited') order by role limit 1`, [hh, b.assignee]))[0]?.id ?? null;
+    const id = uid('rt'), slot = b.assignee !== 'owner' ? (b.due < 900 ? 'v1' : b.due < 1080 ? 'v2' : 'v3') : null;
+    await db.query(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, recurrence, assignee_membership_id, escalation_profile, instructions, visit_slot, enabled, effective_from, urgency)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [id, hh, b.petId, b.title, b.type, b.due, b.minMinutes ?? TYPE_MIN[b.type], b.oneOffToday ? 'once' : 'daily', assignee, TYPE_PROFILE[b.type] ?? 'standard', b.instructions ?? null, slot, b.enabled ?? true, b.oneOffToday ? date : tomorrow, b.urgency ?? null]);
     if (replaces) await db.query(`update routine_tasks set superseded_by=$2 where id=$1 and household_id=$3`, [replaces, id, hh]);
     await audit(db, userId, hh, replaces ? 'routine.edited' : 'routine.created', { id, replaces, effectiveFrom: b.oneOffToday ? date : tomorrow, title: b.title });
     return { id, effectiveFrom: b.oneOffToday ? date : tomorrow };
@@ -223,7 +224,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   /** Helper's WhatsApp thread, for the owner-side simulator in demo mode only (owners never see the helper's chat in production). */
   app.get('/demo/helper-thread/:mid', async (c) => {
     if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
-    return c.json(await db.query(`select direction, template, body, task_id, buttons, at from helper_messages where membership_id=$1 order by at, id`, [c.req.param('mid')]));
+    return c.json(await db.query(`select direction, template, body, gloss, task_id, buttons, at from helper_messages where membership_id=$1 order by at, id`, [c.req.param('mid')]));
   });
 
   /* Inbound WhatsApp (BSP webhook): buttons, text, photo, voice. Idempotent; consent-gated; tenant from the template context. */
@@ -233,6 +234,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     const seen = await db.query(`insert into inbound_messages(message_id, channel, payload) values ($1,'whatsapp',$2) on conflict do nothing returning message_id`, ['wa:' + b.messageId, JSON.stringify({ type: b.type })]);
     if (!seen.length) return c.json({ status: 'duplicate_event' });
     const memberships = await db.query<{ id: string; household_id: string; status: string; paused: boolean; method: string | null }>(`select m.id, m.household_id, m.status, m.paused, m.method from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status in ('active','invited')`, [b.from]);
+    // v1.4: backups, substitutes and ad-hoc numbers answering a cover request or reminder (PS-128, PS-130, PS-133).
+    if (x.cover && !b.payload?.startsWith('ff_') && !b.payload?.startsWith('cover_')) { const cv = await x.cover.personInbound(b); if (cv) return c.json(cv); }
     if (x.ff && (b.payload?.startsWith('ff_') || !memberships.length)) { const r = await x.ff.inbound({ ...b, messageId: b.messageId }); return c.json(r.body, r.status as 200); }
     if (!memberships.length) return c.json({ error: 'unknown_sender' }, 404);
     const hhFromPayload = b.payload?.split(':')[1];
@@ -248,6 +251,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       const p = (b.payload ?? '').split(':')[0] ?? '';
       const t = (b.text ?? '').trim().toLowerCase();
       await say('in', b.type === 'text' ? b.text ?? '' : p);
+      // v1.4: reminder quick replies, "can't come" at any time, substitute name and number, extension replies.
+      if (x.cover) { const cv = await x.cover.helperInbound(hh, mid, b); if (cv) return c.json(cv); }
       if (p === 'consent_yes') {
         await recordConsent('helper_monitoring', true, { methods: ['photo', 'voice', 'ivr'], purpose: 'task evidence for this household only' });
         await db.query(`update memberships set status='active', accepted_at=$2 where id=$1`, [mid, now().toISOString()]);
@@ -334,7 +339,16 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   /* IVR: arrival/exit missed calls and keypad code after a task prompt. */
   app.post('/webhooks/ivr', async (c) => {
     if (!webhookOk(c)) return c.json({ error: 'unauthorized_webhook' }, 401);
-    const b = z.object({ callId: z.string(), from: z.string(), event: z.enum(['arrive', 'exit', 'code']), visitId: z.string().optional(), taskId: z.string().optional(), digits: z.string().max(8).optional(), at: z.string().optional() }).parse(await c.req.json());
+    const b = z.object({ callId: z.string(), from: z.string(), event: z.enum(['arrive', 'exit', 'code', 'reminder', 'cant']), visitId: z.string().optional(), taskId: z.string().optional(), digits: z.string().max(8).optional(), at: z.string().optional(), substituteName: z.string().max(60).optional(), substitutePhone: z.string().regex(/^\+91[6-9]\d{9}$/).optional() }).parse(await c.req.json());
+    if ((b.event === 'reminder' || b.event === 'cant') && x.cover) {
+      // PS-127 basic phone: press 1 / 2 / 3 on the reminder call; press 2 on the missed-call line any time = can't come.
+      const seen = await db.query(`insert into inbound_messages(message_id, channel, payload) values ($1,'ivr',$2) on conflict do nothing returning message_id`, ['ivr:' + b.callId + ':' + b.event, JSON.stringify({ digits: b.digits })]);
+      if (!seen.length) return c.json({ status: 'duplicate_event' });
+      const hlp = (await db.query<{ household_id: string; id: string }>(`select m.household_id, m.id from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status='active'`, [b.from]));
+      if (!hlp.length) return c.json({ error: 'unknown_sender' }, 404);
+      const mem = hlp.length === 1 ? hlp[0]! : undefined; if (!mem) return c.json({ error: 'ambiguous_household' }, 409);
+      return c.json(await x.cover.ivr(mem.household_id, mem.id, b.event, b.digits, b.substituteName && b.substitutePhone ? { name: b.substituteName, phone: b.substitutePhone } : undefined));
+    }
     const helper = await db.query<{ household_id: string; id: string; paused: boolean }>(`select m.household_id, m.id, m.paused from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status='active'`, [b.from]);
     const target = b.visitId ? (await db.query<{ household_id: string; care_date: string }>('select household_id, care_date::text as care_date from care_visits where id=$1', [b.visitId]))[0] : b.taskId ? (await db.query<{ household_id: string; care_date: string }>('select household_id, care_date::text as care_date from care_tasks where id=$1', [b.taskId]))[0] : undefined;
     if (!target) return c.json({ error: 'unknown_target' }, 404);
@@ -523,7 +537,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     for (const hlp of helpers) {
       const cst = await consentOf(hlp.id); if (!cst?.granted || cst.kind === 'helper_withdrawal' || hlp.paused) continue;
       const lang = await helperLang(hlp.id);
-      for (const t of day.tasks.filter(y => y.assignee === hlp.id && day.now >= y.due - 10 && y.ev.state !== 'Cancelled')) {
+      // v1.4: no prompts for a visit the helper said she can't make, or that someone else now covers (PS-128).
+      for (const t of day.tasks.filter(y => y.assignee === hlp.id && day.now >= y.due - 10 && y.ev.state !== 'Cancelled' && !(y.cover && (y.cover.lostBy || (y.cover.personKind && y.cover.personKind !== 'helper'))))) {
         const key = `prompt:${t.id}`;
         const ins = await db.query(`insert into notifications(id, household_id, dedupe_key, recipient, channel, template) values ($1,$2,$3,$4,'whatsapp','W3_PROMPT') on conflict (dedupe_key) do nothing returning id`, [uid('ntf'), hh, key, hlp.id]);
         if (!ins.length) continue;
@@ -569,6 +584,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (x.ff) await x.ff.tick();
     for (const h of hhs) {
       if (!(await cards(h.id)).some(k => k.active)) await createCard(h.id, 'system', 'monthly card');
+      if (x.cover) sent.push(...await x.cover.tick(h.id));
       sent.push(...await runPrompts(h.id, date));
       sent.push(...await runEscalations(db, A, h.id, date, now()));
       sent.push(...await runIncidents(h.id));

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { api, ApiError, type Pet } from '../api';
 import { AppBar, Banner, Icon, PetAvatar } from '../ui';
 
-const FIELDS: [keyof Pet, string, string?][] = [['name', 'Name'], ['breed', 'Breed'], ['age', 'Age'], ['food', 'Food and feeding', 'What, how much and when. Shown to whoever feeds your pet.'], ['allergies', 'Allergies', 'Write “None known” if there are none.'], ['medicines', 'Medicine instructions', 'Copy your vet’s written instructions, or write “None”. Pawsure never suggests doses.'], ['fears', 'Fears and habits'], ['notes', 'Emergency notes'], ['vet_name', 'Your vet'], ['vet_phone', 'Vet phone'], ['clinic24_name', 'Nearest 24x7 clinic'], ['clinic24_phone', '24x7 clinic phone'], ['backup_name', 'Backup person'], ['backup_phone', 'Backup phone']];
+const FIELDS: [keyof Pet, string, string?][] = [['name', 'Name'], ['breed', 'Breed'], ['age', 'Age'], ['food', 'Food and feeding', 'What, how much and when. Shown to whoever feeds your pet.'], ['allergies', 'Allergies', 'Write “None known” if there are none.'], ['medicines', 'Medicine instructions', 'Copy your vet’s written instructions, or write “None”. Pawsure never suggests doses.'], ['fears', 'Fears and habits'], ['handling_note', 'Handling note', 'Shown to anyone covering for the first time, before they accept. For example: nervous with strangers, slips out at the door, reacts on the lead.'], ['notes', 'Emergency notes'], ['vet_name', 'Your vet'], ['vet_phone', 'Vet phone'], ['clinic24_name', 'Nearest 24x7 clinic'], ['clinic24_phone', '24x7 clinic phone'], ['backup_name', 'Backup person'], ['backup_phone', 'Backup phone']];
 
 const REQUIRED: (keyof Pet)[] = ['name', 'food', 'allergies', 'medicines', 'vet_name', 'vet_phone'];
 
@@ -43,7 +43,7 @@ export function PetScreen({ hh, pets, reload, onOpen }: { hh: string; pets: Pet[
     <div className="seg" role="group">{pets.map(p => <button key={p.id} aria-pressed={active === p.id} onClick={() => setActive(p.id)}>{p.name}</button>)}<button aria-pressed={false} onClick={() => { setActive('new'); startEdit(); }}>+ Add</button></div>
     {pet ? <>
       <div className="card"><div className="row"><PetAvatar species={pet.species} size={60} /><div className="grow"><h2>{pet.name}</h2><div className="small muted">{[pet.species, pet.breed, pet.age].filter(Boolean).join(' · ')}</div></div><button className="btn sm" onClick={() => startEdit(pet)}>Edit</button></div>
-        <dl className="kv"><dt>Food</dt><dd>{pet.food || '—'}</dd><dt>Allergies</dt><dd>{pet.allergies || '—'}</dd><dt>Medicine</dt><dd>{pet.medicines || '—'}</dd><dt>Fears / habits</dt><dd>{pet.fears || '—'}</dd></dl>
+        <dl className="kv"><dt>Food</dt><dd>{pet.food || '—'}</dd><dt>Allergies</dt><dd>{pet.allergies || '—'}</dd><dt>Medicine</dt><dd>{pet.medicines || '—'}</dd><dt>Fears / habits</dt><dd>{pet.fears || '—'}</dd><dt>Handling note</dt><dd>{pet.handling_note || 'Not added yet'} <span className="xs muted">(shown to first-time carers before they accept)</span></dd></dl>
         <span className="xs muted">{pet.source} · last updated {pet.updated_at?.slice(0, 10)}</span></div>
       <div className="list">
         <button className="li" onClick={() => setMode('card')}><span className="avatar icon"><Icon name="card" size={20} /></span><div className="grow"><b>Emergency card</b><div className="small muted">Allergies, medicine, vet, 24x7 clinic, backup</div></div><span className="chev">›</span></button>

@@ -1,6 +1,6 @@
 # Documentation
 
-## Document set (v1.0.1)
+## Document set (v1.1.0)
 
 | ID | Document | For | Read online | PDF |
 |---|---|---|---|---|
@@ -10,19 +10,19 @@
 | PS-FAQ-04 | FAQ and Troubleshooting | Everyone | [faq-and-troubleshooting.md](faq-and-troubleshooting.md) | [PDF](pdf/PS-FAQ-04_FAQ_and_Troubleshooting.pdf) |
 | PS-TD-05 | Technical Design | Developers, reviewers, security | [technical-design.md](technical-design.md) | [PDF](pdf/PS-TD-05_Technical_Design.pdf) |
 | PS-UAT-06 | UAT Test Cases | Testers, sign-off owners | [uat-test-cases.md](uat-test-cases.md) | [PDF](pdf/PS-UAT-06_UAT_Test_Cases.pdf) |
-| PS-RN-07 | Release Notes v1.0.1 | Everyone | [release-notes.md](release-notes.md) | [PDF](pdf/PS-RN-07_Release_Notes_v1.0.1.pdf) |
-| PS-TE-08 | Test Evidence v1.0.1 | Testers, auditors | — | [Excel](test-evidence/PS-TE-08_Test_Evidence_v1.0.1.xlsx) |
+| PS-RN-07 | Release Notes v1.1.0 | Everyone | [release-notes.md](release-notes.md) | [PDF](pdf/PS-RN-07_Release_Notes_v1.1.0.pdf) |
+| PS-TE-08 | Test Evidence v1.1.0 | Testers, auditors | — | [Excel](test-evidence/PS-TE-08_Test_Evidence_v1.1.0.xlsx) |
 
 ## Reference
 
 | Document | What it is |
 |---|---|
-| [api.md](api.md) | API reference, generated from the route table (112 routes) |
+| [api.md](api.md) | API reference, generated from the route table (146 routes) |
 | [permission-matrix.md](permission-matrix.md) | Role × resource × action matrix, generated from the code |
 | [traceability.md](traceability.md) | PRD requirements → code → tests, generated |
 | [test-report.md](test-report.md) | Latest test run and the 24 mandatory P0 scenarios |
 | [architecture.md](architecture.md) | Phase 0 architecture notes (superseded by PS-TD-05) |
-| [decision-log.md](decision-log.md) | Decisions D-01 to D-39 and their status |
+| [decision-log.md](decision-log.md) | Decisions D-01 to D-51 and their status |
 | [known-limitations.md](known-limitations.md) | What is not built or connected, and release gates |
 | [runbooks/](runbooks/) | Pilot, monitoring, support, deployment and rollback, restore, vendors, drills, load test |
 

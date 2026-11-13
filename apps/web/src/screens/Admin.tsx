@@ -6,14 +6,14 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError, endSession, session, setSessionMode } from '../api';
 import { Icon } from '../ui';
 
-type Section = 'overview' | 'service' | 'release' | 'queues' | 'households' | 'mix' | 'signals' | 'ff' | 'flags' | 'rewards' | 'rights' | 'audit' | 'breach';
-const SECTIONS: [Section, string, string][] = [['overview', 'Pilot overview', 'home'], ['service', 'Service health', 'bell'], ['release', 'Pilot readiness', 'check'], ['queues', 'Queues', 'bell'], ['households', 'Households', 'paw'], ['mix', 'Method mix', 'list'], ['signals', 'Signals', 'check'], ['ff', 'Friend Finder', 'friends'], ['flags', 'Switches', 'shield'], ['rewards', 'Rewards holds', 'star'], ['rights', 'Rights requests', 'user'], ['audit', 'Audit log', 'card'], ['breach', 'Breach runbook', 'alert']];
+type Section = 'cover' | 'advisory' | 'overview' | 'service' | 'release' | 'queues' | 'households' | 'mix' | 'signals' | 'ff' | 'flags' | 'rewards' | 'rights' | 'audit' | 'breach';
+const SECTIONS: [Section, string, string][] = [['overview', 'Pilot overview', 'home'], ['cover', 'Cover continuity', 'shield'], ['advisory', 'Cluster advisory', 'alert'], ['service', 'Service health', 'bell'], ['release', 'Pilot readiness', 'check'], ['queues', 'Queues', 'bell'], ['households', 'Households', 'paw'], ['mix', 'Method mix', 'list'], ['signals', 'Signals', 'check'], ['ff', 'Friend Finder', 'friends'], ['flags', 'Switches', 'shield'], ['rewards', 'Rewards holds', 'star'], ['rights', 'Rights requests', 'user'], ['audit', 'Audit log', 'card'], ['breach', 'Breach runbook', 'alert']];
 const ROLE_SECTIONS: Record<string, Section[]> = {
-  ops: ['overview', 'service', 'queues', 'households', 'mix', 'signals', 'ff'],
-  ops_lead: ['overview', 'service', 'release', 'queues', 'households', 'mix', 'signals', 'ff', 'flags', 'rewards', 'audit', 'breach'],
-  privacy_lead: ['overview', 'service', 'release', 'households', 'mix', 'signals', 'flags', 'rights', 'audit', 'breach'],
-  tech_lead: ['overview', 'service', 'release', 'queues', 'mix', 'signals', 'ff', 'flags', 'audit', 'breach'],
-  auditor: ['overview', 'service', 'queues', 'mix', 'signals', 'audit']
+  ops: ['overview', 'cover', 'advisory', 'service', 'queues', 'households', 'mix', 'signals', 'ff'],
+  ops_lead: ['overview', 'cover', 'advisory', 'service', 'release', 'queues', 'households', 'mix', 'signals', 'ff', 'flags', 'rewards', 'audit', 'breach'],
+  privacy_lead: ['overview', 'cover', 'service', 'release', 'households', 'mix', 'signals', 'flags', 'rights', 'audit', 'breach'],
+  tech_lead: ['overview', 'cover', 'service', 'release', 'queues', 'mix', 'signals', 'ff', 'flags', 'audit', 'breach'],
+  auditor: ['overview', 'cover', 'service', 'queues', 'mix', 'signals', 'audit']
 };
 const ROLE_LABEL: Record<string, string> = { ops: 'Ops on shift', ops_lead: 'Ops lead', privacy_lead: 'Privacy lead', tech_lead: 'Tech lead', auditor: 'Auditor' };
 const when = (s: string) => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -40,6 +40,7 @@ export function AdminApp() {
       <button onClick={signOut} className="console-out">Sign out</button>
     </aside>
     <main className="console-main">
+      {sec === 'cover' && <CoverMetrics />}{sec === 'advisory' && <Advisory />}
       {sec === 'overview' && <Overview />}{sec === 'service' && <Service />}{sec === 'release' && <Release role={role} />}{sec === 'queues' && <Queues role={role} />}{sec === 'households' && <Households />}
       {sec === 'mix' && <MethodMix />}{sec === 'signals' && <Signals />}{sec === 'ff' && <FF />}{sec === 'flags' && <Flags role={role} />}
       {sec === 'rewards' && <Rewards />}{sec === 'rights' && <Rights />}{sec === 'audit' && <Audit role={role} />}{sec === 'breach' && <Breach role={role} />}
@@ -234,5 +235,46 @@ function Release({ role }: { role: string }) {
         {r.lastAssignment && <div className="small">Last assigned {when(r.lastAssignment.at)}: {r.lastAssignment.detail.on} of {r.lastAssignment.detail.of}, seed <span className="mono">{r.lastAssignment.detail.seed}</span></div>}
         {canAssign && <div><button className="btn sm" onClick={assign}>Assign arms for this cohort</button></div>}</div>
     </>}
+  </>;
+}
+
+/* ---------- v1.1.0: cover continuity metrics (PRD 16.3) and template catalogue (PS-118) ---------- */
+function CoverMetrics() {
+  type M = { preTaskConfirmationRate: number | null; atRiskRescueRate: number | null; coverNotFoundRate: number | null; coverNotFoundReview: boolean; timeToCoverMedian: number | null; noCoverPlannedDayRate: number | null; circleDepth: number | null; counts: Record<string, number> };
+  const [m, e] = useLoad<{ pilot: M; reviewLine: number; note: string }>('/admin/cover-metrics');
+  const [t] = useLoad<{ id: string; approval: string; requirement: string; purpose: string; languages: string[]; buttons: string[]; smsFallback: boolean; sample: string }[]>('/admin/templates');
+  if (e) return <div className="card warn">{e}</div>;
+  if (!m) return <div className="empty">Loading…</div>;
+  const pct = (x: number | null) => x == null ? '— (no data yet)' : Math.round(x * 1000) / 10 + '%';
+  const rows: [string, string, string, string, string][] = [
+    ['Pre-task confirmation rate', 'Visits where the caregiver replied Yes or Can’t make it before the deadline', 'Visits that got a reminder', 'Track', pct(m.pilot.preTaskConfirmationRate)],
+    ['At-risk rescue rate', 'At-risk tasks covered (replacement or owner) before the task time', 'At-risk tasks', 'Track', pct(m.pilot.atRiskRescueRate)],
+    ['Cover-not-found rate', 'At-risk tasks ending in cover not found', 'At-risk tasks', 'Review the cluster if above 10%', pct(m.pilot.coverNotFoundRate)],
+    ['Time to cover', 'Median minutes from At risk to a confirmed replacement', 'Rescued at-risk tasks', 'Track', m.pilot.timeToCoverMedian == null ? '—' : m.pilot.timeToCoverMedian + ' min'],
+    ['No-cover-planned days', 'Pet-days the owner left with nobody confirmed', 'Pet-days with a planned task', 'Track', pct(m.pilot.noCoverPlannedDayRate)],
+    ['Circle depth', 'Households with at least 2 people holding a key, 14 days after sign-up', 'New households', 'Track; newcomer cohort separately', pct(m.pilot.circleDepth)]];
+  return <><h1 className="console-h1">Cover continuity</h1>
+    {m.pilot.coverNotFoundReview ? <div className="card warn"><b>Cover not found is above the 10% review line.</b> Review the cluster: is P1 needed sooner there?</div> : <div className="card flat small">Cover-not-found rate is under the 10% review line.</div>}
+    <table className="tbl"><thead><tr><th>Metric</th><th>Numerator</th><th>Denominator</th><th>Target</th><th>Now</th></tr></thead><tbody>{rows.map(r => <tr key={r[0]}><td><b>{r[0]}</b></td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td className="mono">{r[4]}</td></tr>)}</tbody></table>
+    <p className="small muted">Counts: {Object.entries(m.pilot.counts).map(([k, v]) => `${k} ${v}`).join(' · ')}. The reminder adds about one WhatsApp utility message per visit day (roughly 30 per household per month); cost it against the ₹10 per household per month gate.</p>
+    {t && <><h2 className="console-h2">WhatsApp templates (utility, en / hi / mr)</h2><table className="tbl"><thead><tr><th>Template</th><th>For</th><th>Approval</th><th>Languages</th><th>SMS fallback</th></tr></thead><tbody>{t.map(x => <tr key={x.id}><td className="mono">{x.id}</td><td>{x.purpose} <span className="xs muted">({x.requirement})</span></td><td><span className="tag sim">{x.approval}</span></td><td>{x.languages.join(', ')}</td><td>{x.smsFallback ? 'Yes' : 'No'}</td></tr>)}</tbody></table></>}
+  </>;
+}
+/* ---------- PS-135 cluster advisory composer ---------- */
+function Advisory() {
+  const [d, e, reload] = useLoad<{ clusters: { cluster: string; n: number }[]; sent: { id: string; cluster: string; reason: string; body: string; sent_at: string; remind_at: string; for_date: string }[] }>('/admin/advisories');
+  const [cluster, setCluster] = useState(''); const [reason, setReason] = useState('red rain alert'); const [msg, setMsg] = useState<string | null>(null);
+  if (e) return <div className="card warn">{e}</div>;
+  if (!d) return <div className="empty">Loading…</div>;
+  const c = cluster || d.clusters[0]?.cluster || 'All clusters';
+  return <><h1 className="console-h1">Cluster advisory</h1>
+    <p className="small muted">Send the evening before a likely mass absence. Owners are told to confirm cover tonight, and each helper gets tomorrow’s reminder this evening instead of 90 minutes before the visit.</p>
+    <div className="card"><div className="field"><label htmlFor="adc">Cluster</label><select id="adc" className="input" value={c} onChange={ev => setCluster(ev.target.value)}>{d.clusters.map(x => <option key={x.cluster} value={x.cluster}>{x.cluster} ({x.n} homes)</option>)}<option>All clusters</option></select></div>
+      <div className="field"><label htmlFor="adr">Reason</label><select id="adr" className="input" value={reason} onChange={ev => setReason(ev.target.value)}><option value="red rain alert">Red rain alert</option><option value="strike">Strike</option><option value="festival day">Festival day</option><option value="other">Other</option></select></div>
+      <div className="card flat small"><span className="eyebrow">Preview · owners</span>Many helpers may not come tomorrow ({reason}). Confirm cover tonight. Pawsure is asking your helper this evening and will tell you if a task is at risk.</div>
+      <div className="card flat small"><span className="eyebrow">Preview · helpers (in their language)</span>Tomorrow’s reminder: Yes, I’ll do it · Can’t make it · Send someone else (basic phone: press 1 / 2 / 3).</div>
+      <button className="btn primary" onClick={() => api<{ remindAt: string; households: number }>('/admin/advisories', { body: { cluster: c, reason } }).then(r => { setMsg(`Sent to ${r.households} home(s). Reminders from ${when(r.remindAt)}.`); reload(); }).catch(err => setMsg(err instanceof ApiError ? String(err.body.note ?? err.body.error) : 'Can’t reach Pawsure.'))}>Send advisory</button>
+      <div className="xs muted">Sent now if it is after 6:00 PM, otherwise at 6:00 PM. Every send is audited.</div>{msg && <div className="small" role="status">{msg}</div>}</div>
+    {d.sent.length > 0 && <table className="tbl"><thead><tr><th>Sent</th><th>Cluster</th><th>Reason</th><th>Reminders from</th><th>For</th></tr></thead><tbody>{d.sent.map(a => <tr key={a.id}><td>{when(a.sent_at)}</td><td>{a.cluster}</td><td>{a.reason}</td><td>{when(a.remind_at)}</td><td>{a.for_date}</td></tr>)}</tbody></table>}
   </>;
 }

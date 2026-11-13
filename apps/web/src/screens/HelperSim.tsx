@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { api, API, type DayView } from '../api';
 
-interface Msg { direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
+interface Msg { gloss?: string | null; direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
 const HELPER = { mid: 'm_sunita', phone: '+919000000035' };
 
 export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | null; onChange: () => void }) {
@@ -23,9 +23,9 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
   const [taskId, setTaskId] = useState('');
   const t = prompted.find(x => x.id === taskId) ?? prompted.find(x => !['Confirmed', 'Likely'].includes(x.ev.state)) ?? prompted[0];
   return <div className="sheet" style={{ maxHeight: 'none', borderRadius: 0, background: 'var(--wa-bg)', color: 'var(--wa-ink)' }}>
-    <div className="banner sim"><span className="bi">⚙</span><div>Demo: Sunita’s phone, sending to the real webhooks. Nothing reaches a real phone.</div></div>
+    <div className="banner sim"><span className="bi">⚙</span><div>Sunita’s phone (simulated). Nothing reaches a real phone.</div></div>
     <div className="wa-body" style={{ maxHeight: 280, overflow: 'auto', background: 'var(--wa-bg)', borderRadius: 12 }}>
-      {thread.slice(-12).map((m, i) => <div key={i} className={`bub ${m.direction === 'out' ? 'in' : 'out'}`}>{m.body}
+      {thread.slice(-12).map((m, i) => <div key={i} className={`bub ${m.direction === 'out' ? 'in' : 'out'}`}>{m.body}{m.gloss && <div className="gloss">EN: {m.gloss}</div>}
         {m.buttons && <div className="qr">{m.buttons.map(b => <button key={b.id} onClick={() => send({ type: 'button', payload: b.id })}>{b.label}</button>)}</div>}</div>)}
       {!thread.length && <div className="bub sys">No messages yet.</div>}
     </div>
@@ -40,6 +40,11 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
       {t?.visitId && <><button className="btn sm" onClick={() => ivr('arrive', { visitId: t.visitId })}>☎ Arrival call</button><button className="btn sm" onClick={() => ivr('exit', { visitId: t.visitId })}>☎ Exit call</button></>}
       <button className="btn sm" onClick={() => send({ type: 'button', payload: 'problem_pet_hurt:' + hh })}>⚠ Pet hurt</button>
       <button className="btn sm" onClick={() => send({ type: 'button', payload: 'problem_water_out:' + hh })}>⚠ Water ran out</button>
+      <button className="btn sm" onClick={() => send({ type: 'text', text: 'येऊ शकत नाही' })}>✕ “येऊ शकत नाही” (can’t come)</button>
+      <button className="btn sm" onClick={() => ivr('reminder', { digits: '1' })}>☎ Reminder call: press 1</button>
+      <button className="btn sm" onClick={() => ivr('reminder', { digits: '2' })}>☎ Reminder call: press 2</button>
+      <button className="btn sm" onClick={() => ivr('cant', {})}>☎ Missed-call line: press 2 (can’t come)</button>
+      <button className="btn sm" onClick={() => send({ type: 'text', text: 'लता पवार 90000 00077' })}>Send name: लता पवार 90000 00077</button>
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'change' })}>↺ Change method</button>
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'stop' })}>⏹ Stop</button>
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'start' })}>▶ Start again</button>

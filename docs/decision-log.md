@@ -43,3 +43,16 @@ Format: ID · decision · status · owner · basis. **Proposed** items need sign
 | D-37 | Until a vendor signature check exists (D-06), every webhook must carry WEBHOOK_SECRET in x-webhook-secret outside demo mode; the job runner needs JOB_SECRET. Both fail closed when unset | Proposed | Security | Security round 2, 10 Nov 2026 |
 | D-38 | Sign-out ends the server session, clears the PWA's cached API responses and all on-screen state; owners and circle members can sign out of all devices | Proposed | Security | Shared-phone risk found in testing |
 | D-39 | Helpers and care-circle members (backup, family, viewer) get their own home screens instead of the owner app; staff signing in on the owner app are sent to the console | Proposed | Product | Login testing |
+| D-40 | Evening-before reminders (tasks before 10 AM, and cluster advisories) go At risk 45 min after the reminder if nobody replies; the PRD gives no deadline for this case | Proposed | Product | PS-127, PS-129 |
+| D-41 | “I’m leaving” warns only for tasks known to be uncovered (at risk, asking, substitute pending, cover not found, or the helper marked unavailable), not for a helper whose reminder isn’t due yet | Proposed | Product | PS-134 |
+| D-42 | Medicine is asked only of backups the owner marks “can give medicine” (from written instructions); a backup who can’t give medicine covers the other tasks of the visit and the medicine keeps being asked | Proposed | Product, vet adviser | PS-130, D-10 |
+| D-43 | One at-risk job per visit; a late Yes from the caregiver (after “no reply”) closes the asks and restores the task unless someone is already on hold | Proposed | Product | PS-129 |
+| D-44 | Friend Finder inside cover continuity always needs the owner’s approval; the standing-approval exception covers the ordered backup list only | Agreed (PRD 9.5) | Product | PS-130, PS-131 |
+| D-45 | A substitute not approved by task time − 45 min is treated as declined, and the backups are asked | Proposed | Product | PS-128 |
+| D-46 | Move = the owner does it at the new time (Owner handling); Skip is recorded as “Skipped with reason”, stops the ladder and the day is not covered | Proposed | Product | PS-133 |
+| D-47 | “I’m delayed” asks the current caregiver with one “Only until” time (one hour after the old return time); no answer in 10 min → backups for the extra tasks only. The owner’s own evening tasks are routine rows marked owner_task | Proposed | Product | PS-136 |
+| D-48 | A confirmed friend or backup replacement who said yes after the reminder time is not reminded again; friends get no separate 90-minute reminder in 1.1.0 (their request already has a confirmation and a no-show rule) | Proposed | Product | PS-127 |
+| D-49 | Once cover continuity has run for a task, the missed-task ladder still alerts the owner at due + grace but does not repeat the backup and cover steps | Agreed (PRD 10.4) | Product | 10.4 |
+| D-50 | The AI label always says “rules (no AI connected)” while no model is connected; the demo switch was renamed “Request parser” and its options say “simulate …” | Agreed | Product | Demo fix #4 |
+| D-51 | Names in Hindi and Marathi messages are shown in Devanagari from a small transliteration table (demo names); real sign-up will ask for the name in the helper’s script | Proposed | Product | PS-110 |
+

@@ -4,14 +4,14 @@ import { MATRIX, type Resource } from '../packages/domain/src/permissions.js';
 
 const resources = [...new Set(Object.values(MATRIX).flatMap(r => Object.keys(r ?? {})))] as Resource[];
 let pm = '# Permission matrix (generated from `packages/domain/src/permissions.ts`)\n\nRoles across, resources down. Server-side and object-level: every check also requires the same household, except staff. Extra conditions apply beyond this table:\n\n';
-pm += '- **Backup** sees the pet and emergency card only through a valid 15-minute look-in link, and the address only if authorised.\n- **Helper** sees the emergency card only during a visit or incident.\n- **Friend** sees access details and the emergency card only after acceptance and owner authorisation.\n- **Nearby member** has no access while PS-062 is OFF.\n\n';
+pm += '- **Backup** sees the pet and emergency card only through a valid 15-minute look-in link, and the address only if authorised.\n- **Helper** sees the emergency card only during a visit or incident.\n- **Friend** sees access details and the emergency card only after acceptance and owner authorisation.\n- **Nearby member** has no access while PS-062 is OFF.\n- **Substitute** and **ad-hoc visitor** (v1.4) act only through a one-time task link: this task only, until it expires or is revoked. Before acceptance and owner approval they see the task, time and tower; address, gate, key and emergency card only after both.\n- **Standing approval** (v1.4, PRD 9.5) lets Pawsure message the ordered backup list without a tap each time. It never covers friends, substitutes, ad-hoc numbers or nearby members (`outreachAllowed`).\n\n';
 const roles = Object.keys(MATRIX);
 pm += '| Resource | ' + roles.join(' | ') + ' |\n|' + '---|'.repeat(roles.length + 1) + '\n';
 for (const r of resources.sort()) pm += `| ${r} | ` + roles.map(role => (MATRIX as Record<string, Record<string, string[]>>)[role]?.[r]?.map(a => a[0]!.toUpperCase() + a.slice(1, 3)).join(' ') || '—').join(' | ') + ' |\n';
 pm += '\nKey: Rea = read, Cre = create, Upd = update, Del = delete, Ack = acknowledge, App = approve, Exp = export.\n';
 writeFileSync('docs/permission-matrix.md', pm);
 
-type Row = [id: string, title: string, status: 'Built + tested' | 'Rules built + tested' | 'Partial' | 'Planned', where: string, tests: string, phase: string];
+type Row = [id: string, title: string, status: 'Built + tested' | 'Rules built + tested' | 'Partial' | 'Planned' | 'Switch OFF (locked)', where: string, tests: string, phase: string];
 const T: Row[] = [
   ['PS-001', 'Mobile OTP sign-in', 'Built + tested', 'api /auth/otp/*, web Onboarding', 'api.test: auth', '1'],
   ['PS-002', 'Consent and profile controls', 'Built + tested', 'api /v1/consents, /v1/me/rights (withdrawal), web Onboarding + Your data rights', 'phase4.test: owner rights', '1/4'],
@@ -61,9 +61,26 @@ const T: Row[] = [
   ['§9 retention / backups', 'Retention schedule, encrypted backups, restore drill', 'Built + tested', 'ops.ts runRetention/runBackup, tools/restore-drill.mts', 'phase5.test', '5'],
   ['§16 monitoring', 'Service checks, alerting, vendor failover', 'Built + tested', 'ops.ts serviceChecks/raiseAlerts, delivery.ts', 'phase5.test', '5'],
   ['PS-119/120', 'Rights, grievance, breach runbook', 'Built + tested', 'owner + helper (WhatsApp “my data”) requests with 7/90-day clocks, export, privacy desk; breach checklist and rehearsal with the 72 h clock', 'phase4.test: rights, breach', '4 (legal review pending)'],
-  ['PS-121', 'Task lifecycle', 'Built + tested', 'lifecycle.ts, task_events (immutable)', 'trust.test, api.test', '1']
+  ['PS-121', 'Task lifecycle', 'Built + tested', 'lifecycle.ts, task_events (immutable)', 'trust.test, api.test', '1'],
+  ['PS-127', 'Pre-task caregiver confirmation', 'Built + tested', 'cover/planner.ts planReminder; cover.ts runReminders (90 min before; 8 PM the evening before for tasks before 10 AM; Trusted only if enabled; co-owners and backup replacements); WhatsApp buttons, IVR 1/2/3, app reply; HelperSim', 'cover.test: reminder planner; cover-continuity.test O1/O2/IVR/co-owner; e2e O1, O2', '1.1.0'],
+  ['PS-128', 'Can’t come at any time; substitute', 'Built + tested', 'isCantCome (en/hi/mr), parseSubstitute; helper inbound, IVR “cant”; access revoked + audited; task_links (substitute, owner approves first, one-time link)', 'cover.test: replies; cover-continuity.test: can’t come, substitute; e2e O3, O4', '1.1.0'],
+  ['PS-129', 'At-risk task state', 'Built + tested', 'cover/stateMachine.ts (reason codes); atRiskReason; At-risk banner and cover line on Today', 'cover.test: state machine, at-risk evaluator; e2e O1, O2', '1.1.0'],
+  ['PS-130', 'Ordered backup list', 'Built + tested', 'orderBackups/nextBackupAction (pairs, 10 min, key holders first, hold, auto-confirm); backup_contact; Backups screen; standing approval', 'cover.test: backup runner; cover-continuity.test: backups; e2e O5', '1.1.0'],
+  ['PS-131', 'After the Friend Finder cutoff', 'Built + tested', 'friendFinderOpen/afterFriendCancel; FF reducer blocks sends at the cutoff and sends a late cancel to the backup runner; honours a Yes received before the cutoff', 'friendfinder-cutoff.test; cover-continuity.test: cutoff; e2e O6, P1', '1.1.0'],
+  ['PS-132', 'Task urgency', 'Built + tested', 'defaultUrgency, alertGrace (must happen: due + 15), circleCallDue; routine and care_tasks urgency; urgency selector; hot-day switch', 'cover.test: urgency; cover-continuity.test: must happen; e2e O7, O8', '1.1.0'],
+  ['PS-133', 'Cover not found', 'Built + tested', 'notFoundOptions; message + automated call; I’ll handle it, ask someone else (15-min link), whole circle, move/skip by urgency; Cover not found sheet', 'cover.test; cover-continuity.test: must happen, can wait, ask someone else; e2e O7, O8', '1.1.0'],
+  ['PS-134', 'Pre-departure warning and plan B', 'Built + tested', 'preDepartureCheck; six options; leave anyway → NoCoverPlanned (not covered); plan B on the leaving check; wide ask (60 min) when more than 3 h remain', 'cover.test: pre-departure; cover-continuity.test: leaving; e2e O9', '1.1.0'],
+  ['PS-135', 'Thin-circle warning and cluster advisory', 'Built + tested', 'thinCircle weekly (dedupe by week); /admin/advisories composer; advisory pulls tomorrow’s reminders to that evening', 'cover-continuity.test: advisory, circle builder; e2e O14', '1.1.0'],
+  ['PS-136', 'I’m delayed', 'Built + tested', 'planDelay, splitExtension; /day/delay and /ask; helper Yes / Only until / Can’t; part-only request; day report', 'cover.test: delay planner; cover-continuity.test: delayed; e2e O10', '1.1.0'],
+  ['PS-137', 'Gate and key checklist', 'Built + tested', 'visit_access_checklist for anyone new to the home; key plans; one reminder at task − 15; details only after acceptance', 'cover.test: checklist; cover-continuity.test O1; e2e O1, O11', '1.1.0'],
+  ['PS-138', 'Pet handling note', 'Built + tested', 'pets.handling_note; first-time backups, friends, substitutes and ad-hoc visitors must confirm reading it before Yes; ranking unchanged except a tie-break for people who have cared before', 'cover-continuity.test O1; phase3.test; e2e O1, O4, O12', '1.1.0'],
+  ['PS-139', 'One named carer per task', 'Built + tested', 'task_cover person per task; routine Who (helper, co-owner, owner); co-owner reminder answered in the app', 'cover-continuity.test: co-owner', '1.1.0'],
+  ['PS-140', 'Newcomer circle builder', 'Built + tested', 'Onboarding “Do you have anyone?”; society link, pet-parent swap, building helper, own provider; no day-care list', 'cover-continuity.test: circle builder; e2e O13', '1.1.0'],
+  ['PS-141', 'Same-society member fallback', 'Switch OFF (locked)', 'feature flag sameSocietyFallback, locked OFF until the verification rule is decided (PRD 20.3)', 'cover-continuity.test: switch; e2e O14', '1.1.0'],
+  ['16.3 v1.4', 'Cover continuity metrics', 'Built + tested', 'coverMetrics (six metrics, 10% review line); /admin/cover-metrics; console Cover continuity section', 'cover.test: metrics; cover-continuity.test', '1.1.0'],
+  ['PS-118 v1.4', 'Cover templates', 'Partial', '9 utility templates en/hi/mr with approval status (coverTemplates.ts; /admin/templates). Not submitted: no WhatsApp provider yet', 'cover-continuity.test: templates', '1.1.0 (Meta approval)'],
 ];
-let tr = '# Requirements traceability (P0)\n\nStatus at the end of Phase 3. “Rules built + tested” means the deterministic logic is implemented and unit-tested, but the screens or vendor wiring come in the named phase.\n\n| Requirement | Title | Status | Where | Tests | Phase |\n|---|---|---|---|---|---|\n';
+let tr = '# Requirements traceability (P0)\n\nStatus for release 1.1.0 (PRD v1.4). “Rules built + tested” means the deterministic logic is implemented and unit-tested, but the screens or vendor wiring come in the named phase.\n\n| Requirement | Title | Status | Where | Tests | Phase |\n|---|---|---|---|---|---|\n';
 for (const r of T) tr += '| ' + r.join(' | ') + ' |\n';
 writeFileSync('docs/traceability.md', tr);
 console.log('docs generated:', resources.length, 'resources;', T.length, 'requirement rows');

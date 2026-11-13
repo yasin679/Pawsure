@@ -16,13 +16,13 @@ export function FriendSim({ onChange }: { onChange: () => void }) {
   };
   const lastReq = [...thread].reverse().find(m => m.request_id)?.request_id;
   return <div className="sheet" style={{ maxHeight: 'none', borderRadius: 0, background: 'var(--wa-bg)', color: 'var(--wa-ink)' }}>
-    <div className="banner sim"><span className="bi">⚙</span><div>Demo: friends’ phones, replying through the real webhook. Nothing reaches a real phone.</div></div>
+    <div className="banner sim"><span className="bi">⚙</span><div>Friends’ phones (simulated). Nothing reaches a real phone.</div></div>
     <div className="seg">{FRIENDS.map(f => <button key={f[0]} aria-pressed={who[0] === f[0]} onClick={() => setWho(f)}>{f[1]}</button>)}</div>
     <div className="wa-body" style={{ maxHeight: 280, overflow: 'auto', borderRadius: 12 }}>
       {thread.slice(-10).map((m, i) => <div key={i} className={`bub ${m.direction === 'out' ? 'in' : 'out'}`}>{m.body}{m.buttons && <div className="qr">{m.buttons.map(b => <button key={b.id} onClick={() => send({ type: 'button', payload: b.id })}>{b.label}</button>)}</div>}</div>)}
       {!thread.length && <div className="bub sys">No messages for {who[1]} yet.</div>}
     </div>
     <div className="row"><input className="input" aria-label="Reply text" placeholder="e.g. 5:30 la jamel / thoda late / haan" value={text} onChange={e => setText(e.target.value)} /><button className="btn sm" disabled={!text} onClick={() => send({ type: 'text', text }).then(() => setText(''))}>Send</button></div>
-    <div className="chips">{lastReq && <button className="btn sm" onClick={() => send({ type: 'button', payload: 'ff_yes:' + lastReq })}>Late “Yes”</button>}{last && <button className="btn sm" onClick={() => send({}, true)}>⟲ Replay last webhook (duplicate)</button>}</div>
+    <div className="chips">{lastReq && <button className="btn sm" onClick={() => send({ type: 'button', payload: 'ff_yes:' + lastReq })}>Late “Yes”</button>}{last && <button className="btn sm" onClick={() => send({}, true)}>⟲ Send the last reply again (duplicate)</button>}</div>
   </div>;
 }

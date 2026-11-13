@@ -15,6 +15,12 @@ export interface FriendRequest {
   id: string; state: RequestState; taskTime: Minutes | null; mode: 'one' | 'all3' | null;
   recipients: Recipient[]; holdFriendId?: string; holdAt?: Minutes; holdReminded?: boolean; confirmedFriendId?: string;
   friendSignalAt?: Minutes; exclude: string[]; processedMessageIds: string[];
+  /** v1.4: reply window in minutes when the request is part of a wide ask (PS-134); default is the 15-minute expiry. */
+  windowMin?: number;
+  /** v1.4: the at-risk cover job this request was started from, and the line shown to the owner. */
+  origin?: { jobId: string; text: string };
+  /** v1.4 PS-138: first-time carers who ticked "I have read this" on the handling note. */
+  noteReadBy?: string[];
   history: { at: Minutes; state: RequestState; note: string }[];
 }
 
@@ -24,12 +30,14 @@ export const FF_TIMERS_V1: FFTimers = { expiry: 15, reminder: 8, hold: 10, holdR
 export type Effect =
   | { type: 'send_request'; friendId: string; reminder?: boolean }
   | { type: 'message_friend'; friendId: string; template: 'waiting_for_owner' | 'closed_covered' | 'already_covered' | 'request_closed' | 'released' | 'ask_time_again' | 'declined_ack' | 'reconfirm' | 'cancelled_by_owner' | 'access_removed' }
-  | { type: 'notify_owner'; template: 'friend_yes' | 'friend_declined' | 'friend_proposed' | 'hold_reminder' | 'none_accepted' | 'friend_cancelled' | 'no_show' | 'search_closed'; friendId?: string }
+  | { type: 'notify_owner'; template: 'friend_yes' | 'friend_declined' | 'friend_proposed' | 'hold_reminder' | 'none_accepted' | 'friend_cancelled' | 'no_show' | 'search_closed' | 'friend_cancelled_after_cutoff'; friendId?: string }
   | { type: 'disclose_access'; friendId: string }
   | { type: 'revoke_access'; friendId: string }
   | { type: 'create_cover_task'; friendId: string; time: Minutes }
   | { type: 'resume_escalation_backup' }
-  | { type: 'reopen_search'; exclude: string[] };
+  | { type: 'reopen_search'; exclude: string[] }
+  /** v1.4 PS-131: after the search cutoff a cancelled cover goes to the ordered backup list instead of a new search. */
+  | { type: 'backup_runner'; friendId: string };
 
 export type FFEvent =
   | { type: 'parse_confirmed'; taskTime: Minutes }
@@ -68,6 +76,8 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
     case 'owner_approved_send': {
       if (req.state !== 'Awaiting owner approval') throw new TransitionError('owner approval is only possible after suggestions');
       if (!ev.friendIds.length || (ev.mode === 'one' && ev.friendIds.length !== 1) || ev.friendIds.length > 3) throw new TransitionError('invalid recipients');
+      // PS-131: no new request at or after the search cutoff. The owner is told why and the backup list is used instead.
+      if (req.taskTime != null && now >= req.taskTime - t.closeBeforeTask) throw new TransitionError(`Too close to the task for Friend Finder: the search closes ${t.closeBeforeTask} minutes before the task. Ask your backups instead.`);
       req.mode = ev.mode;
       req.recipients = ev.friendIds.map(friendId => ({ friendId, state: 'sent' as RecipientState, sentAt: now, reminded: false }));
       ev.friendIds.forEach(friendId => fx.push({ type: 'send_request', friendId }));
@@ -135,8 +145,11 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
     case 'friend_cancel': {
       if (req.state !== 'Confirmed' || !req.confirmedFriendId) throw new TransitionError('friend can only cancel a confirmed request');
       const fid = req.confirmedFriendId; rec(fid)!.state = 'cancelled';
-      fx.push({ type: 'notify_owner', template: 'friend_cancelled', friendId: fid }, { type: 'revoke_access', friendId: fid }, { type: 'message_friend', friendId: fid, template: 'access_removed' }, { type: 'reopen_search', exclude: [...req.exclude, fid] });
-      go('Cancelled by friend', `${fid} cancelled after confirming`); break;
+      fx.push({ type: 'notify_owner', template: 'friend_cancelled', friendId: fid }, { type: 'revoke_access', friendId: fid }, { type: 'message_friend', friendId: fid, template: 'access_removed' });
+      const afterCutoff = req.taskTime != null && now >= req.taskTime - t.closeBeforeTask;
+      if (afterCutoff) fx.push({ type: 'notify_owner', template: 'friend_cancelled_after_cutoff', friendId: fid }, { type: 'backup_runner', friendId: fid });
+      else fx.push({ type: 'reopen_search', exclude: [...req.exclude, fid] });
+      go('Cancelled by friend', afterCutoff ? `${fid} cancelled after the search cutoff: backup list asked instead (PS-131)` : `${fid} cancelled after confirming`); break;
     }
     case 'friend_arrived': req.friendSignalAt = now; req.history.push({ at: now, state: req.state, note: 'Friend checked in' }); break;
     case 'completed':
@@ -146,8 +159,9 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
       if (OPEN.includes(req.state)) {
         for (const r of req.recipients) {
           if (r.state !== 'sent') continue;
-          if (!r.reminded && now >= r.sentAt + t.reminder) { r.reminded = true; fx.push({ type: 'send_request', friendId: r.friendId, reminder: true }); }
-          if (now >= r.sentAt + t.expiry) { r.state = 'expired'; req.history.push({ at: now, state: req.state, note: `${r.friendId}: no reply in ${t.expiry} min` }); }
+          const expiry = req.windowMin ?? t.expiry, reminder = req.windowMin ? Math.round(req.windowMin / 2) : t.reminder;
+          if (!r.reminded && now >= r.sentAt + reminder) { r.reminded = true; fx.push({ type: 'send_request', friendId: r.friendId, reminder: true }); }
+          if (now >= r.sentAt + expiry) { r.state = 'expired'; req.history.push({ at: now, state: req.state, note: `${r.friendId}: no reply in ${expiry} min` }); }
         }
         if (req.state === 'Provisional hold' && req.holdAt != null) {
           if (!req.holdReminded && now >= req.holdAt + t.holdReminder) { req.holdReminded = true; fx.push({ type: 'notify_owner', template: 'hold_reminder', friendId: req.holdFriendId }); }
@@ -157,7 +171,9 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
           }
         }
         if (req.recipients.length && req.recipients.every(x => ['declined', 'expired', 'withdrawn', 'released'].includes(x.state))) { go('Expired', 'No acceptance'); fx.push({ type: 'notify_owner', template: 'none_accepted' }); }
-        else if (req.taskTime != null && now >= req.taskTime - t.closeBeforeTask && OPEN.includes(req.state)) { go('Expired', `Search closed ${t.closeBeforeTask} min before the task`); fx.push({ type: 'notify_owner', template: 'search_closed' }); }
+        // v1.1.0 fix: a Yes received before the cutoff is honoured until its hold ends (or, for one friend, until the task time).
+        else if (req.taskTime != null && req.state === 'Accepted - pending owner confirmation' && now >= req.taskTime) { go('Expired', 'Not confirmed by the task time'); fx.push({ type: 'notify_owner', template: 'none_accepted' }); }
+        else if (req.taskTime != null && now >= req.taskTime - t.closeBeforeTask && req.state === 'Sent') { go('Expired', `Search closed ${t.closeBeforeTask} min before the task`); fx.push({ type: 'notify_owner', template: 'search_closed' }); }
       }
       if (req.state === 'Confirmed' && req.taskTime != null && req.friendSignalAt == null && now >= req.taskTime + t.noShowAfter) {
         fx.push({ type: 'notify_owner', template: 'no_show', friendId: req.confirmedFriendId }, { type: 'resume_escalation_backup' });

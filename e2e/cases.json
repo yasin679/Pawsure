@@ -13,7 +13,9 @@
     "K": "Operations console",
     "L": "Cross-cutting",
     "M": "Login separation and security",
-    "N": "Reported issues (regression)"
+    "N": "Reported issues (regression)",
+    "O": "Cover continuity (v1.4)",
+    "P": "Fixes from demo testing (v1.1.0)"
   },
   "cases": {
     "A1": {
@@ -555,6 +557,132 @@
       "pre": "Signed in, setup not finished",
       "steps": "1. Reload part-way through setup",
       "expected": "Setup continues (terms, profile) instead of a blank screen"
+    },
+    "O1": {
+      "role": "Owner, helper, backup",
+      "pre": "Clock 2:30 PM",
+      "steps": "1. Helper taps Can’t make it on the 2:30 reminder\n2. Owner opens Today\n3. Mrs Desai reads the handling note and taps Yes\n4. Owner taps Confirm Mrs Desai\n5. Owner ticks the gate approval and picks the key plan",
+      "expected": "Task At risk with the reason; Mrs Desai and Ankita asked first (key holders); Yes blocked until the note is read; after Confirm the gate and key checklist shows and turns Ready"
+    },
+    "O2": {
+      "role": "Owner, helper",
+      "pre": "Reminder sent 2:30 PM, no reply",
+      "steps": "1. Advance to 3:10, then 3:15",
+      "expected": "Nothing at 3:10; at 3:15 the task is At risk with “No reply from Sunita…”; owner alerted once"
+    },
+    "O3": {
+      "role": "Helper",
+      "pre": "Clock 11:00 AM",
+      "steps": "1. Helper writes “येऊ शकत नाही”",
+      "expected": "The 1 PM visit is At risk at once; owner told; no task prompts for that visit"
+    },
+    "O4": {
+      "role": "Owner, helper, substitute",
+      "pre": "Clock 2:30 PM",
+      "steps": "1. Helper taps Send someone else and sends her sister’s name and number\n2. Owner approves\n3. The sister opens the one-time link, reads the note, opens the details",
+      "expected": "Owner sees “Nothing about your home has been shared”; the link shows the address only after approval and the note"
+    },
+    "O5": {
+      "role": "Owner",
+      "pre": "Helper can’t make it at 2:30",
+      "steps": "1. See what’s happening\n2. Advance to 2:40\n3. Stop asking",
+      "expected": "First pair Mrs Desai and Ankita; then Rohan and Ritu; Stop shows the next-step options"
+    },
+    "O6": {
+      "role": "Owner, friend",
+      "pre": "Priya confirmed for 5 PM",
+      "steps": "1. At 4:45 Priya cancels",
+      "expected": "No new Friend Finder search; At risk; status sheet says “Friend Finder not started: too close to the task”"
+    },
+    "O7": {
+      "role": "Owner",
+      "pre": "Helper can’t come; Ankita covers lunch; nobody for the medicine",
+      "steps": "1. Advance to 12:30\n2. Advance to 12:45",
+      "expected": "Cover not found sheet with no Move or Skip and the 15-minute warning; at 12:45 the care circle is called"
+    },
+    "O8": {
+      "role": "Owner",
+      "pre": "A 6:30 PM walk with no reply",
+      "steps": "1. Advance through the backup pairs to 6:15\n2. Move it",
+      "expected": "Move and Skip offered; task becomes You’re handling it; the day report’s cover history lists who was asked"
+    },
+    "O9": {
+      "role": "Owner",
+      "pre": "Helper marked unavailable",
+      "steps": "1. I’m leaving\n2. Leave anyway\n3. Pick plan B, I’m leaving",
+      "expected": "Warning “Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet” with six options; Today shows No cover planned"
+    },
+    "O10": {
+      "role": "Owner, helper",
+      "pre": "Owner out until 7 PM; clock 6:30 PM",
+      "steps": "1. I’m delayed → 9 PM → See what changes\n2. Ask Sunita first\n3. Sunita replies Only until 8",
+      "expected": "Walk and dinner listed with alone-window and medicine checks; dinner becomes a request on its own"
+    },
+    "O11": {
+      "role": "Owner",
+      "pre": "Mrs Desai confirmed for 4 PM; checklist not ticked",
+      "steps": "1. Advance to 3:45 and 3:50",
+      "expected": "One gate-and-key reminder to the owner"
+    },
+    "O12": {
+      "role": "Friend (Rahul)",
+      "pre": "Request to Rahul for 7:30 PM",
+      "steps": "1. Rahul taps Yes\n2. Rahul taps I have read this, then Yes",
+      "expected": "First Yes is refused with “please read the handling note”; after reading, the request waits for the owner"
+    },
+    "O13": {
+      "role": "New owner",
+      "pre": "New number",
+      "steps": "1. Sign up\n2. Answer No one yet\n3. Start the society invite link",
+      "expected": "Honest “Cover is limited…” message; four builder options; no day-care list"
+    },
+    "O14": {
+      "role": "Ops lead, owner",
+      "pre": "Clock 6:40 PM",
+      "steps": "1. Console → Cluster advisory → Strike → Send\n2. Switches; Cover continuity\n3. Back to the owner app",
+      "expected": "Sent to 1 home; same-society fallback locked OFF; metrics and templates listed; Sunita has tomorrow’s reminder this evening"
+    },
+    "P1": {
+      "role": "Owner, friend",
+      "pre": "Request sent 4:20 PM for 5 PM",
+      "steps": "1. Priya says Yes at 4:28\n2. Owner confirms at 4:35\n3. Owner tries a new request at 4:35",
+      "expected": "Confirm works; the new request is blocked with “Too close to the task for Friend Finder”"
+    },
+    "P2": {
+      "role": "Owner",
+      "pre": "Helper confirmed the 1 PM visit; no evidence",
+      "steps": "1. Advance to 4:30 PM",
+      "expected": "Alert says “Your backup was alerted at 2:00 PM.”"
+    },
+    "P3": {
+      "role": "Owner",
+      "pre": "Fresh demo",
+      "steps": "1. Look at a task card",
+      "expected": "“Planned” shows once; the cover line shows “Sunita · assigned”"
+    },
+    "P4": {
+      "role": "Owner",
+      "pre": "Fresh demo",
+      "steps": "1. Look at the demo parser switch\n2. Ask Pawsure for cover",
+      "expected": "Switch and request both say “rules (no AI connected)”"
+    },
+    "P5": {
+      "role": "Visitor",
+      "pre": "Fresh demo",
+      "steps": "1. Open the welcome screen",
+      "expected": "The mascot is a transparent image with no beige box"
+    },
+    "P6": {
+      "role": "Presenter",
+      "pre": "1440 px wide screen",
+      "steps": "1. Show Sunita’s phone",
+      "expected": "The phone sits beside the owner app; no developer wording"
+    },
+    "P7": {
+      "role": "Presenter",
+      "pre": "Fresh demo, owner signed in",
+      "steps": "1. Demo bar → v1.4 scenario… → pick each of O1 to O14",
+      "expected": "Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state"
     }
   },
   "defects": [

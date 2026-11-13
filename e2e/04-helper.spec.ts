@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { boot, signInOwner, clockTo, taskCard, meItem, tab, api } from './helpers';
 
 /** Sunita’s simulated phone (demo bar) posts to the same WhatsApp and IVR webhooks a real phone would. */
-const phone = (page: Page) => page.locator('.sheet', { hasText: 'Demo: Sunita’s phone' });
+const phone = (page: Page) => page.locator('.sheet', { hasText: 'Sunita’s phone (simulated)' });
 async function openPhone(page: Page) { await page.getByRole('button', { name: 'Show Sunita’s phone' }).click(); await expect(phone(page)).toBeVisible(); }
 
 test.describe('E. Helper check-ins (Sunita’s phone)', () => {

@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 90 acceptance test cases with steps, expected results and the latest result
+subtitle: 111 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,16 +13,16 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 11 Nov 2026, 16:47 IST |
-| Result | **90 of 90 passed** |
+| Latest run | 13 Nov 2026, 12:36 IST |
+| Result | **111 of 111 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
 
-Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, security), **M** medium.
+Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, security, cover continuity), **M** medium.
 
 > [!NOTE]
-> The demo clock starts at 9:00 AM on 6 Nov 2026. Steps that say “clock to” use the demo bar (**+5m**, **+15m**, **+1h**).
+> The demo clock starts at 9:00 AM on 6 Nov 2026 and runs in real time. Steps that say “clock to” or “advance” use the demo bar (**+5m**, **+15m**, **+1h**). Helper, friend and backup replies use the simulated phones (**Show Sunita’s phone**, **Show friends’ phones**, **Show backups’ phones**).
 
 
 ## 2 Sign-in and onboarding
@@ -185,7 +185,38 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | N3 | H | Sign out, then sign straight back in with the same number | 1. Sign out<br>2. Sign in again straight away with the same number | Signs in without a block | Pass |
 | N4 | H | A new user who reloads part-way through setup continues setup (no blank screen) | 1. Reload part-way through setup | Setup continues (terms, profile) instead of a blank screen | Pass |
 
-## 16 Sign-off
+## 16 Cover continuity (v1.4)
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| O1 | H | Helper taps Can’t make it at 2:30 → At risk → backups in order → Mrs Desai reads the note and accepts → owner confirms → gate and key | 1. Helper taps Can’t make it on the 2:30 reminder<br>2. Owner opens Today<br>3. Mrs Desai reads the handling note and taps Yes<br>4. Owner taps Confirm Mrs Desai<br>5. Owner ticks the gate approval and picks the key plan | Task At risk with the reason; Mrs Desai and Ankita asked first (key holders); Yes blocked until the note is read; after Confirm the gate and key checklist shows and turns Ready | Pass |
+| O2 | H | No reply by 3:15 → At risk “no reply”, owner alerted once | 1. Advance to 3:10, then 3:15 | Nothing at 3:10; at 3:15 the task is At risk with “No reply from Sunita…”; owner alerted once | Pass |
+| O3 | H | Helper writes “येऊ शकत नाही” at 11 AM for the 1 PM visit → At risk; access removed | 1. Helper writes “येऊ शकत नाही” | The 1 PM visit is At risk at once; owner told; no task prompts for that visit | Pass |
+| O4 | H | Send someone else → helper names her sister → owner approves → one-time task link with details only after the note is read | 1. Helper taps Send someone else and sends her sister’s name and number<br>2. Owner approves<br>3. The sister opens the one-time link, reads the note, opens the details | Owner sees “Nothing about your home has been shared”; the link shows the address only after approval and the note | Pass |
+| O5 | H | Backups in order: two at a time, key holders first; the owner sees each ask and stops the list | 1. See what’s happening<br>2. Advance to 2:40<br>3. Stop asking | First pair Mrs Desai and Ankita; then Rohan and Ritu; Stop shows the next-step options | Pass |
+| O6 | H | A friend cancels at 4:45 for a 5:00 task → Friend Finder does not start → backup list; owner told why | 1. At 4:45 Priya cancels | No new Friend Finder search; At risk; status sheet says “Friend Finder not started: too close to the task” | Pass |
+| O7 | H | Cover not found, must happen (medicine): no Move or Skip; care circle called after 15 min | 1. Advance to 12:30<br>2. Advance to 12:45 | Cover not found sheet with no Move or Skip and the 15-minute warning; at 12:45 the care circle is called | Pass |
+| O8 | H | Cover not found, can wait (walk) → the owner moves it; the day records who was asked | 1. Advance through the backup pairs to 6:15<br>2. Move it | Move and Skip offered; task becomes You’re handling it; the day report’s cover history lists who was asked | Pass |
+| O9 | H | “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned | 1. I’m leaving<br>2. Leave anyway<br>3. Pick plan B, I’m leaving | Warning “Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet” with six options; Today shows No cover planned | Pass |
+| O10 | H | “I’m delayed” 7 → 9 PM: Sunita only until 8 → a request for the dinner only | 1. I’m delayed → 9 PM → See what changes<br>2. Ask Sunita first<br>3. Sunita replies Only until 8 | Walk and dinner listed with alone-window and medicine checks; dinner becomes a request on its own | Pass |
+| O11 | H | Gate and key: unticked items remind the owner once at task − 15 | 1. Advance to 3:45 and 3:50 | One gate-and-key reminder to the owner | Pass |
+| O12 | H | A first-time friend must read the handling note before Yes | 1. Rahul taps Yes<br>2. Rahul taps I have read this, then Yes | First Yes is refused with “please read the handling note”; after reading, the request waits for the owner | Pass |
+| O13 | H | Newcomer with nobody → honest message and the circle builder; no day-care list | 1. Sign up<br>2. Answer No one yet<br>3. Start the society invite link | Honest “Cover is limited…” message; four builder options; no day-care list | Pass |
+| O14 | H | Ops sends a cluster advisory → tomorrow’s reminders go out this evening; same-society fallback is OFF and locked | 1. Console → Cluster advisory → Strike → Send<br>2. Switches; Cover continuity<br>3. Back to the owner app | Sent to 1 home; same-society fallback locked OFF; metrics and templates listed; Sunita has tomorrow’s reminder this evening | Pass |
+
+## 17 Fixes from demo testing (v1.1.0)
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| P1 | M | A friend’s Yes before the cutoff can still be confirmed after it; new requests are blocked at the cutoff | 1. Priya says Yes at 4:28<br>2. Owner confirms at 4:35<br>3. Owner tries a new request at 4:35 | Confirm works; the new request is blocked with “Too close to the task for Friend Finder” | Pass |
+| P2 | M | Alert text uses the past tense once the backup step has happened | 1. Advance to 4:30 PM | Alert says “Your backup was alerted at 2:00 PM.” | Pass |
+| P3 | M | “Planned” appears once on a task card | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
+| P4 | M | The request label and the demo parser switch say the same thing (no AI connected) | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
+| P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the welcome screen | The mascot is a transparent image with no beige box | Pass |
+| P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
+| P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
+
+## 18 Sign-off
 
 | Role | Name | Decision | Date |
 |---|---|---|---|

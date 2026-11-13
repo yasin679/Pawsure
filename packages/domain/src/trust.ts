@@ -30,7 +30,7 @@ export const RULES_V1: TrustRules = {
 /** Random in-app photo prompt rate (PRD 10.5): 1 in 10 visits; 1 in 5 without a gate app or after a mismatch in the last 14 days. */
 export const photoSampleRate = (o: { gateApp: boolean; mismatchInLast14Days: boolean }) => (!o.gateApp || o.mismatchInLast14Days ? 1 / 5 : 1 / 10);
 
-export const graceFor =(t: Pick<CareTask, 'profile'>, r: TrustRules = RULES_V1) => r.grace[t.profile];
+export const graceFor = (t: Pick<CareTask, 'profile'> & { graceOverride?: number }, r: TrustRules = RULES_V1) => t.graceOverride ?? r.grace[t.profile];
 
 export function minVisitDuration(tasks: Pick<CareTask, 'minMinutes'>[], r: TrustRules = RULES_V1): number {
   return Math.min(r.visitMinCap, tasks.reduce((a, t) => a + t.minMinutes, 0));

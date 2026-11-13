@@ -1,8 +1,8 @@
 {
   "name": "pawsure",
   "private": true,
-  "version": "0.1.0",
-  "description": "Pawsure P0 pilot: owner PWA, API, domain rules and operations console (PRD v1.3).",
+  "version": "1.1.0",
+  "description": "Pawsure P0 pilot: owner PWA, API, domain rules and operations console (PRD v1.4).",
   "workspaces": [
     "packages/*",
     "apps/*"

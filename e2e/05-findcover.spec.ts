@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { boot, signInOwner, tab, clockTo, taskCard, dialog, api } from './helpers';
 
-const friendsPhone = (page: Page) => page.locator('.sheet', { hasText: 'Demo: friends’ phones' });
+const friendsPhone = (page: Page) => page.locator('.sheet', { hasText: 'Friends’ phones (simulated)' });
 async function friendReply(page: Page, name: string, button?: string, text?: string) {
   await page.getByRole('button', { name: 'Show friends’ phones' }).click();
   await friendsPhone(page).locator('.seg').getByRole('button', { name, exact: true }).click();
@@ -88,11 +88,11 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
   });
 
   test('G5 AI unavailable → simple form; matching still works', async ({ page }) => {
-    await page.locator('.demobar select').selectOption('down');
+    await page.locator('.demobar select[data-parser]').selectOption('down');
     await tab(page, 'Find cover');
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
-    await expect(page.getByText(/AI unavailable/)).toBeVisible();
+    await expect(page.locator('main').getByText(/AI unavailable/)).toBeVisible();
     await page.getByText('Feed', { exact: true }).click();
     await page.locator('#mt').selectOption({ label: '5:00 PM' });
     await page.getByRole('button', { name: 'Search my friends' }).click();
@@ -100,7 +100,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
   });
 
   test('G6 AI times out (8 s) → simple form', async ({ page }) => {
-    await page.locator('.demobar select').selectOption('timeout');
+    await page.locator('.demobar select[data-parser]').selectOption('timeout');
     await tab(page, 'Find cover');
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
@@ -148,7 +148,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await page.getByRole('button', { name: 'Show friends’ phones' }).click();
     await friendsPhone(page).locator('.qr').getByRole('button', { name: 'Yes', exact: true }).last().click();
     await page.waitForTimeout(500);
-    await friendsPhone(page).getByRole('button', { name: /Replay last webhook/ }).click();
+    await friendsPhone(page).getByRole('button', { name: /Send the last reply again/ }).click();
     await page.waitForTimeout(500);
     await page.getByRole('button', { name: 'Hide friends’ phones' }).click();
     const req = await api<{ id: string; history: { state: string }[] }[]>(page, 'GET', '/v1/households/hh_demo/requests');

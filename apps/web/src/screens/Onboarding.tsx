@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, session, setSessionMode } from '../api';
 import { AppBar, Art, Banner, Icon } from '../ui';
+import { CircleBuilder } from './Cover';
 
 type Step = 'welcome' | 'phone' | 'otp' | 'consent' | 'profile';
 const ERR: Record<string, string> = {
@@ -13,6 +14,7 @@ const ERR: Record<string, string> = {
 
 export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; start?: Step }) {
   const [step, setStep] = useState<Step>(start);
+  const [newHh, setNewHh] = useState<string | null>(null);
   // Already signed in but setup not finished (for example after leaving and coming back): continue setup.
   useEffect(() => {
     if (start !== 'welcome' || !session.get()) return;
@@ -29,8 +31,14 @@ export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; 
   const run = async (fn: () => Promise<void>) => { setErr(null); setBusy(true); try { await fn(); } catch (e) { setErr(e instanceof ApiError ? ERR[String(e.body.error)] ?? 'Something went wrong. Try again.' : 'Can’t reach Pawsure. Check your connection.'); } finally { setBusy(false); } };
   const e164 = '+91' + phone.replace(/\D/g, '');
 
+  // PS-140: newcomer circle builder (no day-care list)
+  if ((step as string) === 'circle' && newHh) return <><AppBar title="Your circle" /><div className="body">
+    <div className="art-stage"><Art name="wave" width={130} /></div><h2>Do you have anyone who can look in on your pet?</h2><p className="muted">A family member, neighbour or friend who could step in if your helper can’t come.</p>
+    <button className="btn primary block" onClick={onDone}>Yes, I have someone</button><button className="btn block" onClick={() => setStep('builder' as Step)}>No one yet</button>
+    <p className="xs muted">You can change this later in Me → Backups.</p></div></>;
+  if ((step as string) === 'builder' && newHh) return <CircleBuilder hh={newHh} onDone={onDone} />;
   if (step === 'welcome') return <div className="body">
-    <div className="hero-ill"><Art name="family" width={210} /><span className="eyebrow">Pawsure</span><h1>Be sure, whoever’s caring.</h1><p>Plan your pet’s day, see evidence of what happened, and find a friend when your usual help can’t come.</p></div>
+    <div className="hero-ill"><img className="mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={210} height={204} alt="Dog and two cats in yellow headbands" /><span className="eyebrow">Pawsure</span><h1>Be sure, whoever’s caring.</h1><p>Plan your pet’s day, see evidence of what happened, and find a friend when your usual help can’t come.</p></div>
     <div className="card"><div className="stack small">
       <div className="row top"><span className="avatar icon"><Icon name="check" size={20} /></span><div><b>Evidence, task by task.</b><br /><span className="muted">Each task shows how strong the evidence is. Some days it will be incomplete, and the app will say so.</span></div></div>
       <div className="row top"><span className="avatar icon"><Icon name="friends" size={20} /></span><div><b>Your own friends first.</b><br /><span className="muted">Nothing is sent to anyone until you approve it.</span></div></div>
@@ -88,6 +96,6 @@ export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; 
     <div className="field"><label htmlFor="sc">Society</label><input id="sc" className="input" value={p.society} onChange={e => setP({ ...p, society: e.target.value })} placeholder="e.g. Lake Vista CHS, Powai" /><span className="hint">Your location anchor. Friends see society and tower only.</span></div>
     <div className="grid2"><div className="field"><label htmlFor="tw">Tower / wing</label><input id="tw" className="input" value={p.tower} onChange={e => setP({ ...p, tower: e.target.value })} /></div><div className="field"><label htmlFor="fl">Flat (private)</label><input id="fl" className="input" value={p.flat} onChange={e => setP({ ...p, flat: e.target.value })} /></div></div>
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" disabled={busy || !p.displayName || p.society.length < 2} onClick={() => run(async () => { await api('/v1/households', { body: { ...p, tower: p.tower || undefined, flat: p.flat || undefined } }); onDone(); })}>Continue</button>
+    <button className="btn primary block" disabled={busy || !p.displayName || p.society.length < 2} onClick={() => run(async () => { const r = await api<{ id: string }>('/v1/households', { body: { ...p, tower: p.tower || undefined, flat: p.flat || undefined } }); setNewHh(r.id); setStep('circle' as Step); })}>Continue</button>
   </div></>;
 }

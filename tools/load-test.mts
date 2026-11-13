@@ -16,9 +16,9 @@ import { p95 } from '../apps/api/src/ops.js';
 const HOMES = Number(process.argv[2] ?? 20), REQUESTS = Number(process.argv[3] ?? 2000), CONCURRENCY = 10;
 const DAY = '2026-11-10', at = (hm: string) => `${DAY}T${hm}:00+05:30`;
 
-async function run(homes: number, requests: number) {
+async function run(homes: number, requests: number, opts: { at?: string; peak?: boolean } = {}) {
   const db = await openDb({ dataDir: 'memory' }); await migrate(db); await seedDemo(db);
-  const clock = demoClock(at('12:50'));
+  const clock = demoClock(at(opts.at ?? '12:50'));
   const app = createApp({ db, adapters: mockAdapters(), clock, pepper: 'load', demoMode: true, limits: { requestsPerHour: 1e6 } });
   const q = (s: string, p: unknown[]) => db.query(s, p);
   const tokens: { hh: string; token: string; helper: string }[] = [];
@@ -31,11 +31,14 @@ async function run(homes: number, requests: number) {
     await q(`insert into pets(id, household_id, name, species) values ($1,$2,'Dog ' || $3,'Dog'),($4,$2,'Cat ' || $3,'Cat')`, ['pd' + n, hh, n, 'pc' + n]);
     for (const [k, pet, due, type] of [['a', 'pd', 780, 'feeding'], ['b', 'pd', 780, 'medicine'], ['c', 'pc', 780, 'litter'], ['d', 'pd', 960, 'toilet']] as const)
       await q(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, escalation_profile, visit_slot, assignee_membership_id, effective_from) values ($1,$2,$3,$4,$5,$6,3,$7,$8,$9,'2026-11-01')`, [`rl${k}${n}`, hh, pet + n, 'Task ' + k, type, due, type === 'medicine' ? 'medicine' : 'standard', 'v1', 'm_h' + n]);
+    // v1.1.0 evening peak: an 8 AM task tomorrow makes every home's reminder go out at 8 PM tonight (PS-127).
+    if (opts.peak) await q(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, escalation_profile, visit_slot, assignee_membership_id, effective_from) values ($1,$2,$3,'Breakfast','feeding',480,5,'standard','m',$4,'2026-11-01')`, ['rle' + n, hh, 'pd' + n, 'm_h' + n]);
     const token = 'load-' + n;
     await q(`insert into sessions(token_hash, user_id, expires_at) values ($1,$2,'2027-01-01')`, [createHash('sha256').update(token).digest('hex'), ow]);
     tokens.push({ hh, token, helper: hpPhone });
   }
-  const t0 = performance.now(); await app.request('/jobs/tick', { method: 'POST' }); const firstTick = performance.now() - t0;
+  // At the evening peak the reminder run happens while owners are using the app, so the job and the requests overlap.
+  const t0 = performance.now(); const firstJob = app.request('/jobs/tick', { method: 'POST' }); if (!opts.peak) await firstJob; let firstTick = performance.now() - t0;
   const times: Record<string, number[]> = {}; let errors = 0, done = 0;
   const one = async (k: number) => {
     const h = tokens[k % tokens.length]!, r = k % 10;
@@ -55,15 +58,18 @@ async function run(homes: number, requests: number) {
   const start = performance.now(); let next = 0;
   await Promise.all(Array.from({ length: CONCURRENCY }, async () => { while (next < requests) await one(next++); }));
   const wall = (performance.now() - start) / 1000;
+  if (opts.peak) { await firstJob; firstTick = performance.now() - t0; }
+  const reminders = (await db.query<{ n: number }>(`select count(*)::int as n from reminder`))[0]!.n;
   const t1 = performance.now(); await app.request('/jobs/tick', { method: 'POST' }); const tick = performance.now() - t1;
   const all = Object.values(times).flat();
   await db.close();
-  return { homes, requests: done, errors, rps: Math.round(done / wall), p95All: p95(all)!, routes: Object.entries(times).map(([k, v]) => ({ route: k, n: v.length, p95: p95(v)! })), firstTick: Math.round(firstTick), tick: Math.round(tick) };
+  return { reminders, homes, requests: done, errors, rps: Math.round(done / wall), p95All: p95(all)!, routes: Object.entries(times).map(([k, v]) => ({ route: k, n: v.length, p95: p95(v)! })), firstTick: Math.round(firstTick), tick: Math.round(tick) };
 }
 
 const pilot = await run(HOMES, REQUESTS);
 const scale = await run(200, 400);
-const pass = pilot.p95All < 500 && pilot.errors === 0;
+const peak = await run(200, 400, { at: '20:00', peak: true });
+const pass = pilot.p95All < 500 && pilot.errors === 0 && peak.p95All < 500 && peak.errors === 0 && peak.reminders === 200;
 const report = `# Load test
 
 Run ${new Date().toISOString()} · in-process (no network/TLS) · PGlite · concurrency ${CONCURRENCY}
@@ -82,6 +88,12 @@ ${pilot.routes.map(r => `| ${r.route} | ${r.n} | ${r.p95} |`).join('\n')}
 ## Scale check: 200 homes
 
 - Minute job: first run ${scale.firstTick} ms, steady ${scale.tick} ms · p95 of ${scale.requests} requests: ${scale.p95All} ms · errors ${scale.errors}
+## Evening peak: 200 homes, cover reminders (v1.1.0)
+
+- Every home has an 8 AM task tomorrow, so all 200 reminders go out in the 8 PM run while ${peak.requests} owner requests run alongside it.
+- Reminders sent: **${peak.reminders}** of 200 · that run took ${peak.firstTick} ms · the next run ${peak.tick} ms
+- p95 of owner requests during the run: **${peak.p95All} ms** · errors ${peak.errors} → target p95 < 500 ms: **${peak.p95All < 500 && peak.errors === 0 && peak.reminders === 200 ? 'PASS' : 'FAIL'}**
+
 - The job runner visits every home every minute; at 1,000 homes it must be split into household shards before it nears 60 s (not built yet; see known limitations).
 
 Repeat against staging over HTTPS with the real database before the pilot; in-process numbers are a floor, not a promise.

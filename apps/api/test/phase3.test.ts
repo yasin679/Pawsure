@@ -81,7 +81,9 @@ describe('Ask all 3 race and proposed times (PS-061, PS-067, PS-068, PS-123)', (
     await call('POST', `${HH}/requests/${r.id}/approve`, { friendIds: s.top.map(t => t.id), mode: 'all3', approved: true }, owner);
     await reply(PHONE.arjun, undefined, 'haan');
     expect(s.top.map(t => t.id)).toEqual(['u_priya', 'u_arjun', 'u_rahul']); // at 7 PM Rahul (5 min, free 7–10) outranks Kavya (next society)
-    await reply(PHONE.rahul, `ff_yes:${r.id}`);
+    // v1.4 PS-138: Rahul has never cared for Bruno, so his Yes waits until he has read the handling note.
+    expect((await reply(PHONE.rahul, `ff_yes:${r.id}`)).body).toEqual({ status: 'needs_note' });
+    await reply(PHONE.rahul, `ff_read:${r.id}`); await reply(PHONE.rahul, `ff_yes:${r.id}`);
     let v = (await call<View & { holdFriendId: string }>('GET', `${HH}/requests/${r.id}`, undefined, owner)).body;
     expect(v.state).toBe('Provisional hold'); expect(v.holdFriendId).toBe('u_arjun');
     expect(v.recipients.find(x => x.friendId === 'u_rahul')!.state).toBe('waiting');

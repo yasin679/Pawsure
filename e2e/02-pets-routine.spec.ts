@@ -36,7 +36,7 @@ test.describe('B. Pets and C. routine and health', () => {
     await page.locator('#rty').selectOption('walk');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText(/Takes effect from 2026-11-07/)).toBeVisible();
-    await expect(page.locator('button.li', { hasText: 'Evening walk' })).toBeVisible();
+    await expect(page.locator('button.li', { hasText: '6:00 PM' }).filter({ hasText: 'Evening walk' })).toBeVisible(); // the demo also has Neha’s own 7:30 PM walk
   });
 
   test('C2 Health calendar: add a vaccine date, then mark it done', async ({ page }) => {

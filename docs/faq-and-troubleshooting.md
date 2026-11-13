@@ -26,7 +26,24 @@ Not in this release. Requests are understood by rules and the screen says *under
 **What is a covered day?**
 A day on which every pet’s tasks had evidence, or were resolved by you before 11:59 PM. Cancelled tasks are left out. In Trusted Helper mode the day is covered only if you tap **Covered**; otherwise it is *Unknown*.
 
-### 1.2 Alerts and emergencies
+### 1.2 When cover is at risk (new in 1.1)
+
+**Why did my helper get a message before the visit?**
+One reminder per visit asks whether she is coming, so you hear early if she can’t. A Yes is a plan, not evidence: the task still needs its photo, voice note or code.
+
+**Who does Pawsure contact without asking me?**
+Only your ordered backup list, and only if you turned on *Ask my backups automatically*. Friends, substitutes and any other number are contacted only after your tap.
+
+**Why can’t I skip Bruno’s medicine?**
+Medicine *must happen*, so Move and Skip are not offered. If you don’t respond within 15 minutes of *cover not found*, your care circle gets an automated call.
+
+**Why didn’t Pawsure start Friend Finder?**
+Friend Finder closes 30 minutes before the task. After that, Pawsure says *too close to the task for Friend Finder* and asks your backups instead.
+
+**What is “No cover planned”?**
+You left with nobody confirmed. The day isn’t counted as covered unless the tasks are done with evidence or matched by your return check.
+
+### 1.3 Alerts and emergencies
 
 **When is my backup alerted?**
 Standard tasks: you at +30 minutes, your backup at +60 (a 15-minute look-in link), cover suggestions at +75. Walks: +45, +75, +90. Medicine: you at +15, cover suggestions at +60, and never your backup.
@@ -37,7 +54,7 @@ Only tapping **I’m on it** (or pressing 1 on a call) stops the next steps. Rea
 **Is Pawsure an emergency service?**
 No. It alerts the people you chose and shows your vet and 24x7 clinic. In an emergency, call them directly. Pawsure never gives medical advice or promises a response time.
 
-### 1.3 Helpers
+### 1.4 Helpers
 
 **Does my helper need the app or a smartphone?**
 No. WhatsApp works, and so does a basic phone: a missed call on arrival and exit, then keying today’s code on the IVR line.
@@ -54,7 +71,7 @@ Nothing is recorded about them. Use Trusted Helper mode, your own return check, 
 **Why are some points *on hold*?**
 Your return check contradicted a *Likely* task. The Pawsure team decides within 7 days and the helper reads the reason. A hold is never a finding against them.
 
-### 1.4 Friends and cover
+### 1.5 Friends and cover
 
 **Can my friends see my flat number?**
 Only a friend you have **confirmed** for a visit, and only for that visit. Access is removed when they tap **Done**, cancel, or 2 hours after the task.
@@ -68,7 +85,7 @@ With **Ask all 3**, the first valid Yes is held for 10 minutes while you confirm
 **What if the friend doesn’t turn up?**
 If there is no check-in by 20 minutes after the task time, the request becomes *No-show* and your backup is alerted (or cover suggestions, for medicine).
 
-### 1.5 Account and privacy
+### 1.6 Account and privacy
 
 **Someone else used my phone. Can they see my data?**
 After **Sign out**, the session ends on the server and the app clears what was shown. **Sign out of all devices** ends every session, for example if a phone is lost.
@@ -95,6 +112,8 @@ Records other people rely on, such as an incident, are kept only for as long as 
 | *That friend is no longer eligible* | They paused, opted out or were blocked after the search | Search again. |
 | *Up to 10 cover requests an hour* | Spam limit | Wait, or call support if it is an emergency. |
 | *Please fill in: Food and feeding, Allergies…* when adding a pet | Essential care and medical details are required | Fill them in; write *None* or *None known* where there are none. |
+| *Too close to the task for Friend Finder* | The search closes 30 min before the task | Your backups are asked instead; or use **Ask someone else** on the cover-not-found sheet. |
+| A backup’s **Yes** is greyed out | They have not cared for your pet before | They must first tick “I have read this” under the handling note. |
 | *Your role can’t change this* | Co-owners, backups and family have limited permissions | Ask the owner. |
 | The look-in link says *This link has expired* | Links open for 15 minutes | Contact the owner directly. |
 | The look-in link says *This link was switched off* | Your care-circle access was removed | Contact the owner. |

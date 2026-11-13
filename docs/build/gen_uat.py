@@ -18,7 +18,7 @@ def walk(s):
             status[m.group(1)] = 'Pass' if sp['tests'][0]['results'][-1]['status'] == 'passed' else 'Fail'
 for s in pw['suites']: walk(s)
 run = datetime.datetime.fromisoformat(pw['stats']['startTime'].replace('Z', '+00:00')).astimezone(datetime.timezone(datetime.timedelta(hours=5, minutes=30)))
-HIGH = set('ADEGMN')
+HIGH = set('ADEGMNO')
 cell = lambda t: t.replace('|', '\\|').replace('\n', '<br>')
 key = lambda i: (i[0], int(i[1:]))
 ids = sorted(cat['cases'], key=key)
@@ -45,10 +45,10 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
 
-Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, security), **M** medium.
+Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, security, cover continuity), **M** medium.
 
 > [!NOTE]
-> The demo clock starts at 9:00 AM on 6 Nov 2026. Steps that say “clock to” use the demo bar (**+5m**, **+15m**, **+1h**).
+> The demo clock starts at 9:00 AM on 6 Nov 2026 and runs in real time. Steps that say “clock to” or “advance” use the demo bar (**+5m**, **+15m**, **+1h**). Helper, friend and backup replies use the simulated phones (**Show Sunita’s phone**, **Show friends’ phones**, **Show backups’ phones**).
 """]
 n = 2
 for area, name in cat['areas'].items():

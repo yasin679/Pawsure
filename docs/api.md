@@ -1,6 +1,6 @@
 # Pawsure API reference
 
-Generated from the route table by `tools/gen-api-docs.mts` (112 routes). Request bodies are validated with zod in the handlers; errors are JSON `{ error, note? }` with 400 invalid input, 401 no session, 403 role or household not allowed (logged), 404 not found, 409 invalid state or no consent, 429 rate limited, 503 vendor unavailable.
+Generated from the route table by `tools/gen-api-docs.mts` (146 routes). Request bodies are validated with zod in the handlers; errors are JSON `{ error, note? }` with 400 invalid input, 401 no session, 403 role or household not allowed (logged), 404 not found, 409 invalid state or no consent, 429 rate limited, 503 vendor unavailable.
 
 Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every inbound event stores event time and received time.
 
@@ -15,6 +15,8 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | POST | `/l/:token/ack` | Signed, expiring token in the path |
 | GET | `/r/:token` | Signed, expiring token in the path |
 | GET | `/ready` | Public |
+| GET | `/t/:token` | Public |
+| POST | `/t/:token/:action{accept|decline|done|cant}` | Public |
 
 ## Me, consents and rights
 
@@ -35,16 +37,41 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | Method | Path | Access |
 |---|---|---|
 | POST | `/v1/households` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/households/:hh/backups` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/backups` | Session (owner, circle, helper or friend; checked per household) |
+| PATCH | `/v1/households/:hh/backups/:id` | Session (owner, circle, helper or friend; checked per household) |
+| DELETE | `/v1/households/:hh/backups/:id` | Session (owner, circle, helper or friend; checked per household) |
+| PUT | `/v1/households/:hh/backups/order` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/households/:hh/circle` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/circle-builder` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/circle/:mid/revoke` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/circle/invite` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/code-cards` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/households/:hh/code-cards/current` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/households/:hh/cover` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/checklists/:taskId` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/households/:hh/cover/jobs/:id` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/ask-someone` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/circle` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/confirm` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/friend-finder` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/handle` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/move` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/skip` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/start` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/jobs/:id/stop` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/reminders/:id/reply` | Session (owner, circle, helper or friend; checked per household) |
+| PUT | `/v1/households/:hh/cover/settings` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/cover/substitutes/:id/:decision{approve|decline}` | Session (owner, circle, helper or friend; checked per household) |
 | PUT | `/v1/households/:hh/day` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/day/back` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/day/call-helper` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/day/close` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/day/delay` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/day/delay/:id/ask` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/day/leaving` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/households/:hh/day/pre-departure` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/day/pre-departure` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/households/:hh/day/report` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/day/return-check` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/households/:hh/day/timeline` | Session (owner, circle, helper or friend; checked per household) |
@@ -80,6 +107,9 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | Method | Path | Access |
 |---|---|---|
 | POST | `/demo/clock` | Demo mode only |
+| GET | `/demo/cover-link/:hh/:pid` | Demo mode only |
+| GET | `/demo/cover-people/:hh` | Demo mode only |
+| GET | `/demo/cover-thread/:hh/:pid` | Demo mode only |
 | GET | `/demo/friend-thread/:uid` | Demo mode only |
 | GET | `/demo/helper-thread/:mid` | Demo mode only |
 | POST | `/demo/llm` | Demo mode only |
@@ -133,6 +163,8 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 
 | Method | Path | Access |
 |---|---|---|
+| GET | `/admin/advisories` | Session + staff role (every view audited) |
+| POST | `/admin/advisories` | Session + staff role (every view audited) |
 | GET | `/admin/audit` | Session + staff role (every view audited) |
 | GET | `/admin/breach` | Session + staff role (every view audited) |
 | PUT | `/admin/breach/checklist` | Session + staff role (every view audited) |
@@ -140,6 +172,7 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | PUT | `/admin/breach/events/:id` | Session + staff role (every view audited) |
 | POST | `/admin/cases/:id` | Session + staff role (every view audited) |
 | POST | `/admin/cohort/assign` | Session + staff role (every view audited) |
+| GET | `/admin/cover-metrics` | Session + staff role (every view audited) |
 | GET | `/admin/flags` | Session + staff role (every view audited) |
 | PUT | `/admin/flags` | Session + staff role (every view audited) |
 | GET | `/admin/friend-finder` | Session + staff role (every view audited) |
@@ -155,6 +188,7 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | PUT | `/admin/rights/:id` | Session + staff role (every view audited) |
 | GET | `/admin/service` | Session + staff role (every view audited) |
 | GET | `/admin/signals` | Session + staff role (every view audited) |
+| GET | `/admin/templates` | Session + staff role (every view audited) |
 
 ## Webhook contracts
 
