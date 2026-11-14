@@ -10,8 +10,12 @@ Honest list for the pilot hand-over. Nothing below is represented as done anywhe
 - **Live location:** start/stop only, no coordinates (D-23).
 - **Coupon redemption:** points accrue; no coupon vendor.
 - **Job runner sharding:** one runner visits every home each minute. With cover continuity this takes about 9 s for 200 homes in-process, and about 30 s in the 8 PM run when every home has an early task tomorrow (docs/runbooks/load-test.md). Split it by household shard before about 400 homes, sooner than the 1,000 planned for 1.0.
-- **One owner action at a time per request (PAW-014)** is enforced inside the API process. With more than one API instance it also needs a database row lock or an idempotency key from the app.
-- **Owner UI languages:** owner app is English; helper and friend messages are en/hi/mr.
+- **Distance and arrival (PAW-039, PAW-045, PAW-046):** no maps provider and no coordinates (D-23). Distance is a band (same tower, about 2, 5 or 8 minutes) and an ETA changes only when the friend reports a delay. A friend’s “I’ve arrived” is self-reported and shown as such.
+- **Societies (PAW-018, PAW-036):** a starter list of six societies in four cities. A society that isn’t listed is kept as *Not verified yet* until ops checks it; there is no map search.
+- **Emergency exit (PAW-057):** the friend is released at once and the backups are asked. There is no step where the friend stays responsible until a named replacement arrives. Decide whether that step is needed.
+- **Keypad (IVR) menus:** helpers can say they can’t come on a basic phone, but “running late” and “emergency” are on WhatsApp and SMS text only.
+- **One owner action at a time per request (PAW-014)** is enforced inside the API process. The same applies to friend replies (PAW-054). With more than one API instance it also needs a database row lock or an idempotency key from the app.
+- **Owner UI languages:** owner app is English; helper and friend messages are en/hi/mr. Telugu and Kannada (R-18) are not supported.
 - **Developer-tool dependencies:** npm audit still reports issues in Vitest and Vite (developer machines only; they never ship). Upgrade their major versions before running them in shared CI.
 - **Accessibility:** no automated accessibility audit yet (the Playwright suite covers flows, not WCAG).
 - **Cover continuity (1.1.0) runs on mock vendors:** reminders, cover requests, one-time links, the cover-not-found call, the 15-minute care-circle call and the cluster advisory are recorded by the mock WhatsApp, SMS and voice adapters; nothing reaches a phone. The 9 new templates are drafts, not submitted to Meta (no WhatsApp provider yet).

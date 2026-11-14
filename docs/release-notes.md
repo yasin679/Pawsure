@@ -14,11 +14,11 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | Item | Value |
 |---|---|
 | Version | 1.1.0 (P0 pilot build) |
-| Date | 13 Nov 2026 (1.0.1: 11 Nov 2026; 1.0: 10 Nov 2026) |
+| Date | 13 Nov 2026, QA update 14 Nov 2026 (1.0.1: 11 Nov 2026; 1.0: 10 Nov 2026) |
 | Source of truth | PRD v1.4, sections 7.7, 9.6, 8.8 (PS-127 to PS-141), 9.5, 10.4, 16.3, 17.1, Appendix F |
 | Repository | github.com/yasin679/Pawsure |
 | Database | Migration `006_cover_continuity.sql` (adds tables and columns only), with a rollback script |
-| Tests | 301 API, rules and database tests (211 in 1.0.1); 110 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios |
+| Tests | 357 API, rules and database tests (211 in 1.0.1); 123 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
 
 ## 2 What’s new: cover continuity
 
@@ -74,8 +74,42 @@ From *Pawsure_QA_Defect_Tracker.xlsx* (16 items). Each item now has a test: `app
 | PAW-016 | Approving after an edit gave a bare `search_first` | “The request has changed since the suggestions were made. Search again before sending.” with a **Search again** button |
 | PAW-009, 010, 011 | Proposed tests | Passed with no change: start dates by India time (also just after midnight), one must-happen alert at +15 min and none for a task with evidence, co-owner reminder only to the co-owner |
 
+### 3.2 QA consolidated tracker (14 Nov 2026)
+
+From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and audit risks R-01 to R-20). Every item was run, mostly with the demo clock moved across minutes and days, including a **7-day run** (6 to 12 Nov) that covers the 6-day pause. Tests: `apps/api/test/qa-consolidated.test.ts` (35), `packages/domain/test/friendfinder-qa-consolidated.test.ts` (4), `e2e/14-qa-consolidated.spec.ts` (R1–R6).
+
+**Defects found and fixed**
+
+| ID | Finding | Fix |
+|---|---|---|
+| PAW-029, R-05 | **Pause for the next 6 days** was worked out on the phone in UTC (a day short just after midnight in India); the switch showed *off* during the pause; turning the switch off did not end it | The server sets the end in India time, with today as day 1. The switch shows the last paused day and the day requests return, and turning it off ends the pause at once. Over 7 days on the clock: paused from 00:00 to 23:59 on days 1–6 and back on day 7. **Friends can find me** set to OFF stays off when a pause ends |
+| PAW-030, R-13 | Overnight hours (9 PM to 6 AM) never matched; the time picker stopped at 10:30 PM | Free times can run past midnight and are shown as “(next day)”. Boundaries were checked (free 4:30–9 PM: 4:15 no, 4:30 yes, 8:50 for 10 min yes, 8:55 for 10 min no). A window with the same start and end is refused |
+| PAW-034 | A friend with any confirmed visit, on any day and at any time, was treated as busy; capacity was fixed at one | Busy now means pets already agreed at an **overlapping** time on the same day, in any home (confirmed, on hold, or a Yes waiting for the owner) |
+| PAW-043 | Two owners could both confirm the same friend for overlapping visits | The second confirmation is refused: “Priya has just been booked for another visit at that time. Ask someone else.” |
+| PAW-054 | A Yes in the app and a Yes on WhatsApp at the same moment counted twice (two owner alerts); a second **Done** could count a help twice | Replies are handled one at a time per request and a repeated Yes changes nothing; Done is counted once |
+| PAW-025, PAW-021 | A helper could answer another helper’s task by keypad; today’s code typed from an unregistered phone counted | A keypad code counts only from the assigned helper (`not_your_task` otherwise), never from an unknown number |
+| PAW-047 | A second “I’ve arrived” added another check-in; Done or Cancel after the visit ended gave a server error | A repeat check-in changes nothing; late or repeated taps get a plain reason (409), never an error page |
+
+**New, from the tracker’s enhancement items**
+
+| ID | What was built |
+|---|---|
+| PAW-017 | **Edit profile** in Me → Profile and privacy: name, city, society, tower, flat. Owners and co-owners only. Each change is logged (which fields, never the values) and every owner is told; a friend already confirmed sees the new address |
+| PAW-018, PAW-036, R-11 | Sign-up asks for the **city first**, then the society from that city’s list. Two societies with the same name in different cities stay separate, and a society from another city is refused. A society that isn’t listed can be typed; it is marked *Not verified yet* |
+| PAW-019 | Helpers can’t edit the home’s details (they are the owner’s), but **Wrong society or tower? Tell the owner** opens a support case and alerts the owner |
+| PAW-026 | Friends choose **how many pets at once** (1–4) and which kinds (dogs, cats, other). Matching respects both |
+| PAW-033, R-02 | **Several pets in one request**: checkboxes on the simple form and on Check the details; the rules parser understands “both” and two names. The message names every pet, medicine instructions are per pet (“Bruno: …”), and the cover task names them all |
+| PAW-040 | A friend too far away to arrive in time (by distance band) isn’t suggested |
+| PAW-041, PAW-051 | **I’m running late** for a confirmed friend (app, or “late 20” / “10 min late” on WhatsApp or SMS). The owner gets the new arrival time, and the no-show alarm waits for it (up to 80 minutes after the task) |
+| PAW-056 to PAW-062 | **Emergency — I have to leave**: the friend ticks what was already done. The visit is *Interrupted*, never *Completed*. The work done is recorded (*Partly done*), the owner and co-owner get an urgent alert and a call, the access details are removed and the ordered backups are asked at once. Also works as “emergency, done feed” on WhatsApp or SMS. A later Done, arrival or second alert changes nothing |
+
+**Passed with no change** (each has a test): PAW-020, 022, 023, 024, 027, 028 (a pause now also says how many confirmed visits stay booked), 031, 032, 035, 037, 042, 044, 048, 050, 052, 053, 055, 058; R-01, R-04, R-06, R-08, R-10, R-12, R-14, R-15, R-17, R-20.
+
+**Not built, by decision**: route distance, live traffic ETA and GPS checks (PAW-039, PAW-045, PAW-046): Pawsure keeps no coordinates (D-23) and shows distance as bands; this needs a maps-provider decision. Nearby societies (PAW-038) stay behind the locked switch (PS-062). Telugu and Kannada (R-18) are not supported yet; they are refused, not half-translated. Friends need WhatsApp (PAW-049); basic phones work for helpers and backups. Breed and behaviour compatibility (R-16) goes no further than the large or anxious dogs choice and the handling note.
+
 ## 4 Upgrade notes
 
+- QA update (14 Nov): migration `007_qa_consolidated.sql` adds friend capacity and species, a society list (name + city) and the home’s city, state and society id. Existing homes keep their society text; open Edit profile to pick the city and listed society. Rollback: `packages/db/rollback/007_qa_consolidated.down.sql`.
 - Migration `006_cover_continuity.sql` runs at start-up and only adds tables and columns. Rollback: `packages/db/rollback/006_cover_continuity.down.sql` (by hand, after a backup; it removes all cover data).
 - New households start with standing approval **off**. Owners turn it on in Me → Backups.
 - No new settings are required. Timings can be overridden per household (`households.cover_config`) or per routine task (`routine_tasks.cover_config`).
@@ -93,6 +127,7 @@ Own-helper care with an honest evidence layer, alerts and escalation, SOS, pets 
 - The weekly thin-circle check tests key holders only (no availability data for backups yet).
 - Society invite links and pet-parent swaps are recorded but have no join page or matching yet.
 - The reminder adds about 30 WhatsApp utility messages per household per month; it must be costed against the ₹10 per household gate once a provider quote exists.
+- Distance is shown as bands, with no route distance, live traffic or GPS check (D-23). Telugu and Kannada are not supported. Friends need WhatsApp.
 - Owner app in English only; no photo OCR; no live location coordinates; no coupon vendor; code-card **Print** does not work inside the shared demo frame.
 - Release gates outside the software: legal review, helper acceptance and usability tests, vendor quotes, ops rota, trademark check (`docs/runbooks/pilot-runbook.md`).
 

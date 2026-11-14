@@ -19,6 +19,12 @@ export async function api<T = any>(page: Page, method: string, path: string, bod
     return { status: r.status, body: await r.json().catch(() => null) };
   }, [method, path, body, API] as const);
 }
+/** Sign-up asks for the city first, then a listed society or a typed one (PAW-018). */
+export async function fillSociety(page: Page, name: string, city = 'Mumbai') {
+  await page.locator('#cty').selectOption(city);
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+  await page.locator('#sct').fill(name);
+}
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});
 export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 'POST', '/webhooks/whatsapp', { messageId: 'e2e-' + Math.random().toString(36).slice(2), ...body });
 

@@ -10,8 +10,9 @@ const tr = (l: Lang, x: string) => (l === 'en' ? x : DV[l][x] ?? x);
 const hm = (m: number) => `${((Math.floor(m / 60) + 11) % 12) + 1}:${String(m % 60).padStart(2, '0')}`;
 
 /** The exact request text a friend receives — previewed and approved by the owner before sending (PS-059). No flat, key or schedule details. */
-export function requestText(l: Lang, v: { friend: string; owner: string; tower: string; pet: string; pronoun: string; p: ParsedRequest }) {
-  const f = v.friend.split(' ')[0]!, o = v.owner.split(' ')[0]!, pet = tr(l, v.pet), t = v.p.tasks, time = hm(v.p.time ?? 0), dur = v.p.durationMin;
+export function requestText(l: Lang, v: { friend: string; owner: string; tower: string; pet: string; pets?: string[]; pronoun: string; p: ParsedRequest }) {
+  const AND = { en: ' and ', hi: ' और ', mr: ' आणि ' }[l];
+  const f = v.friend.split(' ')[0]!, o = v.owner.split(' ')[0]!, pet = (v.pets?.length ? v.pets : [v.pet]).map(x => tr(l, x)).join(AND), t = v.p.tasks, time = hm(v.p.time ?? 0), dur = v.p.durationMin;
   const home = v.p.access === 'Someone at home';
   if (l === 'en') {
     const parts: string[] = [];

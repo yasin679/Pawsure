@@ -10,6 +10,8 @@ export type Access = 'Key handover' | 'Someone at home' | 'Friend has key';
 export interface ParsedRequest {
   tasks: FFTask[];
   petId: string | null;
+  /** PAW-033: every pet on the request when there is more than one (petId is the first of them). */
+  petIds?: string[];
   time: Minutes | null;
   durationMin: number;
   access: Access | null;
@@ -18,6 +20,9 @@ export interface ParsedRequest {
   medsInstructions: string | null;
   sources: Partial<Record<'time' | 'access' | 'pet', string>>;
 }
+/** All pets on a request: petIds when several were chosen, otherwise the one petId. */
+export const petsOf = (p: Pick<ParsedRequest, 'petId' | 'petIds'>): string[] => p.petIds?.length ? p.petIds : p.petId ? [p.petId] : [];
+
 export interface Clarification { field: 'time' | 'access' | 'meds' | 'tasks'; question: string; options: { value: string; label: string }[] }
 export interface ParseResult { parsed: ParsedRequest; clarifications: Clarification[]; confidence: number; parser: 'rules' | 'llm' }
 
@@ -49,7 +54,10 @@ export function parseRequestRules(text: string, ctx: ParseContext): ParseResult 
   if (/toilet pad|pee pad/.test(low)) tasks.add('toilet');
   const sources: ParsedRequest['sources'] = {};
   let petId: string | null = null;
-  for (const p of ctx.pets) if (low.includes(p.name.toLowerCase())) petId = p.id;
+  const named = ctx.pets.filter(p => low.includes(p.name.toLowerCase())).map(p => p.id);
+  const both = ctx.pets.length > 1 && /\b(both|all (my |the )?pets|dono)\b/.test(low);
+  const many = both ? ctx.pets.map(p => p.id) : named;
+  if (many.length) petId = many[0]!;
   if (!petId) { const cat = ctx.pets.find(p => p.species === 'Cat'); petId = (/\bcat\b/.test(low) && cat ? cat.id : ctx.pets[0]?.id) ?? null; sources.pet = 'assumed'; }
   const clar: Clarification[] = [];
   let rest = low;
@@ -83,7 +91,7 @@ export function parseRequestRules(text: string, ctx: ParseContext): ParseResult 
   let lift: ParsedRequest['lift'] = null;
   if (/lift (is )?(not working|broken|down)|stairs only|use the stairs/.test(low)) lift = 'Stairs needed'; else if (/\blift\b|elevator/.test(low)) lift = 'Lift';
   const confidence = text.trim().length < 12 || (!tasks.size && time == null) ? 0.3 : 0.9;
-  return { parsed: { tasks: [...tasks], petId, time, durationMin, access, lift, urgency, medsInstructions: null, sources }, clarifications: clar, confidence, parser: 'rules' };
+  return { parsed: { tasks: [...tasks], petId, ...(many.length > 1 ? { petIds: many } : {}), time, durationMin, access, lift, urgency, medsInstructions: null, sources }, clarifications: clar, confidence, parser: 'rules' };
 }
 
 /** Search is blocked while any critical field is missing or a clarification is open (C2). */

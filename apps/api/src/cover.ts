@@ -479,10 +479,12 @@ export function makeCover(d: Deps) {
     await closeJob(j, nowM, 'covered', `${first(friendName)} (friend) confirmed via ${reqId}`);
   }
   /** PS-131: a confirmed friend cancelled after the search cutoff → the backup list, not a new search. */
-  async function friendCancelledAfterCutoff(hh: string, coverTaskId: string, friendName: string, friendUserId: string) {
+  async function friendCancelledAfterCutoff(hh: string, coverTaskId: string, friendName: string, friendUserId: string, why?: { reason: 'cancelled' | 'emergency'; done: string[] }) {
     const t = (await db.query<{ care_date: string }>(`select care_date::text as care_date from care_tasks where id=$1`, [coverTaskId]))[0]; if (!t) return null;
-    await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Missed','system',$3)`, [coverTaskId, hh, `${friendName} cancelled after the cutoff; backups asked`]).catch(() => undefined);
-    const job = await atRisk(hh, t.care_date, [coverTaskId], `${first(friendName)} cancelled`, friendUserId, 'friend_cancelled', undefined, { mode: 'pairs' });
+    const emergency = why?.reason === 'emergency', partly = emergency && why!.done.length > 0;
+    // PAW-060: an emergency exit after some of the work is Partly done (what was finished is named), never Done.
+    await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,$3,'system',$4)`, [coverTaskId, hh, partly ? 'Partly done' : 'Missed', emergency ? `${friendName} had an emergency and left${partly ? ' after: ' + why!.done.join(', ') : ''}; backups asked` : `${friendName} cancelled after the cutoff; backups asked`]).catch(() => undefined);
+    const job = await atRisk(hh, t.care_date, [coverTaskId], emergency ? `${first(friendName)} had an emergency and left` : `${first(friendName)} cancelled`, friendUserId, 'friend_cancelled', undefined, { mode: 'pairs' });
     if (job) { job.ffSkipped = true; job.log.splice(1, 0, { at: job.log[0]!.at, text: `Friend Finder not started: too close to the task (search closed at ${clock(friendFinderCutoff(job.firstDue))})` }); await saveJob(job); }
     return job;
   }

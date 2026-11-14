@@ -356,8 +356,11 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (!target) return c.json({ error: 'unknown_target' }, 404);
     const mem = helper.find(h => h.household_id === target.household_id);
     if (mem) { const cst = await consentOf(mem.id); if (!cst?.granted || cst.kind === 'helper_withdrawal' || mem.paused) return c.json({ error: 'no_helper_consent' }, 409); }
+    // PAW-025: a task's keypad code counts only from the helper the task is assigned to.
+    if (mem && b.taskId) { const asg = (await db.query<{ a: string | null }>(`select assignee_membership_id as a from care_tasks where id=$1`, [b.taskId]))[0]?.a; if (asg && asg !== mem.id) return c.json({ error: 'not_your_task' }, 409); }
     let codeOk: boolean | undefined;
-    if (b.event === 'code') codeOk = !!b.digits && checkCode(await cards(target.household_id), Number(target.care_date.slice(8, 10)), b.digits) === 'today';
+    // PAW-021 / PAW-025: a code typed from an unregistered phone never counts, even if it is today's code.
+    if (b.event === 'code') codeOk = !!mem && !!b.digits && checkCode(await cards(target.household_id), Number(target.care_date.slice(8, 10)), b.digits) === 'today';
     const r = await ingestSignal(db, { householdId: target.household_id, idempotencyKey: `ivr:${b.callId}:${b.event}`, kind: b.event === 'code' ? 'ivr' : b.event === 'arrive' ? 'call_arrive' : 'call_exit', visitId: b.visitId, taskId: b.taskId, channel: 'ivr', codeOk, registeredNumber: !!mem, eventTime: b.at ? new Date(b.at) : now(), receivedTime: now(), actor: mem ? 'helper:ivr' : 'unregistered' });
     return c.json({ ...r, registered: !!mem, codeOk });
   });

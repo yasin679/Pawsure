@@ -16,7 +16,8 @@
     "N": "Reported issues (regression)",
     "O": "Cover continuity (v1.4)",
     "P": "Fixes from demo testing (v1.1.0)",
-    "Q": "QA defect tracker (v1.1.0)"
+    "Q": "QA defect tracker (v1.1.0)",
+    "R": "QA consolidated tracker (14 Nov)"
   },
   "cases": {
     "A1": {
@@ -720,6 +721,42 @@
       "pre": "New task / Simple form",
       "steps": "1. Type a task name → Back\n2. Keep editing\n3. Simple form: tick Feed → switch tabs → reopen",
       "expected": "Discard prompt before losing edits; the simple form keeps its ticks (PAW-013)"
+    },
+    "R1": {
+      "role": "Owner",
+      "pre": "Me → Profile and privacy",
+      "steps": "1. Edit profile\n2. Change tower → Save\n3. Change it back",
+      "expected": "City and society pre-selected; Saved: tower; the change is shown; every owner is told (PAW-017)"
+    },
+    "R2": {
+      "role": "New owner",
+      "pre": "Sign-up, About you",
+      "steps": "1. Enter a name\n2. Choose Pune\n3. Choose Lake Vista CHS · Baner",
+      "expected": "Continue stays off until a city and society are chosen; each city lists its own societies (PAW-018, PAW-036)"
+    },
+    "R3": {
+      "role": "Friend",
+      "pre": "Priya → My settings",
+      "steps": "1. Pause for 6 days\n2. Turn the pause switch off",
+      "expected": "Switch shows On with the last paused day and the day requests return; off ends it at once (PAW-029)"
+    },
+    "R4": {
+      "role": "Friend + owner",
+      "pre": "Priya: at most 2 pets",
+      "steps": "1. Priya sets 2 pets, tries 9 PM–6 AM\n2. Owner: Simple form, Feed, tick Misty too → Search",
+      "expected": "Overnight end shows (next day); suggestion names Bruno and Misty and says 2 pets at once (PAW-026, PAW-033, R-13)"
+    },
+    "R5": {
+      "role": "Friend + owner",
+      "pre": "Priya confirmed for 6 PM",
+      "steps": "1. Running late 20 min\n2. I’ve arrived\n3. Emergency, tick Fed → Send\n4. Owner opens the request",
+      "expected": "Owner told about the delay; the visit is Interrupted with Feed finished; backups asked (PAW-041, PAW-056, PAW-060)"
+    },
+    "R6": {
+      "role": "Helper",
+      "pre": "Sunita signs in",
+      "steps": "1. Wrong society or tower? Tell the owner",
+      "expected": "Confirmation shown; owner asked to check; no edit rights for the helper (PAW-019)"
     }
   },
   "defects": [

@@ -58,6 +58,8 @@ export async function seedDemo(db: Db) {
   for (const [k, v, locked, note] of flags) await q('insert into feature_flags(key, default_value, locked, note) values ($1,$2,$3,$4) on conflict do nothing', [k, JSON.stringify(v), locked, note]);
   // v1.1.0 cover continuity (fictional): ordered backup list, handling notes, urgency, the owner's own evening tasks.
   await q(`update households set standing_backup_approval=true, cluster='Powai · Lake Vista CHS' where id=$1`, [DEMO.household]);
+  // QA update 14 Nov (PAW-036): the demo home is the Mumbai Lake Vista CHS, not the one in Pune.
+  await q(`update households set city='Mumbai', state='Maharashtra', society_id='soc_lakevista_mum', society_verified=true where id=$1`, [DEMO.household]);
   await q(`update routine_tasks set urgency = case task_type when 'medicine' then 'MustHappen' when 'walk' then 'CanWait' else 'TimeSensitive' end where household_id=$1`, [DEMO.household]);
   await q(`update pets set handling_note='Nervous with strangers for the first minute: let him sniff your hand. Slips out at the main door, so close it before unclipping the lead. Pulls on the lead near the gate.' where id='bruno'`);
   await q(`update pets set handling_note='Hides under the bed with visitors. Do not chase her. Keep the balcony door closed.' where id='misty'`);

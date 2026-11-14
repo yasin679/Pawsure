@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 117 acceptance test cases with steps, expected results and the latest result
+subtitle: 123 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 13 Nov 2026, 21:02 IST |
-| Result | **117 of 117 passed** |
+| Latest run | 14 Nov 2026, 11:42 IST |
+| Result | **123 of 123 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -227,7 +227,18 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | Q4 | M | PAW-002/008 New task: Save without a name shows a plain error by the field and saves nothing | 1. Save with no name<br>2. Type: medicine, name Eye drops, no instructions → Save | “Give the task a name.” by the field, nothing saved; medicine needs written instructions (PAW-002, PAW-008) | Pass |
 | Q5 | M | PAW-013 unsaved work: leaving New task asks first; the simple form survives a tab switch | 1. Type a task name → Back<br>2. Keep editing<br>3. Simple form: tick Feed → switch tabs → reopen | Discard prompt before losing edits; the simple form keeps its ticks (PAW-013) | Pass |
 
-## 19 Sign-off
+## 19 QA consolidated tracker (14 Nov)
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| R1 | M | PAW-017 the owner edits the profile: tower saved, flat stays private, every owner is told | 1. Edit profile<br>2. Change tower → Save<br>3. Change it back | City and society pre-selected; Saved: tower; the change is shown; every owner is told (PAW-017) | Pass |
+| R2 | M | PAW-018/036 sign-up asks for the city first; Pune and Mumbai list their own Lake Vista CHS | 1. Enter a name<br>2. Choose Pune<br>3. Choose Lake Vista CHS · Baner | Continue stays off until a city and society are chosen; each city lists its own societies (PAW-018, PAW-036) | Pass |
+| R3 | M | PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause | 1. Pause for 6 days<br>2. Turn the pause switch off | Switch shows On with the last paused day and the day requests return; off ends it at once (PAW-029) | Pass |
+| R4 | M | PAW-026/033 a two-pet request: both pets ticked, summary names both; capacity and overnight hours in settings | 1. Priya sets 2 pets, tries 9 PM–6 AM<br>2. Owner: Simple form, Feed, tick Misty too → Search | Overnight end shows (next day); suggestion names Bruno and Misty and says 2 pets at once (PAW-026, PAW-033, R-13) | Pass |
+| R5 | M | PAW-041/056 Priya says she is running late, then has an emergency after feeding: the owner sees both | 1. Running late 20 min<br>2. I’ve arrived<br>3. Emergency, tick Fed → Send<br>4. Owner opens the request | Owner told about the delay; the visit is Interrupted with Feed finished; backups asked (PAW-041, PAW-056, PAW-060) | Pass |
+| R6 | M | PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong | 1. Wrong society or tower? Tell the owner | Confirmation shown; owner asked to check; no edit rights for the helper (PAW-019) | Pass |
+
+## 20 Sign-off
 
 | Role | Name | Decision | Date |
 |---|---|---|---|

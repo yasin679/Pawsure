@@ -134,16 +134,83 @@ export function createApp(input: Deps) {
     return c.json({ ok: true });
   });
 
+  /* ---------- Societies (PAW-018, PAW-036): a society is a name in a city; same-named societies stay apart ---------- */
+  type Soc = { id: string; name: string; area: string | null; city: string; state: string };
+  app.get('/v1/societies', async (c) => {
+    const city = c.req.query('city') ?? '', q = (c.req.query('q') ?? '').trim().toLowerCase();
+    const cities = (await db.query<{ city: string; state: string }>(`select distinct city, state from societies order by city`));
+    const rows = city ? await db.query<Soc>(`select id, name, area, city, state from societies where city=$1 order by name`, [city]) : [];
+    return c.json({ cities, societies: rows.filter(r => !q || `${r.name} ${r.area ?? ''}`.toLowerCase().includes(q)) });
+  });
+  /** Resolve what the owner chose: a listed society (verified), or a typed name kept as unverified for ops to check. */
+  const resolveSociety = async (b: { city?: string; societyId?: string; society?: string }) => {
+    if (b.societyId) {
+      const s = (await db.query<Soc>(`select id, name, area, city, state from societies where id=$1`, [b.societyId]))[0];
+      if (!s) return { error: 'Choose a society from the list, or type its name.' } as const;
+      if (b.city && b.city !== s.city) return { error: `${s.name} is in ${s.city}, not ${b.city}. Check the city.` } as const;
+      return { society: `${s.name}${s.area ? ', ' + s.area : ''}`, city: s.city, state: s.state, societyId: s.id, verified: true } as const;
+    }
+    if (!b.society || b.society.trim().length < 2) return { error: 'Enter your society name.' } as const;
+    const st = b.city ? (await db.query<{ state: string }>(`select state from societies where city=$1 limit 1`, [b.city]))[0]?.state ?? null : null;
+    return { society: b.society.trim(), city: b.city ?? null, state: st, societyId: null, verified: false } as const;
+  };
+  const HouseIn = z.object({ displayName: z.string().trim().min(1).max(80), language: z.enum(['en', 'hi', 'mr']), city: z.string().trim().min(2).max(60).optional(), societyId: z.string().max(40).optional(), society: z.string().max(120).optional(), tower: z.string().max(40).optional(), flat: z.string().max(20).optional() });
   app.post('/v1/households', async (c) => {
-    const b = z.object({ displayName: z.string().min(1).max(80), language: z.enum(['en', 'hi', 'mr']), society: z.string().min(2).max(120), tower: z.string().max(40).optional(), flat: z.string().max(20).optional() }).parse(await c.req.json());
+    const b = HouseIn.parse(await c.req.json());
+    const soc = await resolveSociety(b); if ('error' in soc) return c.json({ error: 'invalid_society', message: soc.error }, 400);
     const id = uid('hh');
     await db.tx(async (t) => {
       await t.query(`update users set display_name=$2, language=$3 where id=$1`, [c.get('userId'), b.displayName, b.language]);
-      await t.query(`insert into households(id, society, tower, flat_private) values ($1,$2,$3,$4)`, [id, b.society, b.tower ?? null, b.flat ?? null]);
+      await t.query(`insert into households(id, society, tower, flat_private, city, state, society_id, society_verified) values ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, soc.society, b.tower ?? null, b.flat ?? null, soc.city, soc.state, soc.societyId, soc.verified]);
       await t.query(`insert into memberships(id, household_id, user_id, role, status, accepted_at) values ($1,$2,$3,'owner','active',now())`, [uid('m'), id, c.get('userId')]);
     });
-    await audit(db, c.get('userId'), id, 'household.created', { society: b.society });
-    return c.json({ id }, 201);
+    await audit(db, c.get('userId'), id, 'household.created', { society: soc.society, city: soc.city, verified: soc.verified });
+    return c.json({ id, societyVerified: soc.verified }, 201);
+  });
+
+  /* ---------- PAW-017: owner edits name, city, society, tower and flat ---------- */
+  app.get('/v1/households/:hh/profile', async (c) => {
+    const hh = c.req.param('hh'); const role = await guard(c, hh, 'household', 'read'); if (!role) return deny(c);
+    const h = (await db.query<Record<string, unknown>>(`select society, tower, flat_private as flat, city, state, society_id, society_verified from households where id=$1`, [hh]))[0]!;
+    const u = (await db.query<{ display_name: string; language: string }>(`select display_name, language from users where id=$1`, [c.get('userId')]))[0]!;
+    // Only owners and co-owners see the flat number; everyone else in the circle sees society and tower.
+    return c.json({ ...h, flat: role === 'owner' || role === 'co_owner' ? h.flat : null, displayName: u.display_name, language: u.language, canEdit: can(role, 'household', 'update', { sameHousehold: true }) });
+  });
+  app.put('/v1/households/:hh/profile', async (c) => {
+    const hh = c.req.param('hh'); if (!(await guard(c, hh, 'household', 'update'))) return deny(c);
+    const b = HouseIn.partial().extend({ flat: z.string().max(20).nullable().optional(), tower: z.string().max(40).nullable().optional() }).parse(await c.req.json());
+    const cur = (await db.query<{ society: string; tower: string | null; flat_private: string | null; city: string | null; society_id: string | null }>(`select society, tower, flat_private, city, society_id from households where id=$1`, [hh]))[0]!;
+    const changed: string[] = [];
+    // Only what really changed is saved, logged and announced (the form sends every field on each save).
+    const me = (await db.query<{ display_name: string | null; language: string }>(`select display_name, language from users where id=$1`, [c.get('userId')]))[0]!;
+    if ((b.displayName != null && b.displayName !== me.display_name) || (b.language && b.language !== me.language)) { await db.query(`update users set display_name=coalesce($2, display_name), language=coalesce($3, language) where id=$1`, [c.get('userId'), b.displayName ?? null, b.language ?? null]); if (b.displayName != null && b.displayName !== me.display_name) changed.push('name'); }
+    if (b.societyId || b.society || (b.city && b.city !== cur.city)) {
+      const soc = await resolveSociety({ city: b.city ?? cur.city ?? undefined, societyId: b.societyId, society: b.society ?? (b.city && b.city !== cur.city ? undefined : cur.society) });
+      if ('error' in soc) return c.json({ error: 'invalid_society', message: soc.error }, 400);
+      if (soc.society !== cur.society || soc.city !== cur.city || soc.societyId !== cur.society_id) {
+        await db.query(`update households set society=$2, city=$3, state=$4, society_id=$5, society_verified=$6 where id=$1`, [hh, soc.society, soc.city, soc.state, soc.societyId, soc.verified]);
+        changed.push(soc.city !== cur.city ? 'city' : 'society');
+      }
+    }
+    if (b.tower !== undefined && (b.tower ?? null) !== cur.tower) { await db.query(`update households set tower=$2 where id=$1`, [hh, b.tower || null]); changed.push('tower'); }
+    if (b.flat !== undefined && (b.flat ?? null) !== cur.flat_private) { await db.query(`update households set flat_private=$2 where id=$1`, [hh, b.flat || null]); changed.push('flat'); }
+    if (!changed.length) return c.json({ ok: true, changed });
+    // Address changes are sensitive: logged (which fields, never the values) and every owner is told, so a change
+    // nobody made is noticed. Friends already confirmed for a visit see the new address from now on.
+    await audit(db, c.get('userId'), hh, 'household.profile_changed', { fields: changed });
+    const address = changed.some(f => f !== 'name');
+    if (address) await d.adapters.push.push('owner:' + hh, 'Home details changed', `Changed: ${changed.join(', ')}. If you didn’t do this, call Pawsure support.`);
+    const visits = address ? (await db.query<{ n: number }>(`select count(*)::int as n from friend_requests where household_id=$1 and state='Confirmed' and parse->>'careDate' >= $2`, [hh, istDate(now())]))[0]!.n : 0;
+    return c.json({ ok: true, changed, confirmedVisits: visits, note: visits ? 'Friends already confirmed for a visit will see the new address.' : undefined });
+  });
+  /** PAW-019: a helper or backup can't change the owner's address, but can report that it is wrong. */
+  app.post('/v1/households/:hh/report-details', async (c) => {
+    const hh = c.req.param('hh'); const role = await roleIn(c, hh); if (!role) return deny(c);
+    const { note } = z.object({ note: z.string().trim().max(300).optional() }).parse(await c.req.json().catch(() => ({})));
+    await db.query(`insert into ops_cases(id, household_id, kind, title, notes) values ($1,$2,'support',$3,$4)`, [uid('case'), hh, 'Home details reported wrong', JSON.stringify([note || 'No detail given', `Reported by ${role}`])]);
+    await d.adapters.push.push('owner:' + hh, 'Check your home details', `Your ${role === 'helper' ? 'helper' : role} says the society or tower shown is wrong. Open Profile and privacy to fix it.`);
+    await audit(db, c.get('userId'), hh, 'household.details_reported', { by: role });
+    return c.json({ ok: true, note: 'Thanks. The owner has been asked to check, and Pawsure support can help.' });
   });
 
   /* ---------- Pets (PS-003, PS-004) ---------- */
@@ -238,7 +305,7 @@ export function createApp(input: Deps) {
   const ff = makeFriendFinder(d);
   const cover = makeCover(d);
   ff.hooks.onCoverConfirmed = (hh, reqId, origin, taskId, name) => cover.coveredByFriend(hh, reqId, origin, taskId, name);
-  ff.hooks.onBackupRunner = async (hh, taskId, name, friendId) => { await cover.friendCancelledAfterCutoff(hh, taskId, name, friendId); };
+  ff.hooks.onBackupRunner = async (hh, taskId, name, friendId, why) => { await cover.friendCancelledAfterCutoff(hh, taskId, name, friendId, why); };
   const ctx = { d, guard, deny, careDate, ff, mon, cover };
   registerDaily(app, ctx);
   registerFriends(app, ctx, ff);

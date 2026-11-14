@@ -118,7 +118,7 @@ describe('clarification, AI fallback, correction metric (PS-056, PS-065, PS-125)
     expect(r.clarifications.map(c => c.field).sort()).toEqual(['access', 'meds', 'time']);
     expect((await search(r.id)).status).toBe(409);
     for (const [field, value] of [['time', String(19 * 60)], ['access', 'Key handover'], ['meds', 'profile']]) await call('PATCH', `${HH}/requests/${r.id}`, { clarify: { field, value } }, owner);
-    expect((await search(r.id)).body.top.map(t => t.id)).toEqual([]); // Arjun (only medicine-capable) is busy with the 6:30 cover
+    expect((await search(r.id)).body.top.map(t => t.id)).toEqual(['u_arjun']); // only Arjun chose medicines; his 6:30 cover ends before 7 (PAW-034: busy means an overlapping visit, not any visit that day)
   });
   it('AI unavailable or low confidence → manual form; the form still matches', async () => {
     adapters.llm.mode = 'down';

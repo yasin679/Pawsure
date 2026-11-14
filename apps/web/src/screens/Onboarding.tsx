@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api, ApiError, session, setSessionMode } from '../api';
 import { AppBar, Art, Banner, Icon } from '../ui';
 import { CircleBuilder } from './Cover';
+import { SocietyFields } from './Friends';
 
 type Step = 'welcome' | 'phone' | 'otp' | 'consent' | 'profile';
 const ERR: Record<string, string> = {
@@ -45,7 +46,7 @@ export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; 
   const [phone, setPhone] = useState(''); const [code, setCode] = useState(''); const [demoCode, setDemoCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [c, setC] = useState({ terms: false, privacy: false, alerts: true, research: false });
-  const [p, setP] = useState({ displayName: '', language: 'en', society: '', tower: '', flat: '' });
+  const [p, setP] = useState({ displayName: '', language: 'en', city: '', societyId: '', society: '', tower: '', flat: '' });
   const run = async (fn: () => Promise<void>) => { setErr(null); setBusy(true); try { await fn(); } catch (e) { setErr(e instanceof ApiError ? ERR[String(e.body.error)] ?? 'Something went wrong. Try again.' : 'Can’t reach Pawsure. Check your connection.'); } finally { setBusy(false); } };
   const e164 = '+91' + phone.replace(/\D/g, '');
 
@@ -111,9 +112,10 @@ export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; 
   return <><AppBar title="About you" /><div className="body">
     <div className="field"><label htmlFor="nm">Your name</label><input id="nm" className="input" value={p.displayName} onChange={e => setP({ ...p, displayName: e.target.value })} /></div>
     <div className="field"><label htmlFor="lg">App language</label><select id="lg" className="input" value={p.language} onChange={e => setP({ ...p, language: e.target.value })}><option value="en">English</option><option value="hi">हिन्दी (Hindi)</option><option value="mr">मराठी (Marathi)</option></select></div>
-    <div className="field"><label htmlFor="sc">Society</label><input id="sc" className="input" value={p.society} onChange={e => setP({ ...p, society: e.target.value })} placeholder="e.g. Lake Vista CHS, Powai" /><span className="hint">Your location anchor. Friends see society and tower only.</span></div>
+    <SocietyFields value={p} onChange={v => setP({ ...p, ...v })} />
+    <span className="hint">Your location anchor. Friends see society and tower only.</span>
     <div className="grid2"><div className="field"><label htmlFor="tw">Tower / wing</label><input id="tw" className="input" value={p.tower} onChange={e => setP({ ...p, tower: e.target.value })} /></div><div className="field"><label htmlFor="fl">Flat (private)</label><input id="fl" className="input" value={p.flat} onChange={e => setP({ ...p, flat: e.target.value })} /></div></div>
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" disabled={busy || !p.displayName || p.society.length < 2} onClick={() => run(async () => { const r = await api<{ id: string }>('/v1/households', { body: { ...p, tower: p.tower || undefined, flat: p.flat || undefined } }); setNewHh(r.id); setStep('circle' as Step); })}>Continue</button>
+    <button className="btn primary block" disabled={busy || !p.displayName || !p.city || (!p.societyId && p.society.trim().length < 2)} onClick={() => run(async () => { const r = await api<{ id: string }>('/v1/households', { body: { displayName: p.displayName, language: p.language, city: p.city, ...(p.societyId ? { societyId: p.societyId } : { society: p.society }), tower: p.tower || undefined, flat: p.flat || undefined } }); setNewHh(r.id); setStep('circle' as Step); })}>Continue</button>
   </div></>;
 }

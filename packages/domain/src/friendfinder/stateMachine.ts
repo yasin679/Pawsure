@@ -7,7 +7,9 @@ import type { Minutes } from '../types.js';
 
 export type RequestState =
   | 'Draft' | 'Ready for search' | 'Awaiting owner approval' | 'Sent' | 'Accepted - pending owner confirmation'
-  | 'Provisional hold' | 'Confirmed' | 'Completed' | 'Declined' | 'Expired' | 'Cancelled' | 'Cancelled by friend' | 'No-show' | 'Task changed';
+  | 'Provisional hold' | 'Confirmed' | 'Completed' | 'Declined' | 'Expired' | 'Cancelled' | 'Cancelled by friend' | 'No-show' | 'Task changed'
+  /** PAW-056: the friend had an emergency and left before finishing; never shown as Completed. */
+  | 'Interrupted';
 export type RecipientState = 'sent' | 'accepted' | 'waiting' | 'proposed' | 'unclear' | 'declined' | 'expired' | 'withdrawn' | 'released' | 'confirmed' | 'cancelled';
 
 export interface Recipient { friendId: string; state: RecipientState; sentAt: Minutes; reminded: boolean; proposal?: Minutes }
@@ -21,6 +23,10 @@ export interface FriendRequest {
   origin?: { jobId: string; text: string };
   /** v1.4 PS-138: first-time carers who ticked "I have read this" on the handling note. */
   noteReadBy?: string[];
+  /** PAW-041: the friend said they are running late by this many minutes (arrival = taskTime + lateMin). */
+  lateMin?: Minutes;
+  /** PAW-060: what the friend finished before an emergency exit. */
+  doneTasks?: string[];
   /** `at` is the minute of the care day; `ts` is the exact time the API recorded it (PAW-012). */
   history: { at: Minutes; state: RequestState; note: string; ts?: string }[];
 }
@@ -31,14 +37,16 @@ export const FF_TIMERS_V1: FFTimers = { expiry: 15, reminder: 8, hold: 10, holdR
 export type Effect =
   | { type: 'send_request'; friendId: string; reminder?: boolean }
   | { type: 'message_friend'; friendId: string; template: 'waiting_for_owner' | 'closed_covered' | 'already_covered' | 'request_closed' | 'released' | 'ask_time_again' | 'declined_ack' | 'reconfirm' | 'cancelled_by_owner' | 'access_removed' }
-  | { type: 'notify_owner'; template: 'friend_yes' | 'friend_declined' | 'friend_proposed' | 'hold_reminder' | 'none_accepted' | 'friend_cancelled' | 'no_show' | 'search_closed' | 'friend_cancelled_after_cutoff'; friendId?: string }
+  | { type: 'notify_owner'; template: 'friend_yes' | 'friend_declined' | 'friend_proposed' | 'hold_reminder' | 'none_accepted' | 'friend_cancelled' | 'no_show' | 'search_closed' | 'friend_cancelled_after_cutoff' | 'friend_late' | 'friend_emergency'; friendId?: string; minutes?: Minutes }
   | { type: 'disclose_access'; friendId: string }
   | { type: 'revoke_access'; friendId: string }
   | { type: 'create_cover_task'; friendId: string; time: Minutes }
   | { type: 'resume_escalation_backup' }
   | { type: 'reopen_search'; exclude: string[] }
   /** v1.4 PS-131: after the search cutoff a cancelled cover goes to the ordered backup list instead of a new search. */
-  | { type: 'backup_runner'; friendId: string };
+  | { type: 'backup_runner'; friendId: string; reason?: 'cancelled' | 'emergency' }
+  /** PAW-060: record what was finished before an emergency exit; the rest stays open. */
+  | { type: 'partial_done'; friendId: string; done: string[] };
 
 export type FFEvent =
   | { type: 'parse_confirmed'; taskTime: Minutes }
@@ -50,12 +58,14 @@ export type FFEvent =
   | { type: 'owner_change_time'; time: Minutes }
   | { type: 'friend_cancel' }
   | { type: 'friend_arrived' }
+  | { type: 'friend_late'; minutes: Minutes }
+  | { type: 'friend_emergency_leave'; done: string[] }
   | { type: 'completed' }
   | { type: 'tick' };
 
 export class TransitionError extends Error {}
 const OPEN: RequestState[] = ['Sent', 'Accepted - pending owner confirmation', 'Provisional hold'];
-const CLOSED: RequestState[] = ['Confirmed', 'Completed', 'Declined', 'Expired', 'Cancelled', 'Cancelled by friend', 'No-show'];
+const CLOSED: RequestState[] = ['Confirmed', 'Completed', 'Declined', 'Expired', 'Cancelled', 'Cancelled by friend', 'No-show', 'Interrupted'];
 
 export function newRequest(id: string, now: Minutes): FriendRequest {
   return { id, state: 'Draft', taskTime: null, mode: null, recipients: [], exclude: [], processedMessageIds: [], history: [{ at: now, state: 'Draft', note: 'Owner started Ask Pawsure' }] };
@@ -109,7 +119,8 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
         fx.push({ type: 'message_friend', friendId: r.friendId, template: 'waiting_for_owner' }, { type: 'notify_owner', template: 'friend_proposed', friendId: r.friendId });
         go('Accepted - pending owner confirmation', `${r.friendId} proposed ${ev.proposedTime}; owner must confirm before the schedule changes`); break;
       }
-      // yes
+      // yes. PAW-054: a second Yes from the same friend (app and WhatsApp together, or a retry) changes nothing.
+      if (['accepted', 'waiting', 'confirmed'].includes(r.state)) return { req: req0, effects: [] };
       if (req.mode === 'all3') {
         if (req.holdFriendId && req.holdFriendId !== r.friendId) { r.state = 'waiting'; fx.push({ type: 'message_friend', friendId: r.friendId, template: 'waiting_for_owner' }); req.history.push({ at: now, state: req.state, note: `${r.friendId} also said yes — no duplicate cover` }); break; }
         r.state = 'accepted'; req.holdFriendId = r.friendId; req.holdAt = now; req.holdReminded = false;
@@ -156,7 +167,27 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
       else fx.push({ type: 'reopen_search', exclude: [...req.exclude, fid] });
       go('Cancelled by friend', afterCutoff ? `${fid} cancelled after the search cutoff: backup list asked instead (PS-131)` : `${fid} cancelled after confirming`); break;
     }
-    case 'friend_arrived': req.friendSignalAt = now; req.history.push({ at: now, state: req.state, note: 'Friend checked in' }); break;
+    case 'friend_arrived':
+      if (req.friendSignalAt != null) return { req: req0, effects: [] }; // PAW-047: a second check-in changes nothing
+      req.friendSignalAt = now; req.history.push({ at: now, state: req.state, note: 'Friend checked in' }); break;
+    case 'friend_late': {
+      // PAW-041 / PAW-051: owner gets the new arrival time; the no-show alarm moves with it (capped, see tick).
+      if (req.state !== 'Confirmed' || !req.confirmedFriendId) throw new TransitionError('only a confirmed friend can report a delay');
+      if (req.friendSignalAt != null) throw new TransitionError('already checked in');
+      if (req.lateMin === ev.minutes) return { req: req0, effects: [] };
+      req.lateMin = ev.minutes;
+      fx.push({ type: 'notify_owner', template: 'friend_late', friendId: req.confirmedFriendId, minutes: ev.minutes });
+      req.history.push({ at: now, state: req.state, note: `${req.confirmedFriendId} running about ${ev.minutes} min late` }); break;
+    }
+    case 'friend_emergency_leave': {
+      // PAW-056 to PAW-060: an emergency exit is Interrupted, never Completed. What was done is recorded, access ends,
+      // and the ordered backup list is asked for the rest at once (a new friend search would be too slow mid-visit).
+      if (req.state === 'Interrupted') return { req: req0, effects: [] };
+      if (req.state !== 'Confirmed' || !req.confirmedFriendId) throw new TransitionError('only a confirmed visit can be interrupted');
+      const fid = req.confirmedFriendId; rec(fid)!.state = 'cancelled'; req.doneTasks = ev.done;
+      fx.push({ type: 'notify_owner', template: 'friend_emergency', friendId: fid }, { type: 'partial_done', friendId: fid, done: ev.done }, { type: 'revoke_access', friendId: fid }, { type: 'message_friend', friendId: fid, template: 'access_removed' }, { type: 'backup_runner', friendId: fid, reason: 'emergency' });
+      go('Interrupted', `${fid} had an emergency and left${ev.done.length ? ' after: ' + ev.done.join(', ') : ' before starting'}`); break;
+    }
     case 'completed':
       if (req.state !== 'Confirmed') throw new TransitionError('only a confirmed request can complete');
       fx.push({ type: 'revoke_access', friendId: req.confirmedFriendId! }); go('Completed', 'Friend finished'); break;
@@ -180,7 +211,7 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
         else if (req.taskTime != null && req.state === 'Accepted - pending owner confirmation' && now >= req.taskTime) { go('Expired', 'Not confirmed by the task time'); fx.push({ type: 'notify_owner', template: 'none_accepted' }); }
         else if (req.taskTime != null && now >= req.taskTime - t.closeBeforeTask && req.state === 'Sent') { go('Expired', `Search closed ${t.closeBeforeTask} min before the task`); fx.push({ type: 'notify_owner', template: 'search_closed' }); }
       }
-      if (req.state === 'Confirmed' && req.taskTime != null && req.friendSignalAt == null && now >= req.taskTime + t.noShowAfter) {
+      if (req.state === 'Confirmed' && req.taskTime != null && req.friendSignalAt == null && now >= req.taskTime + Math.max(t.noShowAfter, Math.min((req.lateMin ?? 0) + 10, t.noShowAfter + 60))) {
         fx.push({ type: 'notify_owner', template: 'no_show', friendId: req.confirmedFriendId }, { type: 'resume_escalation_backup' });
         go('No-show', `No friend signal by task time + ${t.noShowAfter} min (private record)`);
       }

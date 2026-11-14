@@ -6,7 +6,7 @@ import type { Hono, Context } from 'hono';
 import { z } from 'zod';
 import { uid, type Db } from '@pawsure/db';
 import {
-  matchFriends, newRequest, reduce, searchBlockedReasons, correctedCriticalFields, parseRequestRules, parseProposedTime, historySummary,
+  matchFriends, newRequest, reduce, searchBlockedReasons, correctedCriticalFields, parseRequestRules, parseProposedTime, historySummary, petsOf,
   type FriendProfile, type FriendRequest, type FFEvent, type Effect, type ParsedRequest, type Clarification, type ParseResult, type ParseContext, type FFTask
 } from '@pawsure/domain';
 import type { Deps } from './app.js';
@@ -26,14 +26,35 @@ export function makeFriendFinder(d: Deps) {
   const today = () => istDate(now()); const nowMin = () => minutesOnDay(now(), today());
   /** Minutes on the request's own care day (a request for tomorrow morning is measured against tomorrow). */
   const rowNow = (row: { parse: { careDate?: string } | null }) => minutesOnDay(now(), row.parse?.careDate ?? today());
-  const hooks: { onCoverConfirmed?: (hh: string, reqId: string, origin: { jobId: string }, taskId: string, friendName: string) => Promise<void>; onBackupRunner?: (hh: string, taskId: string, friendName: string, friendId: string) => Promise<void> } = {};
+  const hooks: { onCoverConfirmed?: (hh: string, reqId: string, origin: { jobId: string }, taskId: string, friendName: string) => Promise<void>; onBackupRunner?: (hh: string, taskId: string, friendName: string, friendId: string, why?: { reason: 'cancelled' | 'emergency'; done: string[] }) => Promise<void> } = {};
   const firstTime = async (hh: string, fid: string) => ((await db.query<{ n: number }>(`select help_count as n from friend_links where household_id=$1 and friend_user_id=$2`, [hh, fid]))[0]?.n ?? 0) === 0;
 
-  async function loadFriends(hh: string): Promise<(FriendProfile & { userId: string; phone: string })[]> {
+  /**
+   * PAW-034: pets each friend has already agreed to look after at a time overlapping this visit (any household).
+   * Confirmed visits, a provisional hold and a Yes waiting for the owner all count, so two owners can't both book them.
+   */
+  async function busyPets(forReq: { id: string; careDate: string; start: number; end: number; confirmedOnly?: boolean }) {
+    // At confirm time only confirmed visits count: of two owners waiting on the same friend's Yes, the first to confirm wins.
+    const rows = await db.query<{ id: string; state: string; doc: FriendRequest; parse: ReqRow['parse'] }>(`select id, state, doc, parse from friend_requests where id<>$1 and parse->>'careDate'=$2 and state = any($3::text[])`, [forReq.id, forReq.careDate, forReq.confirmedOnly ? ['Confirmed'] : ['Confirmed', 'Provisional hold', 'Accepted - pending owner confirmation']]);
+    const busy = new Map<string, number>();
+    for (const r of rows) {
+      const p = r.parse?.parsed; const t = r.doc.taskTime ?? p?.time; if (!p || t == null) continue;
+      if (!(t < forReq.end && forReq.start < t + (p.durationMin || 15))) continue;
+      const who = r.state === 'Confirmed' ? [r.doc.confirmedFriendId] : r.state === 'Provisional hold' ? [r.doc.holdFriendId] : r.doc.recipients.filter(x => x.state === 'accepted').map(x => x.friendId);
+      for (const f of who) if (f) busy.set(f, (busy.get(f) ?? 0) + petsOf(p).length);
+    }
+    return busy;
+  }
+  /** PAW-029: a timed pause ends on its own; an open-ended pause lasts until the friend turns it off. */
+  const pauseState = (r: { paused?: unknown; paused_until?: unknown }) => {
+    const until = (r.paused_until as string | null) ?? null, timed = !!until && until >= today();
+    return { active: !!r.paused || timed, until: timed ? until : null, resumesOn: timed ? new Date(Date.parse(until + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10) : null };
+  };
+  async function loadFriends(hh: string, forReq?: { id: string; careDate: string; start: number; end: number; confirmedOnly?: boolean }): Promise<(FriendProfile & { userId: string; phone: string; pausedUntil: string | null })[]> {
     const rows = await db.query<Record<string, unknown>>(`select l.friend_user_id, l.status, l.distance_band, l.help_count, l.checked_in_count, coalesce(l.display_label, u.display_name) as name, u.language, u.phone_e164,
-      p.discoverable, p.opt_out_requested_at, p.paused, p.paused_until::text as paused_until, p.windows, p.capabilities, p.key_mode, p.stairs_ok, p.response_band, p.updated_at
+      p.discoverable, p.opt_out_requested_at, p.paused, p.paused_until::text as paused_until, p.windows, p.capabilities, p.key_mode, p.stairs_ok, p.response_band, p.updated_at, p.max_pets, p.species
       from friend_links l join users u on u.id=l.friend_user_id left join friend_profiles p on p.user_id=l.friend_user_id where l.household_id=$1 and l.status <> 'left'`, [hh]);
-    const active = await db.query<{ fid: string; n: number }>(`select (doc->>'confirmedFriendId') as fid, count(*)::int as n from friend_requests where state='Confirmed' group by 1`);
+    const busy = forReq ? await busyPets(forReq) : new Map<string, number>();
     return rows.map(r => {
       const band = (r.distance_band as number | null) ?? 9;
       const windows = (r.windows as [number, number][] | null) ?? [];
@@ -41,10 +62,10 @@ export function makeFriendFinder(d: Deps) {
         id: r.friend_user_id as string, userId: r.friend_user_id as string, phone: r.phone_e164 as string, displayName: (r.name as string) ?? 'Friend',
         distanceBand: band, distanceLabel: BAND_LABEL[band] ?? 'Hidden until they opt in', language: ((r.language as string) ?? 'en') as Lang,
         inviteAccepted: r.status === 'accepted', discoverable: !!r.discoverable, optOutPending: !!r.opt_out_requested_at, blocked: r.status === 'blocked',
-        paused: !!r.paused || (!!r.paused_until && (r.paused_until as string) >= today()), windows,
+        paused: pauseState(r).active, pausedUntil: pauseState(r).until, windows,
         windowsLabel: windows.map(([a, b]) => `${fmt(a)}–${fmt(b)}`).join(', ') || '—', capabilities: (r.capabilities as FriendProfile['capabilities']) ?? {},
-        key: ((r.key_mode as string) ?? 'handover') as FriendProfile['key'], stairsOk: r.stairs_ok !== false, capacity: 1,
-        activeRequests: active.find(a => a.fid === r.friend_user_id)?.n ?? 0, helpCount: (r.help_count as number) ?? 0, checkedInCount: (r.checked_in_count as number) ?? 0,
+        key: ((r.key_mode as string) ?? 'handover') as FriendProfile['key'], stairsOk: r.stairs_ok !== false, capacity: (r.max_pets as number | null) ?? 1, species: (r.species as string[] | null) ?? undefined,
+        activeRequests: busy.get(r.friend_user_id as string) ?? 0, helpCount: (r.help_count as number) ?? 0, checkedInCount: (r.checked_in_count as number) ?? 0,
         responseBand: (r.response_band as string) ?? 'No requests yet', responseRank: /within 10/.test((r.response_band as string) ?? '') ? 1 : /10–20/.test((r.response_band as string) ?? '') ? 2 : 3,
         updatedLabel: r.updated_at ? new Date(r.updated_at as string).toISOString().slice(0, 10) : '—'
       };
@@ -74,9 +95,10 @@ export function makeFriendFinder(d: Deps) {
 
   async function messageFor(hh: string, row: ReqRow, friendUserId: string) {
     const o = await ownerInfo(hh); const l = await langOf(friendUserId);
-    const p = row.parse!.parsed; const pet = (await db.query<{ name: string; pronoun: string | null }>(`select name, pronoun from pets where id=$1`, [p.petId]))[0];
+    const p = row.parse!.parsed; const ids = petsOf(p);
+    const pets = (await db.query<{ id: string; name: string; pronoun: string | null }>(`select id, name, pronoun from pets where id = any($1)`, [ids])).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     const name = (await db.query<{ n: string }>(`select coalesce(display_name,'friend') as n from users where id=$1`, [friendUserId]))[0]!.n;
-    return { lang: l, text: requestText(l, { friend: name, owner: o.owner, tower: o.tower, pet: pet?.name ?? 'your pet', pronoun: pet?.pronoun ?? pet?.name ?? 'them', p }) };
+    return { lang: l, text: requestText(l, { friend: name, owner: o.owner, tower: o.tower, pet: pets[0]?.name ?? 'your pet', pets: pets.map(x => x.name), pronoun: pets.length > 1 ? 'them' : pets[0]?.pronoun ?? pets[0]?.name ?? 'them', p }) };
   }
 
   async function runEffects(hh: string, row: ReqRow, effects: Effect[]) {
@@ -93,11 +115,16 @@ export function makeFriendFinder(d: Deps) {
         await friendSay(hh, row.id, e.friendId, FRIEND_MSG[e.template]![l], 'FF-' + e.template.toUpperCase(), e.template === 'reconfirm' ? [{ id: `ff_yes:${row.id}`, label: BTN.yes![l] }, { id: `ff_no:${row.id}`, label: BTN.no![l] }] : undefined);
       } else if (e.type === 'notify_owner') {
         const n = e.friendId ? (await db.query<{ n: string }>(`select coalesce(display_name,'A friend') as n from users where id=$1`, [e.friendId]))[0]?.n.split(' ')[0] : '';
-        const text: Record<string, string> = { friend_cancelled_after_cutoff: `${n} cancelled. Too close to the task for Friend Finder: your backups are being asked instead.`, friend_yes: `${n} said yes. Confirm to share access details.`, friend_declined: `${n} can’t help this time.`, friend_proposed: `${n} suggested another time. Confirm before anything changes.`, hold_reminder: `${n} is waiting for you to confirm (hold ends in 5 min).`, none_accepted: 'Nobody accepted. See safe next steps.', friend_cancelled: `${n} had to cancel. Access details removed; search reopened without them.`, no_show: `No check-in from ${n} yet. Your backup is being alerted.`, search_closed: 'Search closed 30 minutes before the task.' };
-        await A.push.push('owner:' + hh, 'Find cover', text[e.template] ?? e.template);
+        const text: Record<string, string> = { friend_cancelled_after_cutoff: `${n} cancelled. Too close to the task for Friend Finder: your backups are being asked instead.`, friend_yes: `${n} said yes. Confirm to share access details.`, friend_declined: `${n} can’t help this time.`, friend_proposed: `${n} suggested another time. Confirm before anything changes.`, hold_reminder: `${n} is waiting for you to confirm (hold ends in 5 min).`, none_accepted: 'Nobody accepted. See safe next steps.', friend_cancelled: `${n} had to cancel. Access details removed; search reopened without them.`, no_show: `No check-in from ${n} yet. Your backup is being alerted.`, search_closed: 'Search closed 30 minutes before the task.',
+          friend_late: `${n} is running about ${e.minutes} min late. New arrival about ${fmt((row.doc.taskTime ?? 0) + (e.minutes ?? 0))}. You can keep the visit or ask your backups.`,
+          friend_emergency: `URGENT: ${n} had an emergency and has left${row.doc.doneTasks?.length ? ' after: ' + row.doc.doneTasks.join(', ') : ' before starting'}. Your backups are being asked now.` };
+        await A.push.push('owner:' + hh, e.template === 'friend_emergency' ? 'Urgent: cover' : 'Find cover', text[e.template] ?? e.template);
+        // PAW-058: an emergency exit also rings the owner and co-owner; if nobody answers, the cover job's 15-minute care-circle call follows.
+        if (e.template === 'friend_emergency') for (const m of await db.query<{ phone: string }>(`select u.phone_e164 as phone from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.status='active' and m.role in ('owner','co_owner')`, [hh])) await A.voice.call(m.phone, text[e.template]!);
       } else if (e.type === 'disclose_access') {
         const o = await ownerInfo(hh); const p = row.parse!.parsed;
-        const pet = (await db.query<{ name: string; food: string; fears: string }>(`select name, food, fears from pets where id=$1`, [p.petId]))[0]!;
+        const petRows = await db.query<{ name: string; food: string; fears: string }>(`select name, food, fears from pets where id = any($1) order by name`, [petsOf(p)]);
+        const pet = { name: petRows.map(x => x.name).join(' and '), food: petRows.length > 1 ? petRows.map(x => `${x.name}: ${x.food ?? ''}`).join('; ') : petRows[0]?.food ?? '', fears: petRows.map(x => x.fears).filter(Boolean).join(' ') };
         await db.query(`insert into access_grants(id, request_id, friend_user_id, household_id, expires_at) values ($1,$2,$3,$4,$5)`, [uid('ag'), row.id, e.friendId, hh, atMinute(row.parse!.careDate, (row.doc.taskTime ?? 0) + 120).toISOString()]);
         await friendSay(hh, row.id, e.friendId, `Confirmed ✅ ${fmt(row.doc.taskTime ?? 0)}\nFlat ${o.flat}, ${o.tower}\n${p.access === 'Someone at home' ? 'Someone will be at home.' : 'Key: ' + o.access}\n${pet.name}: ${pet.food ?? ''}. ${pet.fears ?? ''}\nThe emergency card opens in the app during this visit. These details disappear after the visit.`, 'FF-ACCESS', [{ id: `ff_arrived:${row.id}`, label: 'I’ve arrived' }, { id: `ff_cancel:${row.id}`, label: 'Can’t make it' }]);
         await audit(db, 'owner', hh, 'access.disclosed', { request: row.id, friend: e.friendId, fields: ['flat', 'tower', 'key_note', 'pet_care'] });
@@ -109,7 +136,7 @@ export function makeFriendFinder(d: Deps) {
         const p = row.parse!.parsed, date = row.parse!.careDate, tid = 'cover_' + row.id;
         const type = p.tasks.includes('walk') ? 'walk' : p.tasks.includes('meds') ? 'medicine' : 'feeding';
         await db.query(`insert into care_tasks(id, household_id, pet_id, care_date, title, task_type, due_minute, min_minutes, escalation_profile, assignee_friend_user_id, cover_request_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict (id) do nothing`,
-          [tid, hh, p.petId, date, p.tasks.map(t => ({ feed: 'Feed', walk: 'Short walk', meds: 'Medicine', water: 'Water', litter: 'Litter', toilet: 'Toilet pad' } as Record<string, string>)[t]).join(' + ') + ' (friend cover)', type, e.time, Math.min(30, p.durationMin), type === 'medicine' ? 'medicine' : type === 'walk' ? 'walk' : 'standard', e.friendId, row.id]);
+          [tid, hh, p.petId, date, p.tasks.map(t => ({ feed: 'Feed', walk: 'Short walk', meds: 'Medicine', water: 'Water', litter: 'Litter', toilet: 'Toilet pad' } as Record<string, string>)[t]).join(' + ') + (petsOf(p).length > 1 ? ` for ${(await db.query<{ name: string }>(`select name from pets where id = any($1) order by name`, [petsOf(p)])).map(x => x.name).join(' and ')}` : '') + ' (friend cover)', type, e.time, Math.min(30, p.durationMin), type === 'medicine' ? 'medicine' : type === 'walk' ? 'walk' : 'standard', e.friendId, row.id]);
         await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Planned','owner',$3)`, [tid, hh, 'Created from ' + row.id]);
         // PS-137: a friend new to this household gets the gate and key checklist on the owner's Today.
         const fname = (await db.query<{ n: string }>(`select coalesce(display_name,'Friend') as n from users where id=$1`, [e.friendId]))[0]!.n;
@@ -130,7 +157,9 @@ export function makeFriendFinder(d: Deps) {
         await db.query(`insert into task_events(task_id, household_id, state, actor, note) values ($1,$2,'Missed','system','Friend no-show (private record)')`, ['cover_' + row.id, hh]);
       } else if (e.type === 'backup_runner') {
         const n = (await db.query<{ n: string }>(`select coalesce(display_name,'Your friend') as n from users where id=$1`, [e.friendId]))[0]!.n;
-        if (hooks.onBackupRunner) await hooks.onBackupRunner(hh, 'cover_' + row.id, n, e.friendId);
+        if (hooks.onBackupRunner) await hooks.onBackupRunner(hh, 'cover_' + row.id, n, e.friendId, { reason: e.reason ?? 'cancelled', done: row.doc.doneTasks ?? [] });
+      } else if (e.type === 'partial_done') {
+        await audit(db, 'friend:' + e.friendId, hh, 'visit.interrupted', { request: row.id, done: e.done, note: 'Interrupted, not Completed; no help counted as finished' });
       } else if (e.type === 'reopen_search') {
         const id = 'ffr_' + uid('x').slice(2, 12);
         const fresh = newRequest(id, rowNow(row)); fresh.exclude = e.exclude; if (row.doc.origin) fresh.origin = row.doc.origin;
@@ -158,11 +187,31 @@ export function makeFriendFinder(d: Deps) {
     let row = reqId ? await getReq(reqId) : undefined;
     if (!row) row = (await db.query<ReqRow>(`select * from friend_requests where doc->'recipients' @> $1::jsonb order by updated_at desc limit 1`, [JSON.stringify([{ friendId: user.id }])]))[0];
     if (!row) return { status: 404, body: { error: 'no_open_request' } };
+    // PAW-054: one reply at a time per request, so a Yes in the app and on WhatsApp together count once.
+    return withLock(row.id, async () => { row = (await getReq(row!.id))!;
     const BTN_LABEL: Record<string, string> = { ff_yes: 'Yes', ff_no: 'No', ff_arrived: 'I’ve arrived', ff_cancel: 'Can’t make it' };
     await db.query(`insert into friend_messages(id, request_id, friend_user_id, household_id, direction, body, at) values ($1,$2,$3,$4,'in',$5,$6)`, [uid('fm'), row.id, user.id, row.household_id, b.type === 'text' ? b.text ?? '' : (BTN_LABEL[kind ?? ''] ?? kind ?? ''), now().toISOString()]);
     if (kind === 'ff_arrived') { await friendArrived(row, user.id); return { status: 200, body: { status: 'arrived' } }; }
     if (kind === 'ff_read') { const doc = { ...row.doc, noteReadBy: [...new Set([...(row.doc.noteReadBy ?? []), user.id])] }; await saveReq(row, doc); await friendSay(row.household_id, row.id, user.id, 'Thank you. You can now reply Yes or No.', 'FF-NOTE-OK'); return { status: 200, body: { status: 'note_read' } }; }
     if (kind === 'ff_cancel') { if (row.state === 'Confirmed' && row.doc.confirmedFriendId === user.id) await step(row.household_id, row, { type: 'friend_cancel' }); return { status: 200, body: { status: row.state } }; }
+    // PAW-051 / PAW-061: "late 20", "running late", "emergency" from the confirmed friend, on WhatsApp or SMS.
+    if (row.doc.confirmedFriendId === user.id && b.type === 'text') {
+      const t = (b.text ?? '').trim().toLowerCase();
+      if (/^(emergency|sos|have to leave|must leave|आपात|इमरजेंसी|आणीबाणी)/.test(t)) {
+        if (row.state !== 'Confirmed') return { status: 200, body: { status: row.state } };
+        // Each part of the message on its own: "done feed, cannot walk" means fed, not walked.
+        const WORD: Record<string, RegExp> = { feed: /\b(fed|feed|food|khana)\b/, walk: /\bwalk(ed)?\b/, meds: /\b(medicine|meds|tablet|gave)\b/, water: /\bwater\b/, litter: /\blitter\b/, toilet: /\b(toilet|pad)\b/ };
+        const parts = t.split(/[,.;]| but | and /);
+        const done = (Object.keys(WORD) as FFTask[]).filter(k => row!.parse?.parsed?.tasks.includes(k) && parts.some(x => WORD[k]!.test(x) && /\b(done|did|fed|gave|finished|walked|already)\b/.test(x) && !/\b(not|cannot|can't|cant|didn't|didnt|no)\b/.test(x)));
+        await step(row.household_id, row, { type: 'friend_emergency_leave', done: [...done] }); return { status: 200, body: { status: row.state } };
+      }
+      const late = t.match(/^(?:running )?late\s*(\d{1,3})?|^(\d{1,3})\s*(?:min|mins|minutes)?\s*late|^(?:देर|उशीर)\s*(\d{1,3})?/);
+      if (late) {
+        const mins = Number(late[1] ?? late[2] ?? late[3] ?? 15);
+        if (row.state === 'Confirmed' && row.doc.friendSignalAt == null && mins >= 1 && mins <= 120) { await step(row.household_id, row, { type: 'friend_late', minutes: mins }); await friendSay(row.household_id, row.id, user.id, `Thanks. The owner has been told you will be about ${mins} min late.`, 'FF-LATE-OK'); }
+        return { status: 200, body: { status: row.state, lateMin: row.doc.lateMin ?? null } };
+      }
+    }
     const reply = kind === 'ff_yes' ? 'yes' : kind === 'ff_no' ? 'no' : /^(yes|haan|ha|ho|हाँ|हो|ok)\b/i.test((b.text ?? '').trim()) && !/\d/.test(b.text ?? '') ? 'yes' : /^(no|nahi|नहीं|नाही|sorry)\b/i.test((b.text ?? '').trim()) ? 'no' : 'propose';
     if (reply === 'yes' && !(row.doc.noteReadBy ?? []).includes(user.id) && (await firstTime(row.household_id, user.id)) && (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [row.parse?.parsed?.petId]))[0]?.n) {
       await friendSay(row.household_id, row.id, user.id, 'Before you say yes, please read the handling note above and tick “I have read this”.', 'FF-READ-FIRST', [{ id: `ff_read:${row.id}`, label: 'I have read this' }]);
@@ -170,9 +219,10 @@ export function makeFriendFinder(d: Deps) {
     }
     const { req } = await step(row.household_id, row, { type: 'friend_reply', friendId: user.id, messageId: b.messageId, reply, proposedTime: reply === 'propose' ? parseProposedTime(b.text ?? '') : undefined });
     return { status: 200, body: { status: req.state } };
+    });
   }
   async function friendArrived(row: ReqRow, friendUserId: string) {
-    if (row.doc.confirmedFriendId !== friendUserId) return;
+    if (row.doc.confirmedFriendId !== friendUserId || row.state !== 'Confirmed' || row.doc.friendSignalAt != null) return;
     await step(row.household_id, row, { type: 'friend_arrived' });
     await db.query(`update care_tasks set friend_arrived_at=$2 where id=$1`, ['cover_' + row.id, now().toISOString()]);
     await A.push.push('owner:' + row.household_id, 'Find cover', 'Your friend has arrived.');
@@ -198,13 +248,14 @@ export function makeFriendFinder(d: Deps) {
     return next;
   }
 
-  return { hooks, loadFriends, getReq, saveReq, step, runEffects, inbound, tick, messageFor, friendSay, ownerInfo, fmt, nowMin, rowNow, today, friendArrived, langOf, withLock };
+  return { hooks, loadFriends, busyPets, pauseState, getReq, saveReq, step, runEffects, inbound, tick, messageFor, friendSay, ownerInfo, fmt, nowMin, rowNow, today, friendArrived, langOf, withLock };
 }
 export type FriendFinder = ReturnType<typeof makeFriendFinder>;
 
 export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   const db = x.d.db; const A = x.d.adapters; const now = () => x.d.clock.now();
   const H = (c: Context<Env>) => c.req.param('hh')!;
+  const dm = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   /* ---------- F1: owner profile & privacy (PS-050, PS-054, PS-062) ---------- */
   app.get('/v1/households/:hh/privacy', async (c) => {
@@ -224,14 +275,14 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   app.get('/v1/households/:hh/friends', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'read'))) return x.deny(c);
     const fs = await ff.loadFriends(H(c));
-    return c.json(fs.filter(f => !f.blocked).map(f => ({ id: f.id, name: f.displayName, invited: !f.inviteAccepted, findable: f.inviteAccepted && f.discoverable && !f.optOutPending, distance: f.inviteAccepted && f.discoverable ? f.distanceLabel : 'Hidden until they opt in', availability: f.paused ? 'Paused' : f.windowsLabel, key: f.key, language: f.language })).concat([]).sort((a, b) => Number(a.invited) - Number(b.invited)));
+    return c.json(fs.filter(f => !f.blocked).map(f => ({ id: f.id, name: f.displayName, invited: !f.inviteAccepted, findable: f.inviteAccepted && f.discoverable && !f.optOutPending, distance: f.inviteAccepted && f.discoverable ? f.distanceLabel : 'Hidden until they opt in', availability: f.paused ? (f.pausedUntil ? `Paused until ${dm(f.pausedUntil)}` : 'Paused') : f.windowsLabel, key: f.key, language: f.language, maxPets: f.capacity })).concat([]).sort((a, b) => Number(a.invited) - Number(b.invited)));
   });
   app.get('/v1/households/:hh/friends/:uid', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'read'))) return x.deny(c);
     const f = (await ff.loadFriends(H(c))).find(y => y.id === c.req.param('uid'));
     if (!f || f.blocked) return c.json({ error: 'not_found' }, 404);
     if (!f.inviteAccepted || !f.discoverable) return c.json({ id: f.id, name: f.displayName, invited: true, note: 'Not visible until they opt in.' });
-    return c.json({ id: f.id, name: f.displayName, distance: f.distanceLabel, language: f.language, capabilities: f.capabilities, availability: f.paused ? 'Paused' : f.windowsLabel, key: f.key, stairsOk: f.stairsOk, history: historySummary(f), responseBand: f.responseBand, updated: f.updatedLabel, disclaimer: 'Descriptive only — not a safety rating or a guarantee.' });
+    return c.json({ id: f.id, name: f.displayName, distance: f.distanceLabel, language: f.language, capabilities: f.capabilities, availability: f.paused ? (f.pausedUntil ? `Paused until ${dm(f.pausedUntil)}` : 'Paused') : f.windowsLabel, key: f.key, stairsOk: f.stairsOk, maxPets: f.capacity, species: f.species, history: historySummary(f), responseBand: f.responseBand, updated: f.updatedLabel, disclaimer: 'Descriptive only — not a safety rating or a guarantee.' });
   });
   /** Spam/abuse limits (§9): per household, counted from the audit log so they survive restarts. */
   const overLimit = async (hh: string, action: string, max: number, windowMin: number) => ((await db.query<{ n: number }>(`select count(*)::int as n from audit_log where household_id=$1 and action=$2 and at > $3`, [hh, action, new Date(Date.now() - windowMin * 60000).toISOString()]))[0]!.n >= max);
@@ -269,21 +320,25 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   const EDITABLE = ['Draft', 'Ready for search', 'Awaiting owner approval'];
   const ACTIVE = ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation', 'Confirmed'];
   /** The pet's written medicine instructions, or null when the profile has none ("None", blank). */
-  const petMeds = async (petId: string | null | undefined) => {
-    const m = petId ? (await db.query<{ medicines: string | null }>(`select medicines from pets where id=$1`, [petId]))[0]?.medicines : null;
-    return m && !/^\s*(none|none known|no|nil|-)?\s*$/i.test(m) ? m : null;
+  const realMeds = (m: string | null | undefined) => m && !/^\s*(none|none known|no|nil|-)?\s*$/i.test(m) ? m : null;
+  const petMeds = async (petId: string | null | undefined) => realMeds(petId ? (await db.query<{ medicines: string | null }>(`select medicines from pets where id=$1`, [petId]))[0]?.medicines : null);
+  /** PAW-033: on a request for several pets, each pet's own instructions, named ("Bruno: …"). */
+  const medsFor = async (ids: string[]) => {
+    if (ids.length <= 1) return petMeds(ids[0]);
+    const rows = (await db.query<{ id: string; name: string; medicines: string | null }>(`select id, name, medicines from pets where id = any($1)`, [ids])).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)).filter(r => realMeds(r.medicines));
+    return rows.length ? rows.map(r => `${r.name}: ${r.medicines}`).join(' · ') : null;
   };
   /** PAW-006: what changed in the pet profile since the request was written (only while it can still be edited). */
   const petChanges = async (row: ReqRow) => {
     const p = row.parse?.parsed; if (!p || !EDITABLE.includes(row.state) || !p.tasks.includes('meds') || !p.medsInstructions) return [];
-    return (await petMeds(p.petId)) !== p.medsInstructions ? ['medicine instructions'] : [];
+    return (await medsFor(petsOf(p))) !== p.medsInstructions ? ['medicine instructions'] : [];
   };
   /** PAW-007: another request already out to friends for the same pet, day, a task in common, within 30 minutes. */
   const duplicateOf = async (row: ReqRow) => {
     const p = row.parse?.parsed; if (!p?.petId || p.time == null || ACTIVE.includes(row.state)) return null;
-    return (await db.query<{ id: string }>(`select id from friend_requests where household_id=$1 and id<>$2 and state = any($3::text[]) and parse->'parsed'->>'petId'=$4 and parse->>'careDate'=$5
+    return (await db.query<{ id: string }>(`select id from friend_requests where household_id=$1 and id<>$2 and state = any($3::text[]) and (parse->'parsed'->>'petId' = any($4::text[]) or coalesce(parse->'parsed'->'petIds','[]'::jsonb) ?| $4::text[]) and parse->>'careDate'=$5
       and abs((coalesce(doc->>'taskTime', parse->'parsed'->>'time'))::int - $6) <= 30 and exists (select 1 from jsonb_array_elements_text(parse->'parsed'->'tasks') t where t = any($7::text[])) order by created_at desc limit 1`,
-      [row.household_id, row.id, ACTIVE, p.petId, row.parse!.careDate, p.time, p.tasks]))[0]?.id ?? null;
+      [row.household_id, row.id, ACTIVE, petsOf(p), row.parse!.careDate, p.time, p.tasks]))[0]?.id ?? null;
   };
   const view = async (row: ReqRow) => {
     const names =Object.fromEntries((await db.query<{ id: string; n: string }>(`select id, coalesce(display_name,'Friend') as n from users where id = any($1)`, [row.doc.recipients.map(r => r.friendId).concat(row.doc.confirmedFriendId ?? [])])).map(r => [r.id, r.n]));
@@ -292,23 +347,25 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     // v1.1.0 fix #4: no real model is connected, so the label always says rules; the demo switch now names the same thing.
     const parsedBy = row.parser === 'manual' ? (p?.parsed?.sources?.time === 'from the task' ? 'pre-filled from the at-risk task' : 'simple form') : row.parser === 'llm' && ai ? 'AI (structured)' : ai ? 'rules (AI fallback)' : 'rules (no AI connected)';
     // PAW-006: the medicine question always quotes the pet profile as it is now, not as it was when the request was written.
-    const medsNow = p?.parsed && p.clarifications?.some(cl => cl.field === 'meds') ? await petMeds(p.parsed.petId) : null;
-    const petNm = medsNow != null || p?.clarifications?.some(cl => cl.field === 'meds') ? (await db.query<{ name: string }>(`select name from pets where id=$1`, [p?.parsed?.petId]))[0]?.name ?? 'the pet' : '';
+    const medsNow = p?.parsed && p.clarifications?.some(cl => cl.field === 'meds') ? await medsFor(petsOf(p.parsed)) : null;
+    const petNm = medsNow != null || p?.clarifications?.some(cl => cl.field === 'meds') ? (await db.query<{ name: string }>(`select name from pets where id = any($1) order by name`, [p?.parsed ? petsOf(p.parsed) : []])).map(r => r.name).join(' and ') || 'the pet' : '';
     const clarifications = (p?.clarifications ?? []).map(cl => cl.field !== 'meds' ? cl : { ...cl, options: cl.options.map(o => o.value !== 'profile' ? o : { ...o, label: medsNow ? `Use ${petNm}’s profile: ${medsNow}` : `${petNm}’s profile has no medicine instructions yet` }) });
     return { id: row.id, state: row.state, text: p?.text, parser: row.parser, parsedBy, aiConnected: ai, fallbackReason: p?.fallbackReason, parsed: p?.parsed, clarifications, blocked: p?.parsed ? searchBlockedReasons(p.parsed, p.clarifications) : ['missing:parse'], correctedFields: row.corrected_fields, taskTime: row.doc.taskTime, mode: row.doc.mode,
       recipients: row.doc.recipients.map(r => ({ ...r, name: names[r.friendId] })), holdFriendId: row.doc.holdFriendId, holdAt: row.doc.holdAt, confirmedFriendId: row.doc.confirmedFriendId, confirmedName: row.doc.confirmedFriendId ? names[row.doc.confirmedFriendId] : null,
       history: row.doc.history.map(h => ({ ...h, note: Object.entries(names).reduce((n, [id, nm]) => n.split(id).join(nm.split(' ')[0]!), h.note) })), coverTaskId: row.doc.confirmedFriendId ? 'cover_' + row.id : null, searchClosesAt: row.doc.taskTime != null ? row.doc.taskTime - 30 : null, exclude: row.doc.exclude, origin: row.doc.origin ?? null, careDate: p?.careDate, searchOpen: row.doc.taskTime == null || ff.rowNow(row) < row.doc.taskTime - 30, noteReadBy: row.doc.noteReadBy ?? [],
-      editable: EDITABLE.includes(row.state) && !!p?.parsed, petChanged: await petChanges(row), duplicateOf: await duplicateOf(row) };
+      editable: EDITABLE.includes(row.state) && !!p?.parsed, petChanged: await petChanges(row), duplicateOf: await duplicateOf(row), lateMin: row.doc.lateMin ?? null, doneTasks: row.doc.doneTasks ?? null, arrived: row.doc.friendSignalAt != null };
   };
   app.post('/v1/households/:hh/requests', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'create'))) return x.deny(c);
     if (await overLimit(H(c), 'request.created', x.d.limits?.requestsPerHour ?? 10, 60)) return c.json({ error: 'rate_limited', note: 'Up to 10 cover requests an hour. Call Pawsure support if this is an emergency.' }, 429);
-    const b = z.object({ text: z.string().max(500).optional(), manual: z.object({ tasks: z.array(z.enum(['feed', 'walk', 'meds', 'water', 'litter', 'toilet'])).min(1), petId: z.string(), time: z.number().int().min(0).max(1439), access: z.enum(['Key handover', 'Someone at home', 'Friend has key']) }).optional() }).parse(await c.req.json());
+    const b = z.object({ text: z.string().max(500).optional(), manual: z.object({ tasks: z.array(z.enum(['feed', 'walk', 'meds', 'water', 'litter', 'toilet'])).min(1), petId: z.string(), petIds: z.array(z.string()).min(1).max(4).optional(), time: z.number().int().min(0).max(1439), access: z.enum(['Key handover', 'Someone at home', 'Friend has key']) }).optional() }).parse(await c.req.json());
     const hh = H(c), id = 'ffr_' + uid('x').slice(2, 12), ctx = await parseCtx(hh);
     let result: ParseResult | null = null, fallbackReason: string | undefined;
     if (b.manual) {
-      const m = b.manual; const meds = m.tasks.includes('meds') ? ctx.pets.find(p => p.id === m.petId)?.medsInstructions ?? null : null;
-      result = { parsed: { tasks: m.tasks as FFTask[], petId: m.petId, time: m.time, durationMin: (m.tasks.includes('walk') ? 15 : 0) + (m.tasks.includes('feed') ? 10 : 0) + (m.tasks.includes('meds') ? 5 : 0) || 10, access: m.access, lift: null, urgency: 'Today', medsInstructions: meds, sources: { time: 'form', access: 'form' } }, clarifications: [], confidence: 1, parser: 'rules' };
+      const m = b.manual; const ids = [...new Set(m.petIds?.length ? m.petIds : [m.petId])];
+      if (ids.some(i => !ctx.pets.some(p => p.id === i))) return c.json({ error: 'unknown_pet', message: 'Choose pets from your own home.' }, 400);
+      const meds = m.tasks.includes('meds') ? await medsFor(ids) : null;
+      result = { parsed: { tasks: m.tasks as FFTask[], petId: ids[0]!, ...(ids.length > 1 ? { petIds: ids } : {}), time: m.time, durationMin: ((m.tasks.includes('walk') ? 15 : 0) + (m.tasks.includes('feed') ? 10 : 0) + (m.tasks.includes('meds') ? 5 : 0) || 10) + (ids.length - 1) * 5, access: m.access, lift: null, urgency: 'Today', medsInstructions: meds, sources: { time: 'form', access: 'form' } }, clarifications: [], confidence: 1, parser: 'rules' };
     } else if (b.text?.trim()) {
       const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
       try { const r = await A.llm.parse(b.text, ctx, ac.signal); if (r.confidence < 0.5) fallbackReason = `Low confidence (${Math.round(r.confidence * 100)}%)`; else result = r; }
@@ -340,12 +397,17 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     return ff.withLock(c.req.param('id'), async () => {
     const row = await ff.getReq(c.req.param('id'), H(c)); if (!row?.parse?.parsed) return c.json({ error: 'not_found' }, 404);
     if (!EDITABLE.includes(row.state)) return c.json({ error: 'already_sent', message: 'This request has already been sent to friends, so it can’t be edited. Cancel it and ask again, or change the time once a friend has said yes.' }, 409);
-    const b = z.object({ fields: z.object({ tasks: z.array(z.enum(['feed', 'walk', 'meds', 'water', 'litter', 'toilet'])).optional(), petId: z.string().optional(), time: z.number().int().min(0).max(1439).optional(), durationMin: z.number().int().min(5).max(120).optional(), access: z.enum(['Key handover', 'Someone at home', 'Friend has key']).optional(), lift: z.enum(['Lift', 'Stairs needed']).nullable().optional() }).optional(), clarify: z.object({ field: z.enum(['time', 'access', 'meds', 'tasks']), value: z.string() }).optional(), maxBand: z.number().int().min(0).max(3).optional() }).parse(body);
+    const b = z.object({ fields: z.object({ tasks: z.array(z.enum(['feed', 'walk', 'meds', 'water', 'litter', 'toilet'])).optional(), petId: z.string().optional(), petIds: z.array(z.string()).min(1).max(4).optional(), time: z.number().int().min(0).max(1439).optional(), durationMin: z.number().int().min(5).max(120).optional(), access: z.enum(['Key handover', 'Someone at home', 'Friend has key']).optional(), lift: z.enum(['Lift', 'Stairs needed']).nullable().optional() }).optional(), clarify: z.object({ field: z.enum(['time', 'access', 'meds', 'tasks']), value: z.string() }).optional(), maxBand: z.number().int().min(0).max(3).optional() }).parse(body);
     const p = row.parse; const parsed = { ...p.parsed, ...(b.fields ?? {}) } as ParsedRequest;
     const beforeJson = JSON.stringify({ parsed: p.parsed, clar: p.clarifications, maxBand: p.maxBand });
+    // PAW-033: several pets. A single petId edit replaces the list; petIds sets it (first one is the main pet).
+    if (b.fields?.petIds) { const ids = [...new Set(b.fields.petIds)]; const own = (await db.query<{ id: string }>(`select id from pets where household_id=$1 and id = any($2)`, [H(c), ids])).length; if (own !== ids.length) return c.json({ error: 'unknown_pet', message: 'Choose pets from your own home.' }, 400); parsed.petId = ids[0]!; if (ids.length > 1) parsed.petIds = ids; else delete parsed.petIds; }
+    else if (b.fields?.petId) delete parsed.petIds;
+    const petsChanged = petsOf(parsed).join() !== petsOf(p.parsed).join();
+    if (petsChanged) parsed.durationMin = Math.max(5, p.parsed.durationMin + (petsOf(parsed).length - petsOf(p.parsed).length) * 5);
     // PAW-015: a different pet means that pet's own written medicine instructions, never the previous pet's.
-    if (b.fields?.petId && b.fields.petId !== p.parsed.petId && parsed.tasks.includes('meds')) {
-      parsed.medsInstructions = await petMeds(parsed.petId);
+    if (petsChanged && parsed.tasks.includes('meds')) {
+      parsed.medsInstructions = await medsFor(petsOf(parsed));
       p.clarifications = p.clarifications.filter(cl => cl.field !== 'meds');
     }
     if (b.clarify) {
@@ -353,7 +415,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
       if (field === 'time') parsed.time = Number(value);
       if (field === 'access') parsed.access = value as ParsedRequest['access'];
       if (field === 'tasks') parsed.tasks = [...new Set([...parsed.tasks, ...value.split('+') as FFTask[]])];
-      if (field === 'meds') { if (value === 'remove') parsed.tasks = parsed.tasks.filter(t => t !== 'meds'); else parsed.medsInstructions = await petMeds(parsed.petId); }
+      if (field === 'meds') { if (value === 'remove') parsed.tasks = parsed.tasks.filter(t => t !== 'meds'); else parsed.medsInstructions = await medsFor(petsOf(parsed)); }
       p.clarifications = p.clarifications.filter(cl => cl.field !== field);
     }
     if (b.fields?.time != null) p.clarifications = p.clarifications.filter(cl => cl.field !== 'time');
@@ -378,7 +440,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const row = await ff.getReq(c.req.param('id'), hh); if (!row?.parse?.parsed) return c.json({ error: 'not_found' }, 404);
     // PAW-006: friends are asked with the pet profile as it is now, not as it was when the request was written.
     if ((await petChanges(row)).length) {
-      row.parse.parsed = { ...row.parse.parsed, medsInstructions: await petMeds(row.parse.parsed.petId) };
+      row.parse.parsed = { ...row.parse.parsed, medsInstructions: await medsFor(petsOf(row.parse.parsed)) };
       if (!row.parse.parsed.medsInstructions && !row.parse.clarifications.some(cl => cl.field === 'meds')) row.parse.clarifications.push({ field: 'meds', question: 'Which written medicine instructions should the friend follow?', options: [{ value: 'profile', label: 'Use the pet profile instructions' }, { value: 'remove', label: 'Remove the medicine task' }] });
       if (row.state !== 'Draft') row.doc = { ...row.doc, state: 'Draft', history: [...row.doc.history, { at: ff.nowMin(), state: 'Draft', note: 'Pet profile changed: medicine instructions updated' }] };
       await ff.saveReq(row, row.doc);
@@ -386,14 +448,20 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const blocked = searchBlockedReasons(row.parse.parsed, row.parse.clarifications);
     if (blocked.length) return c.json({ error: 'clarification_needed', blocked }, 409);
     if (row.state === 'Draft') await ff.step(hh, row, { type: 'parse_confirmed', taskTime: row.parse.parsed.time! });
-    const pet = (await db.query<{ size: string | null; fears: string | null }>(`select size, fears from pets where id=$1`, [row.parse.parsed.petId]))[0];
-    const m = matchFriends(row.parse.parsed, await ff.loadFriends(hh), { maxBand: row.parse.maxBand ?? 3, exclude: row.doc.exclude, largeOrAnxiousPet: /large|anxious/i.test(`${pet?.size ?? ''} ${pet?.fears ?? ''}`) && /large/i.test(pet?.size ?? '') });
+    const m = matchFriends(row.parse.parsed, await ff.loadFriends(hh, forReq(row)), await matchOpts(row));
     if (row.state === 'Ready for search') await ff.step(hh, row, { type: 'suggestions_shown' });
     await audit(db, 'system', hh, 'match.result', { request: row.id, eligible: m.eligible.length, excluded: m.excludedCounts, rule: 'deterministic-v1' });
     const top = await Promise.all(m.top.map(async t => ({ id: t.friend.id, name: t.friend.displayName, distance: t.friend.distanceLabel, language: t.friend.language, reasons: t.reasons, message: (await ff.messageFor(hh, row, t.friend.id)).text })));
     return c.json({ request: await view(row), top, excludedCounts: m.excludedCounts, nearbyFallback: { offered: false, reason: 'Switched off until the identity-check process is approved.' }, laterOptions: 'Verified carers (P2) and day cares (P1) are not available yet.' });
     });
   });
+  /** One place for the match rules used by search, approve and confirm (PAW-026, PAW-033, PAW-034, PAW-040). */
+  const forReq = (row: ReqRow) => { const p = row.parse!.parsed; const t = row.doc.taskTime ?? p.time ?? 0; return { id: row.id, careDate: row.parse!.careDate, start: t, end: t + (p.durationMin || 15) }; };
+  const matchOpts = async (row: ReqRow) => {
+    const pets = await db.query<{ size: string | null; fears: string | null; species: string }>(`select size, fears, species from pets where id = any($1)`, [petsOf(row.parse!.parsed)]);
+    const t = row.doc.taskTime ?? row.parse!.parsed.time ?? 0;
+    return { maxBand: row.parse!.maxBand ?? 3, exclude: row.doc.exclude, largeOrAnxiousPet: pets.some(pet => /large/i.test(pet.size ?? '')), petCount: Math.max(1, pets.length), species: [...new Set(pets.map(pet => pet.species))], minutesUntilStart: t - ff.rowNow(row) };
+  };
   /** Nothing leaves before this explicit approval (PS-059). Recipients must be among the current eligible suggestions. */
   app.post('/v1/households/:hh/requests/:id/approve', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'approve'))) return x.deny(c);
@@ -411,7 +479,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     // PAW-007: never two requests out to friends for the same pet and time.
     const dup = await duplicateOf(row);
     if (dup) return c.json({ error: 'duplicate_active', duplicateOf: dup, message: 'You already have a request out to friends for this pet at about this time. Open it, or cancel it first.' }, 409);
-    const eligible = matchFriends(row.parse.parsed, await ff.loadFriends(hh), { maxBand: row.parse.maxBand ?? 3, exclude: row.doc.exclude }).top.map(t => t.friend.id);
+    const eligible = matchFriends(row.parse.parsed, await ff.loadFriends(hh, forReq(row)), await matchOpts(row)).top.map(t => t.friend.id);
     if (b.friendIds.some(f => !eligible.includes(f))) return c.json({ error: 'not_eligible' }, 409);
     try { await ff.step(hh, row, { type: 'owner_approved_send', friendIds: b.friendIds, mode: b.mode }); }
     catch (e) { return c.json({ error: 'too_close', message: (e as Error).message }, 409); }
@@ -425,6 +493,12 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     return ff.withLock(c.req.param('id')!, async () => {
       const row = await ff.getReq(c.req.param('id')!, H(c)); if (!row) return c.json({ error: 'not_found' }, 404);
       const before = row.doc.history.length;
+      const e0 = ev(b);
+      // PAW-034 / PAW-043: two owners can't both book the same friend for overlapping visits beyond what they agreed to.
+      if (e0.type === 'owner_confirm' && row.doc.confirmedFriendId !== e0.friendId && row.parse?.parsed) {
+        const f = (await ff.loadFriends(H(c), { ...forReq(row), confirmedOnly: true })).find(x => x.id === e0.friendId);
+        if (f && f.activeRequests + petsOf(row.parse.parsed).length > f.capacity) return c.json({ error: 'friend_busy', message: `${f.displayName.split(' ')[0]} has just been booked for another visit at that time. Ask someone else.` }, 409);
+      }
       try { await ff.step(H(c), row, ev(b)); } catch (e) { return c.json({ error: 'invalid_transition', message: (e as Error).message }, 409); }
       if (row.doc.history.length === before) return c.json(await view(row)); // PAW-014: a repeat changed nothing
       if (ev(b).type === 'owner_change_time') await db.query(`update care_tasks set due_minute=$2 where id=$1`, ['cover_' + row.id, b.time]);
@@ -440,7 +514,10 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   /* ---------- F6 / F7: the friend’s side, when a friend signs in (PS-052–054, PS-060, PS-063) ---------- */
   app.get('/v1/me/friend', async (c) => {
     const uidv = c.get('userId');
-    const profile = (await db.query(`select discoverable, opt_out_requested_at, paused, paused_until::text as paused_until, windows, capabilities, key_mode, stairs_ok, live_location_allowed, nearby_opt_in, updated_at from friend_profiles where user_id=$1`, [uidv]))[0] ?? null;
+    const raw = (await db.query<Record<string, unknown>>(`select discoverable, opt_out_requested_at, paused, paused_until::text as paused_until, windows, capabilities, key_mode, stairs_ok, live_location_allowed, nearby_opt_in, max_pets, species, updated_at from friend_profiles where user_id=$1`, [uidv]))[0];
+    // PAW-029: what the friend sees is the pause as it is today: a 6-day pause that has ended shows as off.
+    const ps = raw ? ff.pauseState(raw) : null;
+    const profile = raw ? { ...raw, pause_active: ps!.active, paused_until: ps!.until, resumes_on: ps!.resumesOn } : null;
     const links = await db.query(`select l.household_id, l.status, h.society, h.tower, (select coalesce(u.display_name,'Owner') from memberships m join users u on u.id=m.user_id where m.household_id=l.household_id and m.role='owner' limit 1) as owner from friend_links l join households h on h.id=l.household_id where l.friend_user_id=$1 and l.status in ('invited','accepted')`, [uidv]);
     const reqs = await db.query<ReqRow>(`select * from friend_requests where doc->'recipients' @> $1::jsonb order by updated_at desc limit 10`, [JSON.stringify([{ friendId: uidv }])]);
     const messages = await db.query(`select request_id, direction, body, buttons, at from friend_messages where friend_user_id=$1 order by at, id`, [uidv]);
@@ -450,18 +527,24 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
       const grant = (await db.query(`select expires_at from access_grants where request_id=$1 and friend_user_id=$2 and revoked_at is null and expires_at > $3`, [r.id, uidv, now().toISOString()]))[0];
       const ftime = ((await db.query<{ n: number }>(`select help_count as n from friend_links where household_id=$1 and friend_user_id=$2`, [r.household_id, uidv]))[0]?.n ?? 0) === 0;
       const note = ftime ? (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [r.parse?.parsed?.petId]))[0]?.n ?? null : null;
-      return { id: r.id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text, handlingNote: note, noteRead: (r.doc.noteReadBy ?? []).includes(uidv) };
+      return { id: r.id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, careDate: r.parse?.careDate, tasks: r.parse?.parsed?.tasks ?? [], lateMin: r.doc.lateMin ?? null, arrived: r.doc.friendSignalAt != null, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text, handlingNote: note, noteRead: (r.doc.noteReadBy ?? []).includes(uidv) };
     })) });
   });
   app.put('/v1/me/friend', async (c) => {
-    const b = z.object({ discoverable: z.boolean().optional(), paused: z.boolean().optional(), pausedUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), windows: z.array(z.tuple([z.number().int().min(0).max(1440), z.number().int().min(0).max(1440)])).max(4).optional(), capabilities: z.object({ feed: z.boolean(), walk: z.boolean(), meds: z.boolean(), large: z.boolean() }).partial().optional(), keyMode: z.enum(['yes', 'handover', 'no']).optional(), stairsOk: z.boolean().optional(), liveLocationAllowed: z.boolean().optional(), nearbyOptIn: z.boolean().optional(), language: z.enum(['en', 'hi', 'mr']).optional() }).parse(await c.req.json());
+    const b = z.object({ discoverable: z.boolean().optional(), paused: z.boolean().optional(), pausedUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), pauseDays: z.number().int().min(1).max(30).optional(), maxPets: z.number().int().min(1).max(4).optional(), species: z.array(z.enum(['Dog', 'Cat', 'Other'])).min(1).optional(),
+      windows: z.array(z.tuple([z.number().int().min(0).max(1440), z.number().int().min(0).max(1440)]).refine(([a, w]) => a !== w, 'A free time needs a different start and end.')).max(4).optional(), capabilities: z.object({ feed: z.boolean(), walk: z.boolean(), meds: z.boolean(), large: z.boolean() }).partial().optional(), keyMode: z.enum(['yes', 'handover', 'no']).optional(), stairsOk: z.boolean().optional(), liveLocationAllowed: z.boolean().optional(), nearbyOptIn: z.boolean().optional(), language: z.enum(['en', 'hi', 'mr']).optional() }).parse(await c.req.json());
     const uidv = c.get('userId');
     await db.query(`insert into friend_profiles(user_id) values ($1) on conflict do nothing`, [uidv]);
     const sets: string[] = [], vals: unknown[] = [uidv];
     const put = (col: string, v: unknown) => { vals.push(v); sets.push(`${col}=$${vals.length}`); };
     if (b.discoverable != null) { put('discoverable', b.discoverable); put('opt_out_requested_at', b.discoverable ? null : now().toISOString()); }
-    if (b.paused != null) put('paused', b.paused);
-    if (b.pausedUntil !== undefined) put('paused_until', b.pausedUntil);
+    // PAW-029: "Pause for 6 days" is worked out on the server in India time (today counts as day 1), so the phone's
+    // clock or time zone can't shorten or stretch it. Turning the pause off ends a timed pause too.
+    if (b.pauseDays != null) { put('paused', false); put('paused_until', istDate(new Date(now().getTime() + (b.pauseDays - 1) * 86400000))); }
+    else if (b.paused === false) { put('paused', false); put('paused_until', null); }
+    else { if (b.paused != null) put('paused', b.paused); if (b.pausedUntil !== undefined) put('paused_until', b.pausedUntil); }
+    if (b.maxPets != null) put('max_pets', b.maxPets);
+    if (b.species) put('species', JSON.stringify(b.species));
     if (b.windows) put('windows', JSON.stringify(b.windows));
     if (b.capabilities) put('capabilities', JSON.stringify(b.capabilities));
     if (b.keyMode) put('key_mode', b.keyMode);
@@ -474,7 +557,10 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     if (b.discoverable != null) await db.query(`insert into consent_records(id, user_id, kind, version, language, granted) values ($1,$2,'friend_discovery','FD-1.0',$3,$4)`, [uid('cr'), uidv, b.language ?? 'en', b.discoverable]);
     if (b.capabilities) await audit(db, uidv, null, 'friend.capabilities', { ...b.capabilities, note: 'explicit choice, never AI-inferred' });
     await audit(db, uidv, null, 'friend.profile.updated', { fields: Object.keys(b), note: b.discoverable === false ? 'removed from search immediately (target ≤60 s)' : undefined });
-    return c.json({ ok: true, removedFromSearch: b.discoverable === false ? 'immediately' : undefined, nearbyNote: b.nearbyOptIn ? 'Saved, but nearby-member matching is switched off until ID checks are approved.' : undefined });
+    const st = ff.pauseState((await db.query<Record<string, unknown>>(`select paused, paused_until::text as paused_until from friend_profiles where user_id=$1`, [uidv]))[0]!);
+    // PAW-028: pausing stops new requests; visits already confirmed stay booked, and the friend is told which.
+    const committed = st.active ? (await db.query<{ id: string; household_id: string }>(`select id, household_id from friend_requests where state='Confirmed' and doc->>'confirmedFriendId'=$1 and parse->>'careDate' >= $2`, [uidv, ff.today()])).length : 0;
+    return c.json({ ok: true, pauseActive: st.active, pausedUntil: st.until, resumesOn: st.resumesOn, stillConfirmed: committed, removedFromSearch: b.discoverable === false ? 'immediately' : undefined, nearbyNote: b.nearbyOptIn ? 'Saved, but nearby-member matching is switched off until ID checks are approved.' : undefined });
   });
   app.post('/v1/me/friend/links/:hh/accept', async (c) => {
     const r = await db.query(`update friend_links set status='accepted' where household_id=$1 and friend_user_id=$2 and status='invited' returning household_id`, [c.req.param('hh'), c.get('userId')]);
@@ -491,9 +577,34 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const r = await ff.inbound({ messageId: 'app-' + uid('m'), from: u.phone_e164, type: b.reply === 'propose' ? 'text' : 'button', payload: b.reply === 'propose' ? undefined : `ff_${b.reply}:${row.id}`, text: b.text });
     return c.json(r.body, r.status as 200);
   });
-  app.post('/v1/me/requests/:id/:action{arrived|done|cancel}', async (c) => {
+  app.post('/v1/me/requests/:id/late', async (c) => {
     const row = await myRequest(c); if (!row || row.doc.confirmedFriendId !== c.get('userId')) return c.json({ error: 'not_found' }, 404);
+    const { minutes } = z.object({ minutes: z.number().int().min(5, 'Choose at least 5 minutes.').max(120, 'For more than 2 hours, cancel so the owner can ask someone else.') }).parse(await c.req.json());
+    return ff.withLock(row.id, async () => {
+      const r = (await ff.getReq(row.id))!;
+      try { await ff.step(r.household_id, r, { type: 'friend_late', minutes }); } catch (e) { return c.json({ error: 'invalid_transition', message: r.doc.friendSignalAt != null ? 'You have already checked in.' : 'This visit is no longer active.' }, 409); }
+      return c.json({ ok: true, state: r.state, lateMin: r.doc.lateMin });
+    });
+  });
+  /** PAW-056: the friend must leave mid-visit. Recorded as Interrupted with what was done; backups are asked at once. */
+  app.post('/v1/me/requests/:id/emergency', async (c) => {
+    const row = await myRequest(c); if (!row || row.doc.confirmedFriendId !== c.get('userId')) return c.json({ error: 'not_found' }, 404);
+    const { done } = z.object({ done: z.array(z.enum(['feed', 'walk', 'meds', 'water', 'litter', 'toilet'])).max(6).default([]) }).parse(await c.req.json().catch(() => ({})));
+    return ff.withLock(row.id, async () => {
+      const r = (await ff.getReq(row.id))!;
+      const allowed = done.filter(t => r.parse?.parsed?.tasks.includes(t));
+      try { await ff.step(r.household_id, r, { type: 'friend_emergency_leave', done: allowed }); } catch { return c.json({ error: 'invalid_transition', message: 'This visit is no longer active.' }, 409); }
+      return c.json({ ok: true, state: r.state, done: r.doc.doneTasks ?? [] });
+    });
+  });
+  app.post('/v1/me/requests/:id/:action{arrived|done|cancel}', async (c) => {
+    const row0 = await myRequest(c); if (!row0 || row0.doc.confirmedFriendId !== c.get('userId')) return c.json({ error: 'not_found' }, 404);
     const action = c.req.param('action');
+    return ff.withLock(row0.id, async () => {
+    const row = (await ff.getReq(row0.id))!;
+    // PAW-054 / PAW-062: a repeated or late tap (second Done, Done after an emergency exit or after a replacement took over) changes nothing.
+    if (action === 'done' && row.state === 'Completed') return c.json({ ok: true, state: row.state, note: 'Already marked done.' });
+    if (row.state !== 'Confirmed') return c.json({ error: 'not_active', state: row.state, message: row.state === 'Interrupted' ? 'This visit was interrupted. The owner’s backups have taken over.' : 'This visit is no longer active.' }, 409);
     if (action === 'arrived') await ff.friendArrived(row, c.get('userId'));
     if (action === 'cancel') await ff.step(row.household_id, row, { type: 'friend_cancel' });
     if (action === 'done') await db.query(`delete from visit_access_checklist where task_id=$1`, ['cover_' + row.id]);
@@ -505,6 +616,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
       await A.push.push('owner:' + row.household_id, 'Find cover', 'Your friend finished. Say thanks on WhatsApp?');
     }
     return c.json({ ok: true, state: row.state });
+    });
   });
   /** Access details + emergency card: only for the confirmed friend, only while the grant is active (PS-063, 9.5). */
   app.get('/v1/me/requests/:id/access', async (c) => {

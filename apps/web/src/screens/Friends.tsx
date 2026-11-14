@@ -1,6 +1,6 @@
 /** F1 privacy, F2 friends list + invite, F3 friend profile + block/report (PS-050–054, PS-064, PS-069). */
 import { useEffect, useState } from 'react';
-import { api, ApiError, type FriendProfileView, type FriendSummary, type Privacy } from '../api';
+import { api, ApiError, type FriendProfileView, type FriendSummary, type HomeProfile, type Privacy, type Society } from '../api';
 import { AppBar, Art, Banner, Icon } from '../ui';
 
 const LANG: Record<string, string> = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
@@ -45,13 +45,57 @@ export function Friends({ hh, onAsk }: { hh: string; onAsk: (name: string) => vo
   </main></>;
 }
 
+/**
+ * PAW-018 / PAW-036: city first, then the society from that city's list, so two societies with the same name in
+ * different cities never mix. A society that isn't listed can be typed; it is marked unverified until ops checks it.
+ */
+export interface SocietyValue { city: string; societyId: string; society: string }
+export function SocietyFields({ value, onChange }: { value: SocietyValue; onChange: (v: SocietyValue) => void }) {
+  const [cities, setCities] = useState<{ city: string; state: string }[]>([]); const [list, setList] = useState<Society[]>([]); const [typed, setTyped] = useState(!value.societyId && !!value.society);
+  useEffect(() => { api<{ cities: { city: string; state: string }[] }>('/v1/societies').then(r => setCities(r.cities)).catch(() => setCities([])); }, []);
+  useEffect(() => { if (value.city) api<{ societies: Society[] }>(`/v1/societies?city=${encodeURIComponent(value.city)}`).then(r => setList(r.societies)).catch(() => setList([])); else setList([]); }, [value.city]);
+  return <>
+    <div className="field"><label htmlFor="cty">City</label><select id="cty" className="input" value={value.city} onChange={e => onChange({ city: e.target.value, societyId: '', society: '' })}><option value="">Choose your city</option>{cities.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}</select></div>
+    {value.city && !typed && <div className="field"><label htmlFor="soc">Society</label><select id="soc" className="input" value={value.societyId} onChange={e => { const s = list.find(x => x.id === e.target.value); onChange({ ...value, societyId: e.target.value, society: s ? `${s.name}${s.area ? ', ' + s.area : ''}` : '' }); }}><option value="">Choose your society</option>{list.map(s => <option key={s.id} value={s.id}>{s.name}{s.area ? ' · ' + s.area : ''}</option>)}</select>
+      <button type="button" className="btn ghost sm" onClick={() => { setTyped(true); onChange({ ...value, societyId: '', society: '' }); }}>My society isn’t listed</button></div>}
+    {value.city && typed && <div className="field"><label htmlFor="sct">Society name</label><input id="sct" className="input" value={value.society} onChange={e => onChange({ ...value, societyId: '', society: e.target.value })} placeholder="e.g. Green Acres CHS, Andheri East" /><span className="hint">Pawsure support checks new societies before nearby features use them.</span>
+      {list.length > 0 && <button type="button" className="btn ghost sm" onClick={() => { setTyped(false); onChange({ ...value, society: '' }); }}>Choose from the list</button>}</div>}
+  </>;
+}
+
+/** PAW-017: owner edits their name and home details; the flat stays private. */
+function HomeDetails({ hh, onSaved }: { hh: string; onSaved: () => void }) {
+  const [h, setH] = useState<HomeProfile | null>(null); const [edit, setEdit] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
+  const [f, setF] = useState({ displayName: '', city: '', societyId: '', society: '', tower: '', flat: '' });
+  const load = () => api<HomeProfile>(`/v1/households/${hh}/profile`).then(x => { setH(x); setF({ displayName: x.displayName ?? '', city: x.city ?? '', societyId: x.society_id ?? '', society: x.society_id ? '' : x.society, tower: x.tower ?? '', flat: x.flat ?? '' }); });
+  useEffect(() => { load(); }, []);
+  if (!h) return null;
+  if (!edit) return <div className="card">{msg && <div className="small" role="status">{msg}</div>}
+    <dl className="kv"><dt>Name</dt><dd>{h.displayName}</dd><dt>City</dt><dd>{h.city ? `${h.city}${h.state ? ', ' + h.state : ''}` : 'Not set'}</dd><dt>Society</dt><dd>{h.society} {!h.society_verified && <span className="tag">Not verified yet</span>}</dd><dt>Tower</dt><dd>{h.tower ?? '—'}</dd>{h.flat != null && <><dt>Flat (private)</dt><dd>{h.flat}</dd></>}</dl>
+    {h.canEdit && <button className="btn sm" onClick={() => { setEdit(true); setMsg(null); }}>Edit profile</button>}</div>;
+  const save = async () => {
+    setErr(null);
+    try {
+      const r = await api<{ changed: string[]; note?: string }>(`/v1/households/${hh}/profile`, { method: 'PUT', body: { displayName: f.displayName, city: f.city || undefined, ...(f.societyId ? { societyId: f.societyId } : { society: f.society }), tower: f.tower || null, flat: f.flat || null } });
+      setEdit(false); setMsg(r.changed.length ? `Saved: ${r.changed.join(', ')}.${r.note ? ' ' + r.note : ''}` : 'Nothing changed.'); load(); onSaved();
+    } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? 'Check the details and try again.') : 'Can’t reach Pawsure.'); }
+  };
+  return <div className="card"><span className="eyebrow">Edit profile</span>
+    <div className="field"><label htmlFor="pn">Your name</label><input id="pn" className="input" value={f.displayName} onChange={e => setF({ ...f, displayName: e.target.value })} /></div>
+    <SocietyFields value={f} onChange={v => setF({ ...f, ...v })} />
+    <div className="grid2"><div className="field"><label htmlFor="ptw">Tower / wing</label><input id="ptw" className="input" value={f.tower} onChange={e => setF({ ...f, tower: e.target.value })} /></div><div className="field"><label htmlFor="pfl">Flat (private)</label><input id="pfl" className="input" value={f.flat} onChange={e => setF({ ...f, flat: e.target.value })} /></div></div>
+    <div className="xs muted">Every owner of this home is told when the address changes. Friends see your society and tower only, and the flat only after you confirm them for a visit.</div>
+    {err && <span className="errtext" role="alert">{err}</span>}
+    <div className="btnrow"><button className="btn primary" disabled={!f.displayName.trim() || (!f.societyId && f.society.trim().length < 2)} onClick={save}>Save</button><button className="btn" onClick={() => { setEdit(false); load(); }}>Cancel</button></div></div>;
+}
+
 export function PrivacyScreen({ hh, onBack }: { hh: string; onBack: () => void }) {
   const [p, setP] = useState<Privacy | null>(null);
   const load = () => api<Privacy>(`/v1/households/${hh}/privacy`).then(setP);
   useEffect(() => { load(); }, []);
   if (!p) return <><AppBar title="Profile and privacy" onBack={onBack} /><main className="body"><div className="empty">Loading…</div></main></>;
   return <><AppBar title="Profile and privacy" onBack={onBack} /><main className="body">
-    <div className="card"><dl className="kv"><dt>Society</dt><dd>{p.society}</dd><dt>Tower</dt><dd>{p.tower}</dd></dl></div>
+    <HomeDetails hh={hh} onSaved={load} />
     <div className="card"><span className="eyebrow">What friends can see</span><div className="grid2 small"><div><b>Visible to friends</b><ul style={{ margin: '4px 0', paddingLeft: 16 }}>{p.friendsSee.map(x => <li key={x}>{x}</li>)}</ul></div><div><b>Hidden until you confirm someone</b><ul style={{ margin: '4px 0', paddingLeft: 16 }}>{p.hiddenUntilConfirmed.map(x => <li key={x}>{x}</li>)}</ul></div></div><div className="xs muted">No public map. No exact pin, ever.</div></div>
     <div className="card"><span className="eyebrow">Location sharing</span><div className="seg">{[['society', 'Society only'], ['tower', 'Society + tower']].map(([k, l]) => <button key={k} aria-pressed={p.loc_share === k} onClick={() => api(`/v1/households/${hh}/privacy`, { method: 'PUT', body: { locShare: k } }).then(load)}>{l}</button>)}</div><div className="xs muted">Default: society only. Distance shows as bands like “same tower”.</div></div>
     <div className="card"><div className="row"><b className="grow">Ask nearby members if no friend is free</b><span className="tag flag-off">Switch OFF</span></div><label className="switch"><span className="grow small muted">{p.nearbyFallback.reason}</span><input type="checkbox" role="switch" disabled checked={false} readOnly /></label></div>

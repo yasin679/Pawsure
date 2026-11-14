@@ -108,7 +108,7 @@ If you leave part-way through setting up, signing in again continues where you l
 |---|---|---|
 | 1 | **Your name** | Shown to your care circle and, by first name, to friends you ask. |
 | 2 | **App language** | English, Hindi or Marathi. |
-| 3 | **Society** | Your location anchor. Friends see the society and tower only, never a map pin. |
+| 3 | **City, then society** | Choose your city first, then your society from that city’s list, so a society with the same name in another city is never confused with yours. If yours isn’t listed, tap **My society isn’t listed** and type it; it shows as *Not verified yet* until Pawsure support checks it. Friends see the society and tower only, never a map pin. |
 | 4 | **Flat (private)** | Never shown to anyone except a friend you have confirmed for a visit, and a backup you authorised. |
 
 ### 2.4 Screen layout
@@ -420,6 +420,8 @@ Ask in your own words. Pawsure understands the request, checks your own friends,
 
 Medicine requests only go to friends who chose *Medicines*, and they get your written instructions.
 
+**Several pets** (new in the 14 Nov update): with more than one pet, tick each pet the friend should look after, here or on the simple form (or write “both” or the names). Pawsure suggests only friends who said they can look after that many pets at once and that kind of pet. The message names every pet, and medicine instructions are quoted per pet.
+
 ### 6.3 Suggestions
 
 ![Figure 32: Suggestions](images/32-suggestions.jpg)
@@ -451,7 +453,7 @@ With **Ask all 3**, the first valid Yes is held for 10 minutes while you confirm
 
 | # | Item | What it does |
 |---|---|---|
-| 1 | **State** | *Sent*, *Provisional hold*, *Accepted - pending owner confirmation*, *Confirmed*, *Completed*, *Declined*, *Expired*, *Cancelled*, *No-show*. |
+| 1 | **State** | *Sent*, *Provisional hold*, *Accepted - pending owner confirmation*, *Confirmed*, *Completed*, *Declined*, *Expired*, *Cancelled*, *No-show*, *Interrupted* (the friend had an emergency and left; what they finished is shown and your backups are asked). |
 | 2 | **Friend** | Their reply: waiting, said yes, suggested another time, declined. A request expires after 15 minutes without a reply (reminder at 8). |
 | 3 | **Confirm** | Confirms the friend. If they suggested another time, the button says **Confirm 5:30** and nothing changes until you tap it. |
 | 4 | **Event history** | The latest three steps with their exact time (to the second); **View all** shows every step. |
@@ -461,7 +463,7 @@ Tapping a button twice, or a retry on a slow connection, never sends anything tw
 
 ![Figure 35: Confirmed: what is shared](images/36-confirmed.jpg)
 
-Once confirmed, the friend sees the flat number, key arrangement, pet notes and emergency card for this visit only; access is removed when they tap **Done**, cancel, or 2 hours after the task. A cover task appears on Today. If your helper was unavailable, only the matching tasks (same pet, same kind of task) move to the friend; anything else stays open and still alerts you. If the friend sends nothing by 20 minutes after the task time, the request becomes *No-show* and your backup is alerted.
+Once confirmed, the friend sees the flat number, key arrangement, pet notes and emergency card for this visit only; access is removed when they tap **Done**, cancel, or 2 hours after the task. A cover task appears on Today. If your helper was unavailable, only the matching tasks (same pet, same kind of task) move to the friend; anything else stays open and still alerts you. If the friend sends nothing by 20 minutes after the task time, the request becomes *No-show* and your backup is alerted. If the friend said they are running late, you see the new arrival time and the no-show alarm waits for it (up to 80 minutes after the task).
 
 Search closes 30 minutes before the task. **Cancel request** and **Change time +30 min** are available while it is open; a time change asks the friend to reconfirm.
 
@@ -486,7 +488,7 @@ Search closes 30 minutes before the task. **Cancel request** and **Change time +
 
 ### 7.1 What friends can see
 
-**Me → Profile and what friends see** lists what is visible and what is hidden until you confirm someone. Location sharing is *society only* by default; you can widen it to *society + tower*. There is no public map and never an exact pin.
+**Me → Profile and what friends see** shows your name, city, society, tower and (to owners only) your flat. **Edit profile** changes any of them. Every owner of the home is told when the address changes, and a friend already confirmed for a visit sees the new address. The same screen lists what is visible and what is hidden until you confirm someone. Location sharing is *society only* by default; you can widen it to *society + tower*. There is no public map and never an exact pin.
 
 ![Figure 38: Profile and privacy](images/39-privacy.jpg)
 
@@ -568,7 +570,7 @@ Helpers don’t need the app. Everything works on WhatsApp or a basic phone:
 
 ![Figure 45: A helper’s WhatsApp messages (demo phone)](images/42-helper-whatsapp.jpg)
 
-If you sign in to the app with your number, you see the helper home with these instructions and your data rights:
+If you sign in to the app with your number, you see the helper home with these instructions and your data rights. The society and tower shown belong to the owner’s profile; if they are wrong, tap **Wrong society or tower? Tell the owner**:
 
 ![Figure 46: Helper home](images/44-helper-home.jpg)
 
@@ -584,13 +586,18 @@ Friends receive requests on WhatsApp in their language and can reply **Yes**, **
 
 After the owner confirms you, **Show address, key and emergency card** reveals the details for that visit only. Tap **I’ve arrived** when you get there and **Done** when finished; tap **Can’t make it** if plans change (the owner is told and the details are removed).
 
+**Running late?** Choose how late and tap **I’m running late** (or write “late 20” on WhatsApp or SMS). The owner gets your new arrival time.
+
+**Emergency?** Tap **Emergency — I have to leave**, tick what you already finished and send. The owner and co-owner are alerted and called, their backups are asked at once, and the visit is marked *interrupted* (never *done*). On WhatsApp or SMS, write “emergency” (for example “emergency, done feed”).
+
 ![Figure 49: My helper settings](images/46-friend-settings.jpg)
 
 | # | Item | What it does |
 |---|---|---|
 | 1 | **Friends can find me** | Turning it off removes you from search at once. |
-| 2 | **Pause all requests** | Take a break any time, or pause for the next 6 days. |
-| 3 | **When I’m usually free** | Shown as “usually free”, with when you last updated it. Not a promise. |
+| 2 | **Pause all requests** | Take a break any time, or **Pause for 6 days** (today counts as day 1). While paused, the switch shows the last paused day and the day requests return; turn it off to come back early. Visits you already confirmed stay booked, and your friends still see you, marked *Paused*. |
+| 3 | **When I’m usually free** | Shown as “usually free”, with when you last updated it. Not a promise. An end time before the start means overnight, for example 9 PM to 6 AM (next day). |
+| 3a | **How many pets at once** | One to four, counted across every visit you’ve agreed to at the same time, and which kinds of pets (dogs, cats, other). |
 | 4 | **Tasks I’m comfortable with** | Feeding and water, short walks, medicines (only with written instructions), large or anxious dogs. |
 
 Keys, message language, stairs, live location (off by default, only during an accepted visit) and the separate nearby-members opt-in are also here.

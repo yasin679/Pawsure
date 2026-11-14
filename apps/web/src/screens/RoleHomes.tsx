@@ -10,9 +10,11 @@ import { AppBar, Art, Banner } from '../ui';
 const ROLE: Record<string, string> = { backup: 'Backup', family: 'Family', viewer: 'Viewer' };
 
 export function HelperHome({ me, onRights, onSignOut, onSignOutAll }: { me: Me; onRights: () => void; onSignOut: () => void; onSignOutAll: () => void }) {
-  const home = me.memberships[0];
+  const home = me.memberships[0]; const [msg, setMsg] = useState<string | null>(null);
   return <><AppBar title="Pawsure for helpers" /><main className="body">
-    <div className="hero-ill"><Art name="wave" width={120} /><h2>Hello {me.user.display_name?.split(' ')[0]}</h2><p className="small">You help at {home?.society?.split(',')[0]}{home?.tower ? ', ' + home.tower : ''}.</p></div>
+    <div className="hero-ill"><Art name="wave" width={120} /><h2>Hello {me.user.display_name?.split(' ')[0]}</h2><p className="small">You help at {home?.society?.split(',')[0]}{home?.tower ? ', ' + home.tower : ''}.</p>
+      {/* PAW-019: the home's address belongs to the owner; the helper can say it is wrong. */}
+      {home && (msg ? <div className="small" role="status">{msg}</div> : <button className="btn ghost sm" onClick={() => api<{ note: string }>(`/v1/households/${home.household_id}/report-details`, { body: {} }).then(r => setMsg(r.note)).catch(() => setMsg('Couldn’t send. Reply “help” on WhatsApp instead.'))}>Wrong society or tower? Tell the owner</button>)}</div>
     <div className="card"><span className="eyebrow">Pawsure works on WhatsApp or a basic phone</span>
       <p className="small">You don’t need this app. Reply on WhatsApp to the task messages, or give a missed call and enter the code.</p>
       <dl className="kv"><dt>points</dt><dd>See your points</dd><dt>share</dt><dd>Get a link to your record (counts only)</dd><dt>my data</dt><dd>Ask what Pawsure holds about you</dd><dt>stop</dt><dd>Stop check-ins at any time</dd><dt>help</dt><dd>A person calls you back</dd></dl></div>

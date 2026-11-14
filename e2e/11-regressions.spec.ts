@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, PHONE } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, fillSociety, PHONE } from './helpers';
 
 /** Issues reported on 11 Nov 2026, reproduced the way a user meets them (real waiting, no demo-clock jumps). */
 test.describe('N. Reported issues (regression)', () => {
@@ -54,7 +54,7 @@ test.describe('N. Reported issues (regression)', () => {
     await expect(page.getByRole('heading', { name: 'Terms and privacy' })).toBeVisible();
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Kiran'); await page.locator('#sc').fill('Hiranandani, Powai');
+    await page.locator('#nm').fill('Kiran'); await fillSociety(page, 'Hiranandani, Powai');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Kiran/ })).toBeVisible();

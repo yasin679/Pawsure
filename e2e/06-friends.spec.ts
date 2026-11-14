@@ -54,7 +54,7 @@ test.describe('I. The friend’s own app', () => {
     await expect(page.getByRole('heading', { name: 'Requests for you' })).toBeVisible();
     await page.getByRole('button', { name: 'My settings (F7)' }).click();
     await page.getByRole('switch', { name: /Pause all requests/ }).click();
-    await expect(page.getByText('Saved.')).toBeVisible();
+    await expect(page.getByText('Paused. No new requests until you turn this off.')).toBeVisible();
     await page.getByRole('switch', { name: /Friends can find me/ }).click();
     await expect(page.getByText('You’re no longer findable. Removed from search immediately.')).toBeVisible();
   });

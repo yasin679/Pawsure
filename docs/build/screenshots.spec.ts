@@ -3,7 +3,7 @@
  * Run: npx playwright test -c docs/build/shots.config.ts   → docs/images/*.jpg
  */
 import { test, type Page, type Locator } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, clockTo, tab, meItem, dialog, staff, consoleSection, api, webhook, tick, PHONE, SUNITA, DAY } from '../../e2e/helpers';
+import { boot, signIn, signInOwner, signOut, clockTo, tab, meItem, dialog, staff, consoleSection, api, webhook, tick, fillSociety, PHONE, SUNITA, DAY } from '../../e2e/helpers';
 
 const OUT = 'docs/images/';
 const MARK = '#A84C08'; // Pawsure marigold
@@ -42,8 +42,8 @@ test('sign-in and onboarding', async ({ page }) => {
   await mark(page, [[page.getByText('I accept the Terms of Use'), 1], [page.getByText('I have read the Privacy Notice'), 2], [page.locator('.card', { hasText: 'Optional' }), 3]]); await shot(page, '04-consent');
   await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.locator('#nm').fill('Asha Rao'); await page.locator('#sc').fill('Raheja Vihar, Powai'); await page.locator('#tw').fill('C'); await page.locator('#fl').fill('C-702');
-  await mark(page, [[page.locator('#nm'), 1], [page.locator('#lg'), 2], [page.locator('#sc'), 3], [page.locator('#fl'), 4]]); await shot(page, '05-profile');
+  await page.locator('#nm').fill('Asha Rao'); await fillSociety(page, 'Raheja Vihar, Powai'); await page.locator('#tw').fill('C'); await page.locator('#fl').fill('C-702');
+  await mark(page, [[page.locator('#nm'), 1], [page.locator('#lg'), 2], [page.locator('#cty'), 3], [page.locator('#fl'), 4]]); await shot(page, '05-profile');
 });
 
 test('today', async ({ page }) => {
