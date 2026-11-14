@@ -61,7 +61,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     }, [API, '+91' + PHONE.neha] as const);
     await tab(page, 'Me');
     await page.getByRole('button', { name: 'Sign out of all devices' }).click();
-    await expect(page.getByRole('button', { name: 'Get started' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
     const status = await page.evaluate(async ([A, t]) => (await fetch(A + '/v1/me', { headers: { authorization: 'Bearer ' + t } })).status, [API, other] as const);
     expect(status).toBe(401);
   });

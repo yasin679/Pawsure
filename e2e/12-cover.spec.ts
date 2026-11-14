@@ -262,7 +262,7 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
   });
   test('P5 The welcome mascot is a transparent image, not a crop on a beige box', async ({ page }) => {
     await boot(page);
-    const img = page.locator('.hero-ill img.mascot');
+    const img = page.locator('.login-hero img.login-mascot');
     await expect(img).toBeVisible(); await expect(img).toHaveAttribute('src', /mascot-family\.png$/);
     const corner = await img.evaluate(async (el: HTMLImageElement) => { const c = document.createElement('canvas'); c.width = el.naturalWidth; c.height = el.naturalHeight; const g = c.getContext('2d')!; g.drawImage(el, 0, 0); return g.getImageData(2, 2, 1, 1).data[3]; });
     expect(corner).toBe(0);
@@ -273,7 +273,7 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     await page.getByRole('button', { name: /Show Sunita’s phone/ }).click();
     const app = await page.locator('main.body').first().boundingBox(), sim = await page.locator('.simdock').boundingBox();
     expect(sim!.x).toBeGreaterThan(app!.x + app!.width - 5);
-    expect(Math.abs(sim!.y - app!.y)).toBeLessThan(200);
+    expect(Math.abs(sim!.y - app!.y)).toBeLessThan(320); // the framed app has a status bar and the demo bar above its content
     await expect(page.locator('.demobar')).not.toContainText(/webhook/i); await expect(page.locator('.simdock')).not.toContainText(/webhook/i);
     await noHorizontalScroll(page);
   });

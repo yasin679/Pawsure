@@ -5,7 +5,7 @@ import { AppBar, Art, Banner, Icon } from '../ui';
 import { CircleBuilder } from './Cover';
 import { SocietyFields } from './Friends';
 
-type Step = 'welcome' | 'phone' | 'otp' | 'consent' | 'profile';
+type Step = 'phone' | 'otp' | 'consent' | 'profile';
 const ERR: Record<string, string> = {
   invalid_code: 'That code doesn’t match. Check the SMS and try again.', expired_code: 'This code has expired. Request a new one.',
   too_many_attempts: 'Too many wrong attempts. Request a new code.', rate_limited: 'Too many codes requested. Try again in 15 minutes.',
@@ -31,17 +31,17 @@ function DemoNumbers({ onPick }: { onPick: (phone: string) => void }) {
   </details>;
 }
 
-export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; start?: Step }) {
+export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; start?: Step }) {
   const [step, setStep] = useState<Step>(start);
   const [newHh, setNewHh] = useState<string | null>(null);
   // Already signed in but setup not finished (for example after leaving and coming back): continue setup.
   useEffect(() => {
-    if (start !== 'welcome' || !session.get()) return;
+    if (start !== 'phone' || !session.get()) return;
     api<{ memberships: unknown[] }>('/v1/me').then(async me => {
       if (me.memberships.length) return onDone();
       const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
       if (fr.links.length || fr.profile) onDone(); else setStep('consent');
-    }).catch(() => { /* not signed in any more: stay on the welcome screen */ });
+    }).catch(() => { /* not signed in any more: stay on the sign-in screen */ });
   }, []);
   const [phone, setPhone] = useState(''); const [code, setCode] = useState(''); const [demoCode, setDemoCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
@@ -56,24 +56,28 @@ export function Onboarding({ onDone, start = 'welcome' }: { onDone: () => void; 
     <button className="btn primary block" onClick={onDone}>Yes, I have someone</button><button className="btn block" onClick={() => setStep('builder' as Step)}>No one yet</button>
     <p className="xs muted">You can change this later in Me → Backups.</p></div></>;
   if ((step as string) === 'builder' && newHh) return <CircleBuilder hh={newHh} onDone={onDone} />;
-  if (step === 'welcome') return <div className="body">
-    <div className="hero-ill"><img className="mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={210} height={204} alt="Dog and two cats in yellow headbands" /><span className="eyebrow">Pawsure</span><h1>Be sure, whoever’s caring.</h1><p>Plan your pet’s day, see evidence of what happened, and find a friend when your usual help can’t come.</p></div>
-    <div className="card"><div className="stack small">
-      <div className="row top"><span className="avatar icon"><Icon name="check" size={20} /></span><div><b>Evidence, task by task.</b><br /><span className="muted">Each task shows how strong the evidence is. Some days it will be incomplete, and the app will say so.</span></div></div>
-      <div className="row top"><span className="avatar icon"><Icon name="friends" size={20} /></span><div><b>Your own friends first.</b><br /><span className="muted">Nothing is sent to anyone until you approve it.</span></div></div>
-      <div className="row top"><span className="avatar icon"><Icon name="bell" size={20} /></span><div><b>Alerts that escalate.</b><br /><span className="muted">If a check-in is missed, you hear first, then your backup.</span></div></div>
-    </div></div>
-    <button className="btn primary block" onClick={() => setStep('phone')}>Get started</button>
-    <p className="xs muted" style={{ textAlign: 'center' }}>Pawsure is not a veterinary or emergency service.</p>
+  // One screen for both: an existing number logs in, a new number goes on to set up an account after the code.
+  if (step === 'phone') return <div className="login">
+    <div className="login-hero">
+      <img className="login-mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={168} height={163} alt="Dog and two cats in yellow headbands" />
+      <div className="login-word">Pawsure</div>
+      <p className="login-tag">Be sure, whoever’s caring.</p>
+    </div>
+    <div className="login-sheet">
+      <h1>Log in or create an account</h1>
+      <p className="muted small">Enter your mobile number and we’ll send a 6-digit code. New to Pawsure? You’ll set up your home right after.</p>
+      <div className="field"><label htmlFor="ph">Mobile number</label><div className="phone-in"><span className="cc">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
+      {err && <span className="errtext" role="alert">{err}</span>}
+      <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>Send code</button>
+      <div className="perks">
+        <span><Icon name="check" size={18} /><b>Evidence</b>task by task</span>
+        <span><Icon name="friends" size={18} /><b>Friends</b>asked first</span>
+        <span><Icon name="bell" size={18} /><b>Alerts</b>that escalate</span>
+      </div>
+      <p className="xs muted" style={{ textAlign: 'center', margin: 0 }}>Friends never see your number. Pawsure is not a veterinary or emergency service.</p>
+      <DemoNumbers onPick={setPhone} />
+    </div>
   </div>;
-
-  if (step === 'phone') return <><AppBar title="Your mobile number" onBack={() => setStep('welcome')} /><div className="body">
-    <p className="muted">We’ll send a 6-digit code by SMS. Friends never see your number.</p>
-    <div className="field"><label htmlFor="ph">Mobile number</label><div className="row"><span className="tag">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
-    {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>Send code</button>
-    <DemoNumbers onPick={setPhone} />
-  </div></>;
 
   if (step === 'otp') return <><AppBar title="Enter the code" onBack={() => setStep('phone')} /><div className="body">
     <p className="muted">Sent to {e164}.</p>

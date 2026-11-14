@@ -30,7 +30,6 @@ export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 
 
 /** Owner sign-in through the real screens (welcome → phone → code shown in demo mode → verify). */
 export async function signIn(page: Page, phone10: string) {
-  await page.getByRole('button', { name: 'Get started' }).click();
   await page.locator('#ph').fill(phone10);
   await page.getByRole('button', { name: 'Send code' }).click();
   const code = (await page.locator('b.mono').first().innerText()).trim();
@@ -45,7 +44,7 @@ export async function signInOwner(page: Page) {
 export async function signOut(page: Page) {
   if (await page.locator('nav.tabbar').isVisible()) await tab(page, 'Me');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Get started' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
 }
 
 /** The essential care and medical details every new pet needs. */

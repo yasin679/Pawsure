@@ -6,7 +6,6 @@ test.describe('N. Reported issues (regression)', () => {
   test('N1 After waiting 30 seconds, “Resend code” sends a new code', async ({ page }) => {
     test.setTimeout(120_000);
     await boot(page);
-    await page.getByRole('button', { name: 'Get started' }).click();
     await page.locator('#ph').fill(PHONE.neha);
     await page.getByRole('button', { name: 'Send code' }).click();
     const first = (await page.locator('b.mono').first().innerText()).trim();

@@ -23,7 +23,7 @@
     "A1": {
       "role": "New owner",
       "pre": "Fresh demo; unknown number",
-      "steps": "1. Get started\n2. Enter 98112 22333, Send code\n3. Enter the code shown, Verify\n4. Tick Terms and Privacy, Continue\n5. Enter name, society, tower, Continue",
+      "steps": "1. Open the app: Log in or create an account\n2. Enter 98112 22333, Send code\n3. Enter the code shown, Verify\n4. Tick Terms and Privacy, Continue\n5. Enter name, city, society, tower, Continue",
       "expected": "Today opens greeting the new owner"
     },
     "A2": {
@@ -54,7 +54,7 @@
       "role": "Owner",
       "pre": "Signed in",
       "steps": "1. Me → Sign out",
-      "expected": "Welcome screen shown"
+      "expected": "Log in or create an account shown"
     },
     "A7": {
       "role": "Co-owner (Rohan)",
@@ -677,7 +677,7 @@
     "P5": {
       "role": "Visitor",
       "pre": "Fresh demo",
-      "steps": "1. Open the welcome screen",
+      "steps": "1. Open the app (Log in or create an account)",
       "expected": "The mascot is a transparent image with no beige box"
     },
     "P6": {

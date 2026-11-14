@@ -26,7 +26,6 @@ test.describe('A. Sign-in and onboarding', () => {
 
   test('A3 A wrong code is refused with a clear message', async ({ page }) => {
     await boot(page);
-    await page.getByRole('button', { name: 'Get started' }).click();
     await page.locator('#ph').fill(PHONE.neha);
     await page.getByRole('button', { name: 'Send code' }).click();
     await page.locator('#otp').fill('000000');
@@ -36,7 +35,6 @@ test.describe('A. Sign-in and onboarding', () => {
 
   test('A4 An invalid phone number is refused', async ({ page }) => {
     await boot(page);
-    await page.getByRole('button', { name: 'Get started' }).click();
     await page.locator('#ph').fill('12345');
     await page.getByRole('button', { name: 'Send code' }).click();
     await expect(page.getByRole('alert')).toContainText('10-digit');
@@ -49,11 +47,11 @@ test.describe('A. Sign-in and onboarding', () => {
     await expect(page.locator('.petchip', { hasText: 'Misty' })).toBeVisible();
   });
 
-  test('A6 Sign out returns to the welcome screen', async ({ page }) => {
+  test('A6 Sign out returns to Log in or create an account', async ({ page }) => {
     await boot(page);
     await signInOwner(page);
     await signOut(page);
-    await expect(page.getByRole('heading', { name: 'Be sure, whoever’s caring.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
   });
 });
 

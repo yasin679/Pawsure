@@ -64,21 +64,21 @@ Numbered markers on a screenshot point to the item described in the matching row
 
 Open Pawsure in your phone’s browser and tap **Add to Home Screen** to install it like an app. It works on recent Android and iPhone browsers.
 
+While it starts, the yellow Pawsure screen is shown. On a laptop or tablet the app is shown inside a phone frame; on a phone it fills the screen.
+
 If you leave part-way through setting up, signing in again continues where you left off.
 
-![Figure 2: The welcome screen](images/01-welcome.jpg)
+### 2.2 Log in or create an account
 
-| # | Item | What it does |
-|---|---|---|
-| 1 | **Get started** | Begins sign-in with your mobile number. |
+The app opens straight on **Log in or create an account**. There is one screen for both: a number Pawsure already knows logs in; a new number goes on to set up a home after the code.
 
-### 2.2 Signing in
+![Figure 2: Log in or create an account](images/01-welcome.jpg)
 
 ![Figure 3: Entering your mobile number](images/02-phone.jpg)
 
 | # | Item | What it does |
 |---|---|---|
-| 1 | **Mobile number** | Your 10-digit Indian mobile number. Friends never see it. |
+| 1 | **Mobile number** | Your 10-digit Indian mobile number (+91 is added for you). Friends never see it. |
 | 2 | **Send code** | Sends a 6-digit code by SMS. You can ask for a new code after 30 seconds, and up to 3 codes in 15 minutes. |
 
 ![Figure 4: Entering the code](images/03-code.jpg)

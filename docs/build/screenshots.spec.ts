@@ -31,8 +31,7 @@ const top = (page: Page) => page.evaluate(() => { document.querySelector('main.b
 
 test('sign-in and onboarding', async ({ page }) => {
   await boot(page); await hideDemoBar(page);
-  await mark(page, [[page.getByRole('button', { name: 'Get started' }), 1]]); await shot(page, '01-welcome');
-  await page.getByRole('button', { name: 'Get started' }).click();
+  await mark(page, [[page.locator('.login-hero'), 1]]); await shot(page, '01-welcome');
   await page.locator('#ph').fill('9811222333');
   await mark(page, [[page.locator('#ph'), 1], [page.getByRole('button', { name: 'Send code' }), 2]]); await shot(page, '02-phone');
   await page.getByRole('button', { name: 'Send code' }).click();

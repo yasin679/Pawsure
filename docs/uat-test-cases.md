@@ -13,7 +13,7 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 14 Nov 2026, 11:42 IST |
+| Latest run | 15 Nov 2026, 00:07 IST |
 | Result | **123 of 123 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
@@ -29,12 +29,12 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
-| A1 | H | New owner signs up: phone, code, consents, profile, then lands on Today | 1. Get started<br>2. Enter 98112 22333, Send code<br>3. Enter the code shown, Verify<br>4. Tick Terms and Privacy, Continue<br>5. Enter name, society, tower, Continue | Today opens greeting the new owner | Pass |
+| A1 | H | New owner signs up: phone, code, consents, profile, then lands on Today | 1. Open the app: Log in or create an account<br>2. Enter 98112 22333, Send code<br>3. Enter the code shown, Verify<br>4. Tick Terms and Privacy, Continue<br>5. Enter name, city, society, tower, Continue | Today opens greeting the new owner | Pass |
 | A2 | H | Consent is required: continuing without Terms and Privacy shows an error | 1. Sign in with a new number<br>2. Tap Continue without ticking Terms/Privacy | Error: please accept the Terms and the Privacy Notice | Pass |
 | A3 | H | A wrong code is refused with a clear message | 1. Enter Neha’s number, Send code<br>2. Enter 000000, Verify | Error: code doesn’t match | Pass |
 | A4 | H | An invalid phone number is refused | 1. Enter 12345, Send code | Error asking for a 10-digit Indian mobile number | Pass |
 | A5 | H | Existing owner signs in and sees both pets on Today | 1. Sign in as 98000 00021 | Today shows Bruno and Misty | Pass |
-| A6 | H | Sign out returns to the welcome screen | 1. Me → Sign out | Welcome screen shown | Pass |
+| A6 | H | Sign out returns to Log in or create an account | 1. Me → Sign out | Log in or create an account shown | Pass |
 | A7 | H | Co-owner Rohan signs in and sees the same household | 1. Sign in as 98000 00022 | Today greets Rohan and shows the shared pets | Pass |
 
 ## 3 Pets
@@ -213,7 +213,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | P2 | M | Alert text uses the past tense once the backup step has happened | 1. Advance to 4:30 PM | Alert says “Your backup was alerted at 2:00 PM.” | Pass |
 | P3 | M | “Planned” appears once on a task card | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
 | P4 | M | The request label and the demo parser switch say the same thing (no AI connected) | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
-| P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the welcome screen | The mascot is a transparent image with no beige box | Pass |
+| P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the app (Log in or create an account) | The mascot is a transparent image with no beige box | Pass |
 | P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
 | P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
 

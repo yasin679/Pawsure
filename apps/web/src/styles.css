@@ -385,3 +385,49 @@ body{background:var(--stage)}
   .simdock > .sheet{max-height:none;max-width:none;flex:0 0 auto}
 }
 .hero-ill img.mascot{display:block;margin:0 auto;background:transparent;max-width:100%;height:auto}
+
+/* ---------- Sign-in: log in or create an account (no separate welcome page) ---------- */
+.login{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;background:var(--bg)}
+.login-hero{background:var(--yellow);color:var(--charcoal);text-align:center;padding:18px 16px 26px;border-radius:0 0 32px 32px;position:relative;flex:none}
+.login-hero::after{content:'';position:absolute;inset:auto 0 -1px 0;height:2px;background:transparent}
+.login-mascot{display:block;margin:0 auto;width:150px;height:auto;filter:drop-shadow(0 6px 0 rgba(32,32,29,.12));animation:float 3.2s ease-in-out infinite}
+.login-word{font:800 2rem/1 var(--f-display,'Baloo 2'),system-ui,sans-serif;letter-spacing:.01em;margin-top:6px}
+.login-tag{margin:4px 0 0;font-weight:700;font-size:.95rem;opacity:.85}
+.login-sheet{padding:20px 18px 28px;display:flex;flex-direction:column;gap:14px}
+.login-sheet h1{font-size:1.5rem;line-height:1.2;margin:0}
+.login-sheet p{margin:0}
+.phone-in{display:flex;align-items:stretch;border:1.5px solid var(--line-2);border-radius:14px;background:var(--surface);overflow:hidden}
+.phone-in:focus-within{border-color:var(--charcoal);box-shadow:0 0 0 3px var(--accent-soft)}
+.phone-in .cc{display:flex;align-items:center;padding:0 12px;font-weight:800;background:var(--surface-2);border-right:1px solid var(--line);white-space:nowrap}
+.phone-in .input{border:0;border-radius:0;box-shadow:none;flex:1;min-width:0;font-size:1.15rem;letter-spacing:.06em}
+.phone-in .input:focus{outline:none}
+.btn.lg{min-height:52px;font-size:1.05rem;border-radius:16px}
+.perks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.perks span{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-size:.72rem;line-height:1.25;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
+.perks span b{font-size:.82rem;color:var(--ink);margin-top:2px}
+.perks svg{width:18px;height:18px;flex:none}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.login-mascot{animation:none}}
+
+/* ---------- Phone frame: on a laptop or tablet the app is shown as a phone; real phones get the full screen ---------- */
+.sbar{display:none}
+@media (min-width:600px) and (min-height:640px){
+  body:has(#root > .pwa){background:radial-gradient(ellipse 60% 50% at 18% 12%,color-mix(in srgb,var(--yellow) 45%,transparent) 0,transparent 70%),radial-gradient(ellipse 50% 45% at 85% 88%,color-mix(in srgb,var(--yellow) 22%,transparent) 0,transparent 70%),var(--stage)}
+  #root:has(> .pwa){display:flex;flex-direction:column;justify-content:center;padding:18px 0;box-sizing:border-box}
+  #root > .pwa{width:390px;max-width:390px;height:min(844px,100%);flex:none;margin:0 auto;border-radius:50px;border:11px solid #161614;overflow:hidden;padding-top:0;box-shadow:0 0 0 2px #45443d,0 34px 70px -18px rgba(32,32,29,.55),0 14px 30px -14px rgba(0,0,0,.35)}
+  #root > .pwa::before{content:'';position:absolute;top:11px;left:50%;transform:translateX(-50%);width:104px;height:30px;border-radius:20px;background:#0b0b0a;z-index:60;pointer-events:none}
+  #root > .pwa::after{content:'';position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:126px;height:5px;border-radius:5px;background:var(--ink);opacity:.8;z-index:60;pointer-events:none}
+  #root > .pwa .sbar{display:flex;order:-1;flex:none;height:50px;align-items:center;justify-content:space-between;padding:4px 30px 0 34px;font:800 15px/1 var(--f-body);color:var(--ink);background:var(--bg)}
+  #root > .pwa:has(> .demobar) .sbar{background:var(--charcoal);color:var(--cream)}
+  #root > .pwa:has(.login) .sbar{background:var(--yellow);color:var(--charcoal)}
+  .sbar-i{display:flex;gap:6px;align-items:center}
+  .sbar-i svg{fill:currentColor}
+  #root > .pwa .tabbar{padding-bottom:22px}
+  #root > .pwa *::-webkit-scrollbar{width:0;height:0}
+  #root > .pwa *{scrollbar-width:none}
+}
+/* With the demo phones open, the framed app moves left so they sit beside it (fix #6). */
+@media (min-width:960px) and (min-height:640px){
+  #root > .pwa:has(.simdock){margin-left:calc(50% - 470px)}
+  #root > .pwa:has(.simdock) > .simdock{top:18px;max-height:calc(100vh - 36px)}
+}
