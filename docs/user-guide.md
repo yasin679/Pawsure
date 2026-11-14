@@ -532,6 +532,8 @@ Your consents are listed with their versions under **Me**. Withdrawing an option
 
 ## 10 Care circle
 
+How helpers and friends join is in 12.1 and 13.1.
+
 ![Figure 42: Care circle](images/27-care-circle.jpg)
 
 | # | Item | What it does |
@@ -560,6 +562,23 @@ The link works only for the person it was sent to, every open is logged, and it 
 
 ## 12 For helpers
 
+### 12.1 How a helper joins
+
+A helper can’t sign up on their own. The owner invites them, and nothing about the helper is recorded until they say Yes.
+
+| Step | Who | What happens |
+|---|---|---|
+| 1 | Owner | **Helper and code card → Invite another helper**: the helper’s name, mobile number and language. |
+| 2 | Helper | Gets a WhatsApp message in that language explaining what Pawsure records: only the bowl or the pet, never their face, and only for this home. They can switch language first. |
+| 3 | Helper | Replies **Yes**: the consent is recorded with its version and time, the helper becomes active and the owner is told. Replies **Not now**: nothing is recorded; the owner can use Trusted Helper mode or check-ins they make themselves. |
+| 4 | Helper | Chooses how to check in: **photo**, **voice note** or **missed call** with the day’s code. Reply **change** to switch later. |
+| 5 | Owner (optional) | **Practice together** sends a practice prompt so the helper can try it; nothing from the practice counts as evidence. |
+| 6 | Helper | From now on uses WhatsApp or a basic phone. No app is needed. **stop** ends check-ins at any time; **start** asks for consent again. |
+
+A helper can also sign in to the app with their own number and a one-time code. They see only the helper home below, never the owner’s screens.
+
+### 12.2 Day to day
+
 Helpers don’t need the app. Everything works on WhatsApp or a basic phone:
 
 - **Invitation:** a WhatsApp message in your language asks whether you want to join. Only the bowl or the pet is ever photographed, never your face. Reply **Yes** or **Not now**.
@@ -579,6 +598,23 @@ If you sign in to the app with your number, you see the helper home with these i
 ![Figure 47: The reminder on the helper’s phone](images/cover-helper-reminder.png)
 
 ## 13 For friends
+
+### 13.1 How a friend joins
+
+A friend can’t sign up on their own either. The owner invites them, and being invited is not the same as being findable.
+
+| Step | Who | What happens |
+|---|---|---|
+| 1 | Owner | **Friends → Invite**: the friend’s name, mobile number and message language. Up to 20 invites a day. |
+| 2 | Friend | Gets a WhatsApp invitation with **Set up my profile**. Tapping it (or **Accept** in the app) connects them to the owner. They are still not findable. |
+| 3 | Friend | Signs in to the app with their own number and a one-time code, and opens **My settings**. |
+| 4 | Friend | Turns on **Friends can find me**. This is their consent to be suggested, recorded with the time; turning it off removes them from search at once. |
+| 5 | Friend | Sets when they are usually free, the tasks they are comfortable with (feeding, walks, medicines, large dogs), how many pets at once and which kinds, keys, stairs and message language. |
+| 6 | Friend | From now on, requests arrive on WhatsApp (and in **Requests for you**). They reply Yes, No or another time. The flat, key and emergency card are shown only after the owner confirms them, for that visit only. |
+
+A friend needs WhatsApp. A friend with only a basic phone can’t be set up yet (backups and helpers can use a basic phone).
+
+### 13.2 Day to day
 
 Friends receive requests on WhatsApp in their language and can reply **Yes**, **No**, or suggest another time (for example *5:30*). In the app, a friend sees **Requests for you** and **My settings**.
 
