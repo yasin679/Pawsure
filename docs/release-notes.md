@@ -110,7 +110,7 @@ From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and a
 ### 3.3 New look (15 Nov 2026)
 
 - **Theme:** sage green, cream and a touch of gold, with softer buttons and cards.
-- **Splash:** sage gradient with the Pawsure paw mark, shown for at least 1.5 seconds.
+- **Splash:** sage gradient with the Pawsure paw mark, shown for about 3 seconds. Pawly takes about 5 seconds, one step at a time.
 - **Sign-in:** opens straight on **Log in or create an account**: mascot, mark, one line, the number and **Send code**. Demo numbers sit behind **Try a demo number**.
 - **Phone frame:** on a laptop or tablet the app shows inside a phone with a status bar; on a phone it fills the screen.
 - **Pawly:** **Find with Pawly** shows the friend search step by step, then how many friends were found. A new **No friend is free right now** page offers another time, any distance, invite a friend and call your backup.

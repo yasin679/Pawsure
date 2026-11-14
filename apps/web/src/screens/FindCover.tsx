@@ -50,12 +50,12 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
   useEffect(() => { if (v.k !== 'request') return; const t = setInterval(() => loadReq(v.id), 5000); return () => clearInterval(t); }, [v]);
   const run = async (fn: () => Promise<void>) => { if (busy) return; setErr(null); setDupErr(null); setBusy(true); try { await fn(); } catch (e) { if (e instanceof ApiError && e.body.duplicateOf) setDupErr(String(e.body.duplicateOf)); setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
   const petName = (id: string | null) => pets.find(p => p.id === id)?.name ?? '';
-  /** Run the normal search with Pawly's steps on screen (at least ~2.6 s, so the steps can be read). */
+  /** Run the normal search with Pawly's steps on screen (about 5.5 s, so each step can be read). */
   const askPawly = (time: number | null | undefined, go: () => Promise<SearchResult>) => run(async () => {
     const t0 = Date.now(); setThinking({ step: 0, time: time != null ? fmt(time) : 'that time' });
-    const iv = setInterval(() => setThinking(s => s && { ...s, step: Math.min(s.step + 1, 4) }), 650);
+    const iv = setInterval(() => setThinking(s => s && { ...s, step: Math.min(s.step + 1, 4) }), 1300);
     try {
-      const r = await go(); const wait = 2600 - (Date.now() - t0); if (wait > 0) await new Promise(res => setTimeout(res, wait));
+      const r = await go(); const wait = 5600 - (Date.now() - t0); if (wait > 0) await new Promise(res => setTimeout(res, wait));
       setSr(r); setSel([]); setByPawly(true); setV({ k: 'suggest', id: r.request.id });
     } finally { clearInterval(iv); setThinking(null); }
   });

@@ -23,12 +23,12 @@ import { PRESETS } from './demo/presets';
 type Tab = 'today' | 'find' | 'friends' | 'pet' | 'me';
 type Sub = null | 'routine' | 'health' | 'helper' | 'circle' | 'privacy' | 'wallet' | 'rights' | 'backups' | 'builder';
 /** Fade out and remove the HTML splash screen (once; later calls do nothing). */
-const SPLASH_MIN_MS = 1500;
-/** Hide the splash once the first screen is ready, but never before it has been seen for 1.5 s. */
+const SPLASH_MIN_MS = 3200;
+/** Hide the splash once the first screen is ready, but never before it has been seen for about 3 s. */
 export function hideSplash() {
   const s = document.getElementById('splash'); if (!s || s.classList.contains('gone') || s.dataset.hiding) return;
   s.dataset.hiding = '1';
-  setTimeout(() => { s.classList.add('gone'); setTimeout(() => s.remove(), 450); }, Math.max(0, SPLASH_MIN_MS - performance.now()));
+  setTimeout(() => { s.classList.add('gone'); setTimeout(() => s.remove(), 800); }, Math.max(0, SPLASH_MIN_MS - performance.now()));
 }
 const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'search'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
