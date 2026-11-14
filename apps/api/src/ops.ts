@@ -94,7 +94,7 @@ export async function serviceChecks(db: Db, mon: Monitor, now: Date, demoMode: b
     { key: 'api_latency', label: 'Core API p95 (15 min, non-AI)', status: corP95 == null ? 'ok' : lvl(corP95 > 1000, corP95 > 500), value: corP95 == null ? 'no traffic' : `${corP95} ms over ${core.length} requests`, target: '< 500 ms' },
     { key: 'api_errors', label: 'Server errors (15 min)', status: lvl(err5 >= 5, err5 >= 1), value: `${err5}`, target: '0' },
     { key: 'stuck_requests', label: 'Friend requests waiting > 10 min', status: lvl(false, stuck > 0), value: `${stuck}`, target: 'ops checks each one' },
-    { key: 'open_s1', label: 'S1 emergencies unacknowledged > 15 min', status: lvl(s1 > 0, false), value: `${s1}`, target: '0 — call the care circle' },
+    { key: 'open_s1', label: 'S1 emergencies unacknowledged > 15 min', status: lvl(s1 > 0, false), value: `${s1}`, target: '0, call the care circle' },
     { key: 'rights_age', label: 'Rights requests', status: lvl(rights.overdue > 0, rights.soon > 0), value: `${rights.overdue} overdue · ${rights.soon} due within 2 days · oldest ${rights.oldest ?? 0} days`, target: 'reply within 7 days' },
     { key: 'llm', label: 'AI parse fallbacks (24 h)', status: lvl(false, llmAll >= 5 && llmFb / llmAll > 0.5), value: `${llmFb} of ${llmAll}`, target: 'manual form always works; > 50% fallback = check vendor' },
     { key: 'database', label: 'Database', status: lvl(dbMs > 1000, dbMs > 200), value: `${dbMs} ms round trip`, target: '< 200 ms' },

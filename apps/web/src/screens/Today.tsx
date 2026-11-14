@@ -4,8 +4,8 @@ import { api, ApiError, fmt, hm, type DayTask, type DayView, type DayReport, typ
 import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
 
-const COVER_LABEL: Record<string, [string, string]> = { Covered: ['Confirmed', 'Covered day'], 'In progress': ['Pending', 'Covered so far'], 'At risk': ['Not confirmed', 'Not covered yet'], 'Not covered': ['Missed', 'Not covered'], Unknown: ['Unknown', 'Unknown — tap Covered'], Excluded: ['Pending', 'No tasks today'] };
-const MODE: Record<string, string> = { tracked: 'Sunita (tracked helper)', trusted: 'Sunita — Trusted Helper mode', uncovered: 'Nobody yet — cover needed', friend: 'A friend (Find cover)' };
+const COVER_LABEL: Record<string, [string, string]> = { Covered: ['Confirmed', 'Covered day'], 'In progress': ['Pending', 'Covered so far'], 'At risk': ['Not confirmed', 'Not covered yet'], 'Not covered': ['Missed', 'Not covered'], Unknown: ['Unknown', 'Unknown, tap Covered'], Excluded: ['Pending', 'No tasks today'] };
+const MODE: Record<string, string> = { tracked: 'Sunita (tracked helper)', trusted: 'Sunita, Trusted Helper mode', uncovered: 'Nobody yet, cover needed', friend: 'A friend (Find cover)' };
 const SEV: Record<string, [string, string][]> = {
   'S1 Urgent': [['pet_hurt', 'Pet hurt'], ['bite', 'Someone was bitten'], ['collapse_breathing', 'Collapse / breathing trouble'], ['pet_missing', 'Pet missing'], ['door_key_security', 'Door / key problem']],
   'S2 Unwell': [['vomiting', 'Vomiting'], ['not_eating', 'Not eating'], ['limping', 'Limping'], ['unusual_behaviour', 'Unusual behaviour']],
@@ -65,17 +65,17 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </div>)}
 
       <div className="card"><div className="row"><div className="grow"><span className="eyebrow">Who’s caring today?</span><h2>{MODE[d.mode] ?? d.mode}</h2></div><button className="btn sm" onClick={() => setSheet('caring')}>Change</button></div>
-        {d.mode === 'trusted' && <><div className="small muted">No check-ins, alerts or points today. The day counts as covered only when you tap Covered.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>Covered</button>}</>}
+        {d.mode === 'trusted' && <><div className="small muted">No check-ins or alerts today. Tap Covered when it’s done.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>Covered</button>}</>}
         {d.helperUnavailable && <Banner kind="warn" icon="!">Sunita can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
         {needsCover && <div className="btnrow">{d.helperUnavailable && ov?.preDeparture.warn && !ov.jobs.some(j => j.active) && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/pre-departure`, { body: { option: 'ask_circle_now' } }))}><Icon name="friends" size={18} />Ask my backups</button>}<button className="btn sm" onClick={() => onFindCover(d.helperUnavailable ? coverDraft : undefined)}><Icon name="search" size={18} />Ask a friend to cover</button></div>}
         {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn ghost sm" onClick={() => setSheet('cantcome')}>My help can’t come today</button>}
       </div>
       {d.alone.exceeds && <Banner kind="warn" icon="⏱"><b>Alone-window warning.</b> Your pets would be alone {(d.alone.longestMinutes / 60).toFixed(1)} h ({fmt(d.alone.from)}–{fmt(d.alone.to)}). Your limit is {d.alone.limitHours} h. <span className="xs muted">Your own threshold, not medical guidance.</span></Banner>}
       {d.leftAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Heading out?</b><div className="small muted">30-second leaving checklist</div></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>I’m leaving</button></div></div>
-        : d.backAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>I’m delayed</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today — no return check needed.'); }, () => {})}>I’m back</button></div></div>
+        : d.backAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>I’m delayed</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>I’m back</button></div></div>
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">Quick return check (10 s)</b><button className="btn primary sm" onClick={() => setSheet('return')}>Start</button></div></div> : null}
 
-      <div className="row"><h2 className="grow" style={{ fontSize: 'var(--fs-l)' }}>Plan & evidence</h2>
+      <div className="row wrap"><h2 className="grow" style={{ fontSize: 'var(--fs-l)', whiteSpace: 'nowrap' }}>Plan & evidence</h2>
         {onEditRoutine && <button className="btn ghost sm" onClick={onEditRoutine}>Edit routine</button>}
         <button className="btn ghost sm" onClick={() => run(async () => { setTimeline(await api<TimelineItem[]>(`${H}/day/timeline`)); setSheet('timeline'); }, () => {})}>Timeline</button>
         <button className="btn ghost sm" onClick={() => run(async () => { setReport(await api<DayReport>(`${H}/day/report`)); setSheet('report'); }, () => {})}>Day report</button></div>
@@ -94,15 +94,15 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
     {sheet === 'task' && task && <Sheet onClose={close}>
       <div className="row"><h2 className="grow">{task.title}</h2><Conf state={task.ev.state} label={task.ev.label} /></div>
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
-      {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">A Yes from a caregiver is a plan, not evidence that the task was done.</div></div>}
+      {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">A Yes is a plan, not proof the task was done.</div></div>}
       {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span>{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
       <div className="card flat"><span className="eyebrow">Why this label</span>{task.ev.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>
       {task.esc && <div className="card"><span className="eyebrow">Escalation ladder</span>{task.esc.steps.map(s => <div key={s.n} className="row small"><span className="mono" style={{ minWidth: 60 }}>{fmt(s.at)}</span><span className="grow">{s.kind.replace(/_/g, ' ')}</span><span className={`tag ${s.fired ? 'flag-on' : s.stoppedByAck || s.notRepeated ? 'owner' : ''}`}>{s.fired ? 'Sent' : s.stoppedByAck ? 'Stopped' : s.notRepeated ? 'Not repeated (asked before the task)' : 'Pending'}</span></div>)}</div>}
-      <div className="card"><span className="eyebrow">Lifecycle (append-only)</span>{task.lifecycle.map((l, i) => <div key={i} className="row small"><span className="mono muted" style={{ minWidth: 48 }}>{hm(l.at)}</span><span className="grow"><b>{l.state}</b> · {l.actor}{l.note ? ' — ' + l.note : ''}</span></div>)}</div>
+      <div className="card"><span className="eyebrow">Lifecycle (append-only)</span>{task.lifecycle.map((l, i) => <div key={i} className="row small"><span className="mono muted" style={{ minWidth: 48 }}>{hm(l.at)}</span><span className="grow"><b>{l.state}</b> · {l.actor}{l.note ? ', ' + l.note : ''}</span></div>)}</div>
       <div className="small"><b>Helper points:</b> {task.points.kind === 'earn' ? `+${task.points.points}` : task.points.kind === 'hold' ? 'held (review, max 7 days)' : (task.points.reason ?? '').replace(/_/g, ' ')}</div>
       <div className="btnrow">{task.visitId && d.gateApp && <button className="btn sm" onClick={() => run(() => api(`${H}/visits/${task.visitId}/gate`, { body: {} }))}>Attach my gate-app alert</button>}
         {task.ev.state !== 'Cancelled' && <button className="btn sm" onClick={() => setSheet('change')}>Change this task</button>}</div>
-      <p className="xs muted">Gate alerts are labelled owner-provided. Pawsure has no gate-app integration.</p>
+      <p className="xs muted">Gate alerts are marked as from you.</p>
     </Sheet>}
 
     {sheet === 'predeparture' && ov && <PreDepartureSheet hh={hh} ov={ov} pets={pets} onClose={close} onLeave={() => setSheet('leaving')} reload={reloadAll} />}
@@ -112,20 +112,20 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="field"><label htmlFor="cn">{change === 'Partly done' ? 'What was skipped?' : 'Reason'} (required)</label><input id="cn" className="input" value={note} onChange={e => setNote(e.target.value)} /></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block" onClick={() => run(() => api(`${H}/tasks/${task.id}/lifecycle`, { body: { state: change, note } }))}>Save</button>
-      <p className="xs muted">History is kept. A cancelled task is left out of the covered-day count.</p></Sheet>}
+      <p className="xs muted">History is kept.</p></Sheet>}
 
     {sheet === 'resolve' && task && <Sheet onClose={close}><h2>Resolve: {task.title}</h2>
       <div className="field"><label htmlFor="rn">What happened? (required)</label><textarea id="rn" className="input" value={note} onChange={e => setNote(e.target.value)} /></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block" onClick={() => run(() => api(`${H}/tasks/${task.id}/resolve`, { body: { note } }))}>Mark resolved</button>
-      <p className="xs muted">A missed task counts toward a covered day only if it’s resolved by 11:59 PM.</p></Sheet>}
+      <p className="xs muted">Resolve a missed task by midnight to keep the day covered.</p></Sheet>}
 
     {sheet === 'caring' && <Sheet onClose={close}><h2>Who’s caring today?</h2>
-      <div className="list">{[['tracked', 'user', 'Own helper — Sunita (tracked)', 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Ask your own friends. Nothing is sent until you approve']].map(([k, i, t, s]) =>
+      <div className="list">{[['tracked', 'user', 'Own helper: Sunita (tracked)', 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Ask your own friends. Nothing is sent until you approve']].map(([k, i, t, s]) =>
         <button key={k} className="li" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { mode: k } }), k === 'friend' ? () => { close(); onFindCover(coverDraft); } : undefined)}><span className="avatar icon"><Icon name={i!} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div>{d.mode === k && <span className="tag flag-on">Selected</span>}</button>)}</div>
-      <div className="list"><div className="li"><span className="avatar icon"><Icon name="home" size={20} /></span><div className="grow"><b>Graded day care · Verified carer</b><div className="small muted">Later releases (P1 / P2) — not available</div></div></div></div></Sheet>}
+      <div className="list"><div className="li"><span className="avatar icon"><Icon name="home" size={20} /></span><div className="grow"><b>Graded day care · Verified carer</b><div className="small muted">Later releases (P1 / P2), not available</div></div></div></div></Sheet>}
 
-    {sheet === 'cantcome' && <Sheet onClose={close}><h2>Help can’t come today</h2><p>Sunita will be marked unavailable for today. Your original plan stays in the record.</p>
+    {sheet === 'cantcome' && <Sheet onClose={close}><h2>Help can’t come today</h2><p>Sunita is marked unavailable for today.</p>
       <div className="field"><label htmlFor="cr">Reason (optional, private)</label><select id="cr" className="input" value={note} onChange={e => setNote(e.target.value)}><option value="">Not given</option><option>Unwell</option><option>Family emergency</option><option>Holiday</option></select></div>
       <button className="btn primary block" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { helperUnavailable: true, reason: note || undefined } }))}>Mark unavailable</button></Sheet>}
 
@@ -133,23 +133,23 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="card">{([['water', 'Water bowl is full'], ['doors', 'Balcony and main door secured'], ['pads', 'Toilet pads in place']] as const).map(([k, l]) => <label key={k} className="check"><input type="checkbox" checked={checklist[k]} onChange={e => { const v = e.target.checked; setChecklist(p => ({ ...p, [k]: v })); }} /><span>{l}</span></label>)}
         <div className="field"><label htmlFor="pb">If nobody can come today, who is plan B?</label><select id="pb" className="input" value={planB} onChange={e => setPlanB(e.target.value)}><option value="">Not decided</option><option>I’ll come back myself</option>{(ov ? ov.keyPlans.filter(k => k[0].startsWith('named_person:')).map(k => k[0].slice(13)) : []).map(n => <option key={n}>{n}</option>)}</select></div>
         <div className="field"><label htmlFor="rt">Expected return</label><select id="rt" className="input" value={returnAt} onChange={e => setReturnAt(Number(e.target.value))}>{[1080, 1140, 1200, 1320].map(m => <option key={m} value={m}>{fmt(m)}</option>)}</select></div></div>
-      <p className="xs muted">This list is a reminder only. It doesn’t check the home or your pets.</p>
+      <p className="xs muted">Just a reminder list.</p>
       <div className="btnrow"><button className="btn" onClick={() => run(() => api(`${H}/day/leaving`, { body: { checklist: null, returnAt, planB: planB || null } }))}>Skip</button><button className="btn primary" onClick={() => run(() => api(`${H}/day/leaving`, { body: { checklist, returnAt, planB: planB || null } }))}>I’m leaving</button></div></Sheet>}
 
-    {sheet === 'return' && <Sheet onClose={close}><h2>Quick return check</h2><p className="muted small">About 10 seconds. One mismatch is never treated as wrongdoing; Sunita sees the reason and can respond.</p>
+    {sheet === 'return' && <Sheet onClose={close}><h2>Quick return check</h2><p className="muted small">One mismatch is never treated as wrongdoing.</p>
       {RQ.map(([k, q, a, b]) => <div key={k} className="card"><b>{q}</b><div className="seg" role="radiogroup" aria-label={q}><button aria-pressed={answers[k] === 0} onClick={() => setAnswers(p => ({ ...p, [k]: 0 }))}>{a}</button><button aria-pressed={answers[k] === 1} onClick={() => setAnswers(p => ({ ...p, [k]: 1 }))}>{b}</button></div></div>)}
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block" disabled={RQ.some(([k]) => answers[k] == null)} onClick={() => run(async () => {
         const r = await api<{ outcomes: { taskId: string; result: string }[]; suggestIncident?: boolean }>(`${H}/day/return-check`, { body: answers });
         const m = r.outcomes.filter(o => o.result === 'matched').length, c = r.outcomes.filter(o => o.result === 'contradicted').length;
-        setMsg(`Return check saved. ${m ? m + ' task(s) matched by your check (no helper points). ' : ''}${c ? c + ' mismatch(es): points held while it’s reviewed. ' : ''}${r.suggestIncident ? 'You reported a problem — use SOS to log details.' : ''}`);
+        setMsg(`Return check saved. ${m ? m + ' task(s) matched by your check (no helper points). ' : ''}${c ? c + ' mismatch(es): points held while it’s reviewed. ' : ''}${r.suggestIncident ? 'You reported a problem, use SOS to log details.' : ''}`);
       })}>Save</button></Sheet>}
 
     {sheet === 'timeline' && <Sheet onClose={close}><h2>Timeline</h2><div className="card"><div className="tl">{timeline.map((x, i) => <div key={i} className={`ev ${x.kind === 'signal' ? 'sig' : x.kind}`}><span className="t">{hm(x.at)}</span><span className="d" aria-hidden="true" /><span>{x.text}</span></div>)}</div></div></Sheet>}
 
     {sheet === 'report' && report && <Sheet onClose={close}>
       <div className={`card ${report.covered.household === 'Covered' ? 'hero' : ''}`}><span className="eyebrow">{report.date}</span><h2>{report.covered.household === 'Covered' ? 'Covered care day' : report.covered.household}</h2>
-        {report.covered.pets.map(p => <div key={p.petId} className="small">{petName(p.petId)}: <b>{p.status}</b>{p.why.length ? ' — ' + p.why.join('; ') : ''}</div>)}<div className="xs">{report.covered.rule}</div></div>
+        {report.covered.pets.map(p => <div key={p.petId} className="small">{petName(p.petId)}: <b>{p.status}</b>{p.why.length ? ', ' + p.why.join('; ') : ''}</div>)}<div className="xs">{report.covered.rule}</div></div>
       {report.covered.household === 'Covered' && <div className="art-stage"><Art name="run" width={150} /></div>}
       <div className="list">{report.tasks.map(t => <div key={t.id} className="li"><span className="mono small">{hm(t.due)}</span><div className="grow"><b>{t.title}</b><div className="xs muted">{petName(t.petId)} · {t.lifecycle}</div></div><Conf state={t.state} label={t.label} /></div>)}</div>
       {ov && <CoverHistory ov={ov} />}
@@ -160,7 +160,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
 
     {sheet === 'incident' && inc && <Sheet onClose={close}><h2>{inc.severity} · {inc.category.replace(/_/g, ' ')}</h2>
       <div className="card">{inc.plan.map((s, i) => <div key={i} className="row small"><span className="mono" style={{ minWidth: 48 }}>+{s.offsetMin}m</span><span className="grow"><b>{s.to.replace('+', ' + ').replace(/_/g, ' ')}</b> · {s.channels.join(', ')}</span><span className={`tag ${s.sent ? 'flag-on' : s.stopped ? 'owner' : ''}`}>{s.sent ? 'Sent' : s.stopped ? 'Stopped' : 'Pending'}</span></div>)}
-        <div className="xs muted">Repeat steps stop when someone taps “I’m on it” or presses 1. A read receipt doesn’t count. Outside 8 AM–10 PM automation continues and ops reviews next shift.</div></div>
+        <div className="xs muted">Stops when someone taps “I’m on it” or presses 1.</div></div>
       <Banner kind="alert" icon="☎">Call your own vet: <b>{pets[0]?.vet_name}</b> · <span className="mono">{pets[0]?.vet_phone}</span>. Pawsure is not an emergency or vet service.</Banner>
       <div className="field"><label htmlFor="ir">Resolution note (required to close)</label><textarea id="ir" className="input" value={note} onChange={e => setNote(e.target.value)} /></div>
       {err && <span className="errtext" role="alert">{err}</span>}

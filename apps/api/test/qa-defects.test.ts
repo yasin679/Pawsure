@@ -42,7 +42,7 @@ describe('New task (PAW-002, PAW-008, PAW-009)', () => {
     expect(blank.status).toBe(400); expect(blank.body.message).toBe('Give the task a name.');
     expect((await db.query(`select 1 from routine_tasks where household_id='hh_demo' and coalesce(trim(title),'')=''`)).length).toBe(0);
   });
-  it('PAW-009 every day starts tomorrow, just for today starts today — by India time, also just after midnight', async () => {
+  it('PAW-009 every day starts tomorrow, just for today starts today, by India time, also just after midnight', async () => {
     clock.set(at('00:10', '2026-11-07')); // 18:40 UTC on 6 Nov
     const daily = await call<{ effectiveFrom: string }>('POST', `${HH}/routine`, { petId: 'bruno', title: 'Night check', type: 'other', due: 1380, assignee: 'owner' }, owner);
     const once = await call<{ effectiveFrom: string }>('POST', `${HH}/routine`, { petId: 'bruno', title: 'Early walk', type: 'walk', due: 420, assignee: 'owner', oneOffToday: true }, owner);
@@ -90,7 +90,7 @@ describe('Find cover editing (PAW-001, PAW-005, PAW-006, PAW-015, PAW-016)', () 
     const r = await ask('Can someone give Bruno his medicine at 6 pm? Spare key with Ankita.');
     if (r.clarifications.some(c => c.field === 'meds')) await patch(r.id, { clarify: { field: 'meds', value: 'profile' } });
     expect((await get(r.id)).parsed.medsInstructions).toContain('1 chewable');
-    await call('PATCH', `${HH}/pets/bruno`, { medicines: 'Joint supplement — 2 chewables with lunch (vet changed the dose)' }, owner);
+    await call('PATCH', `${HH}/pets/bruno`, { medicines: 'Joint supplement, 2 chewables with lunch (vet changed the dose)' }, owner);
     const v = await get(r.id);
     expect(v.petChanged).toEqual(['medicine instructions']);
     const s = await search(r.id);

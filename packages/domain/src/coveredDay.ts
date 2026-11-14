@@ -32,7 +32,7 @@ export function coveredDay(input: CoveredDayInput): CoveredDayResult {
       if (coverBlocksDay(o.cover) || o.coverSkipped) { ok = false; why.push(`${o.taskId}: ${o.coverSkipped ? 'skipped after cover not found' : o.cover === 'NoCoverPlanned' ? 'no cover planned' : 'cover not found'}`); continue; }
       if (st === 'Pending') { pending = true; continue; }
       if (o.esc?.resolved) continue;
-      ok = false; why.push(`${o.taskId}: ${o.ev.label}${o.esc?.open ? ' — escalation open' : ''}`);
+      ok = false; why.push(`${o.taskId}: ${o.ev.label}${o.esc?.open ? ', escalation open' : ''}`);
     }
     const status: PetDayStatus = !ok ? (input.dayClosed ? 'Not covered' : 'At risk') : pending && !input.dayClosed ? 'In progress' : 'Covered';
     if (input.dayClosed && pending) return { petId, status: 'Not covered' as PetDayStatus, why: [...why, 'Task still pending at midnight'] };

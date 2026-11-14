@@ -53,7 +53,7 @@ describe('escalation defaults (PS-101, PS-102)', () => {
   });
 });
 
-describe('covered care day (PS-111) — #12, #24', () => {
+describe('covered care day (PS-111), #12, #24', () => {
   const out = (petId: string, state: string, extra: Partial<TaskOutcome> = {}): TaskOutcome => ({ taskId: petId + state, petId, ev: { state: state as never, label: state, reasons: [], ruleSet: 'v1', needsEscalation: false }, esc: null, trusted: false, ...extra });
   it('Confirmed + Likely + Matched → Covered; verified only without Matched', () => {
     const r = coveredDay({ petIds: ['bruno'], outcomes: [out('bruno', 'Confirmed'), out('bruno', 'Likely'), out('bruno', 'Matched')], trustedCoveredTap: false, dayClosed: true });
@@ -77,7 +77,7 @@ describe('covered care day (PS-111) — #12, #24', () => {
   });
 });
 
-describe('emergency severity (PS-124) — #9, #22', () => {
+describe('emergency severity (PS-124), #9, #22', () => {
   it('maps categories to S1/S2/S3', () => {
     expect(severityOf('bite')).toBe('S1'); expect(severityOf('vomiting')).toBe('S2'); expect(severityOf('water_out')).toBe('S3');
   });

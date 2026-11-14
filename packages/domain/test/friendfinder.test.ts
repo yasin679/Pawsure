@@ -6,7 +6,7 @@ const pets = [{ id: 'bruno', name: 'Bruno', species: 'Dog', medsInstructions: '1
 const ctx = (now = T(15, 30)) => ({ now, pets, defaultAccess: 'Key handover' as const, defaultAccessLabel: 'from your profile' });
 const F = (id: string, p: Partial<FriendProfile> = {}): FriendProfile => ({ id, displayName: id, distanceBand: 1, distanceLabel: 'about 2 min', language: 'en', inviteAccepted: true, discoverable: true, paused: false, blocked: false, windows: [[T(16), T(21)]], windowsLabel: '4–9 PM', capabilities: { feed: true, walk: true }, key: 'handover', stairsOk: true, capacity: 1, activeRequests: 0, helpCount: 6, checkedInCount: 5, responseBand: 'within 10 min', responseRank: 1, updatedLabel: 'today', ...p });
 
-describe('Ask Pawsure parsing (PS-055, PS-056, PS-125) — #13, #23', () => {
+describe('Ask Pawsure parsing (PS-055, PS-056, PS-125), #13, #23', () => {
   it('parses the PRD example: feed + walk at 5 PM, access from profile, no clarification', () => {
     const r = parseRequestRules('I am stuck in a meeting until 8. Can someone feed Bruno and take him down at 5?', ctx());
     expect(r.parsed.tasks.sort()).toEqual(['feed', 'walk']);
@@ -35,7 +35,7 @@ describe('Ask Pawsure parsing (PS-055, PS-056, PS-125) — #13, #23', () => {
   });
 });
 
-describe('deterministic matching (PS-057, PS-058) — #13', () => {
+describe('deterministic matching (PS-057, PS-058), #13', () => {
   const req = { tasks: ['feed', 'walk'] as const, petId: 'bruno', time: T(17), durationMin: 25, access: 'Key handover' as const, lift: null, urgency: 'Today' as const, medsInstructions: null, sources: {} };
   it('filters, then ranks nearest first; reasons explain each match', () => {
     const r = matchFriends({ ...req, tasks: [...req.tasks] }, [F('kavya', { distanceBand: 3 }), F('priya', { distanceBand: 0 }), F('arjun'), F('farhan', { paused: true }), F('dev', { discoverable: false }), F('meera', { capabilities: { feed: true } })], { maxBand: 3 });

@@ -91,7 +91,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('button', { name: 'I’m running late' }).click();
     await expect(page.getByText('The owner has been told you’ll be about 20 min late.')).toBeVisible();
     await page.getByRole('button', { name: 'I’ve arrived' }).click();
-    await page.getByRole('button', { name: 'Emergency — I have to leave' }).click();
+    await page.getByRole('button', { name: 'Emergency: I have to leave' }).click();
     await page.getByRole('checkbox', { name: 'Fed' }).check();
     await page.getByRole('button', { name: 'Send emergency alert' }).click();
     await expect(page.getByText('The owner has been alerted and backups are being asked. Take care.')).toBeVisible();

@@ -199,7 +199,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await page.getByRole('button', { name: 'No one yet' }).click();
     await expect(page.getByText('Cover is limited until you have a circle.')).toBeVisible();
     await expect(page.locator('[data-builder]')).toHaveCount(4);
-    await expect(page.getByText('Pawsure doesn’t show a list of day cares here.')).toBeVisible();
+    await expect(page.getByText('Day cares aren’t listed here.')).toBeVisible();
     await page.locator('[data-builder="society_link"]').getByRole('button', { name: 'Start' }).click();
     await expect(page.locator('[data-builder="society_link"]')).toContainText('Invite link');
     await page.getByRole('button', { name: 'Continue' }).click();

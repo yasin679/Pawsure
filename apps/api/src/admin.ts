@@ -96,7 +96,7 @@ export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor, cover?: imp
     const role = await gate(c, 'ops_queue', 'update'); if (!role) return deny(c);
     const b = z.object({ action: z.enum(['assign', 'note', 'close']), note: z.string().max(500).optional() }).parse(await c.req.json());
     if (b.action === 'close' && (b.note ?? '').trim().length < 5) return c.json({ error: 'reason_required' }, 400);
-    const entry = `${now().toISOString()} ${role}: ${b.action}${b.note ? ' — ' + b.note : ''}`;
+    const entry = `${now().toISOString()} ${role}: ${b.action}${b.note ? ', ' + b.note : ''}`;
     const state = b.action === 'close' ? 'closed' : b.action === 'assign' ? 'assigned' : undefined;
     await db.query(`update ops_cases set notes = notes || $2::jsonb ${state ? `, state='${state}'` : ''} where id=$1`, [c.req.param('id'), JSON.stringify([entry])]);
     await audit(db, 'staff:' + c.get('userId'), null, 'ops.case.' + b.action, { case: c.req.param('id') });

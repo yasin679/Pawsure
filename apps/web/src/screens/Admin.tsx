@@ -108,7 +108,7 @@ function Households() {
 
 type Cut = { group: string; n: number | null; value?: number | null; suppressed: boolean };
 const CutTable = ({ title, rows, pct }: { title: string; rows: Cut[]; pct?: boolean }) => <div className="card"><span className="eyebrow">{title}</span>
-  {rows.length === 0 ? <div className="small muted">No data yet.</div> : <table className="tbl"><tbody>{rows.map(r => <tr key={r.group}><td>{r.group}</td><td className="mono">{r.suppressed ? <span className="muted">fewer than 5 — hidden</span> : pct ? `${r.value}% (n=${r.n})` : r.n}</td></tr>)}</tbody></table>}</div>;
+  {rows.length === 0 ? <div className="small muted">No data yet.</div> : <table className="tbl"><tbody>{rows.map(r => <tr key={r.group}><td>{r.group}</td><td className="mono">{r.suppressed ? <span className="muted">fewer than 5, hidden</span> : pct ? `${r.value}% (n=${r.n})` : r.n}</td></tr>)}</tbody></table>}</div>;
 function MethodMix() {
   const [m, e] = useLoad<{ note: string; consentGiven: number; helpersInvited: number; helpersByMethod: Cut[]; helpersByLanguage: Cut[]; confirmedLikelyBy: Record<string, Cut[]> }>('/admin/method-mix');
   return <><Head title="Method mix" sub={m?.note} /><Err e={e} />

@@ -262,7 +262,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     if (!(await x.guard(c, H(c), 'household', 'read'))) return x.deny(c);
     const h = (await db.query<{ society: string; tower: string; loc_share: string }>(`select society, tower, loc_share from households where id=$1`, [H(c)]))[0]!;
     const flag = (await db.query<{ locked: boolean; note: string }>(`select locked, note from feature_flags where key='nearbyMemberFallback'`))[0];
-    return c.json({ ...h, friendsSee: ['Your display name', h.loc_share === 'tower' ? 'Society and tower' : 'Society only', 'Pet name, species and size', 'Request details you approve'], hiddenUntilConfirmed: ['Flat number', 'Key and access notes', 'Emergency card', 'When the home is empty', 'Your phone number', 'Exact location — never shown'], nearbyFallback: { available: false, locked: flag?.locked ?? true, reason: 'Switched off until the identity-check process is approved (PS-062).' } });
+    return c.json({ ...h, friendsSee: ['Your display name', h.loc_share === 'tower' ? 'Society and tower' : 'Society only', 'Pet name, species and size', 'Request details you approve'], hiddenUntilConfirmed: ['Flat number', 'Key and access notes', 'Emergency card', 'When the home is empty', 'Your phone number', 'Exact location, never shown'], nearbyFallback: { available: false, locked: flag?.locked ?? true, reason: 'Switched off until the identity-check process is approved (PS-062).' } });
   });
   app.put('/v1/households/:hh/privacy', async (c) => {
     if (!(await x.guard(c, H(c), 'household', 'update'))) return x.deny(c);
@@ -282,7 +282,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     const f = (await ff.loadFriends(H(c))).find(y => y.id === c.req.param('uid'));
     if (!f || f.blocked) return c.json({ error: 'not_found' }, 404);
     if (!f.inviteAccepted || !f.discoverable) return c.json({ id: f.id, name: f.displayName, invited: true, note: 'Not visible until they opt in.' });
-    return c.json({ id: f.id, name: f.displayName, distance: f.distanceLabel, language: f.language, capabilities: f.capabilities, availability: f.paused ? (f.pausedUntil ? `Paused until ${dm(f.pausedUntil)}` : 'Paused') : f.windowsLabel, key: f.key, stairsOk: f.stairsOk, maxPets: f.capacity, species: f.species, history: historySummary(f), responseBand: f.responseBand, updated: f.updatedLabel, disclaimer: 'Descriptive only — not a safety rating or a guarantee.' });
+    return c.json({ id: f.id, name: f.displayName, distance: f.distanceLabel, language: f.language, capabilities: f.capabilities, availability: f.paused ? (f.pausedUntil ? `Paused until ${dm(f.pausedUntil)}` : 'Paused') : f.windowsLabel, key: f.key, stairsOk: f.stairsOk, maxPets: f.capacity, species: f.species, history: historySummary(f), responseBand: f.responseBand, updated: f.updatedLabel, disclaimer: 'Descriptive only, not a safety rating or a guarantee.' });
   });
   /** Spam/abuse limits (§9): per household, counted from the audit log so they survive restarts. */
   const overLimit = async (hh: string, action: string, max: number, windowMin: number) => ((await db.query<{ n: number }>(`select count(*)::int as n from audit_log where household_id=$1 and action=$2 and at > $3`, [hh, action, new Date(Date.now() - windowMin * 60000).toISOString()]))[0]!.n >= max);

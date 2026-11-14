@@ -26,7 +26,7 @@ test.describe('B. Pets and C. routine and health', () => {
     await page.locator('button.li', { hasText: 'Emergency card' }).click();
     await expect(page.getByText('Own vet: Dr. Aarti Deshmukh')).toBeVisible();
     await expect(page.getByText(/24x7 clinic:/)).toBeVisible();
-    await expect(page.getByText('Pawsure is not a veterinary or emergency service')).toBeVisible();
+    await expect(page.getByText('In an emergency, call your vet or the 24x7 clinic.')).toBeVisible();
   });
 
   test('C1 Add a routine task: it takes effect from tomorrow and is listed', async ({ page }) => {

@@ -20,14 +20,20 @@ const DEMO_PEOPLE: [group: string, people: [name: string, role: string, phone: s
   ['Ops console (staff sign-in)', [['Ops on shift', 'ops', '9811000001'], ['Ops lead', 'ops lead', '9811000002'], ['Privacy lead', 'privacy', '9811000003'], ['Auditor', 'auditor', '9811000004']]]
 ];
 const spaced = (p: string) => `${p.slice(0, 5)} ${p.slice(5)}`;
+/** Pawsure mark: a paw with a gold heart in the pad. */
+function PawMark() {
+  return <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="var(--sage-dark)"><ellipse cx="11" cy="17" rx="4.2" ry="5.4" transform="rotate(-18 11 17)" /><ellipse cx="19.5" cy="9.5" rx="4.4" ry="5.6" /><ellipse cx="28.5" cy="9.5" rx="4.4" ry="5.6" /><ellipse cx="37" cy="17" rx="4.2" ry="5.4" transform="rotate(18 37 17)" /></g>
+    <path d="M24 21c-7.5 0-13 6.3-13 12.6C11 39.8 16.6 43 24 43s13-3.2 13-9.4C37 27.3 31.5 21 24 21z" fill="none" stroke="var(--sage-dark)" strokeWidth="3.4" />
+    <path d="M24 38.5s-6-3.6-6-7.4a3.2 3.2 0 0 1 6-1.6 3.2 3.2 0 0 1 6 1.6c0 3.8-6 7.4-6 7.4z" fill="var(--gold)" /></svg>;
+}
 function DemoNumbers({ onPick }: { onPick: (phone: string) => void }) {
-  return <details className="card flat small demo-numbers" open>
-    <summary><b>Demo numbers</b> <span className="muted">· tap one to fill it in, or use any new number to start fresh</span></summary>
+  return <details className="demo-link">
+    <summary>Try a demo number</summary>
     {DEMO_PEOPLE.map(([g, ps]) => <div key={g}><div className="eyebrow">{g}</div><div className="list">
       {ps.map(([n, r, p]) => <button key={p} type="button" className="li" onClick={() => onPick(p)} aria-label={`Use ${n}'s number, ${r}`}>
         <div className="grow"><b>{n}</b> <span className="muted">{r}</span></div><span className="mono">{spaced(p)}</span></button>)}
     </div></div>)}
-    <div className="xs muted">Backups who aren’t members (Mrs Desai, Ritu, Vikram) don’t sign in: they reply on the simulated phones (Show backups’ phones).</div>
+    <div className="xs muted">Tap one to fill it in, or use any new number to start fresh.</div>
   </details>;
 }
 
@@ -56,27 +62,25 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
     <button className="btn primary block" onClick={onDone}>Yes, I have someone</button><button className="btn block" onClick={() => setStep('builder' as Step)}>No one yet</button>
     <p className="xs muted">You can change this later in Me → Backups.</p></div></>;
   if ((step as string) === 'builder' && newHh) return <CircleBuilder hh={newHh} onDone={onDone} />;
-  // One screen for both: an existing number logs in, a new number goes on to set up an account after the code.
+  // One screen for both: an existing number logs in, a new number goes on to set up a home after the code.
   if (step === 'phone') return <div className="login">
     <div className="login-hero">
-      <img className="login-mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={168} height={163} alt="Dog and two cats in yellow headbands" />
-      <div className="login-word">Pawsure</div>
-      <p className="login-tag">Be sure, whoever’s caring.</p>
+      <img className="login-mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={178} height={173} alt="" />
+      <div className="brandmark"><PawMark /><div><div className="login-word">Pawsure</div><p className="login-tag">Be sure, whoever’s caring.</p></div></div>
     </div>
     <div className="login-sheet">
       <h1>Log in or create an account</h1>
-      <p className="muted small">Enter your mobile number and we’ll send a 6-digit code. New to Pawsure? You’ll set up your home right after.</p>
+      <p className="muted small">We’ll text you a 6-digit code.</p>
       <div className="field"><label htmlFor="ph">Mobile number</label><div className="phone-in"><span className="cc">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>Send code</button>
-      <div className="perks">
-        <span><Icon name="check" size={18} /><b>Evidence</b>task by task</span>
-        <span><Icon name="friends" size={18} /><b>Friends</b>asked first</span>
-        <span><Icon name="bell" size={18} /><b>Alerts</b>that escalate</span>
-      </div>
-      <p className="xs muted" style={{ textAlign: 'center', margin: 0 }}>Friends never see your number. Pawsure is not a veterinary or emergency service.</p>
-      <DemoNumbers onPick={setPhone} />
     </div>
+    <div className="perks">
+      <span><Icon name="check" size={22} /><b>Evidence</b>Task by task</span>
+      <span><Icon name="friends" size={22} /><b>Friends</b>Asked first</span>
+      <span><Icon name="bell" size={22} /><b>Alerts</b>That escalate</span>
+    </div>
+    <DemoNumbers onPick={setPhone} />
   </div>;
 
   if (step === 'otp') return <><AppBar title="Enter the code" onBack={() => setStep('phone')} /><div className="body">

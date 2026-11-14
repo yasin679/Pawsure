@@ -109,8 +109,8 @@ export function evaluateTask(task: CareTask, ctx: EvaluateContext): TaskEvaluati
   const life = currentLifecycle(task);
   if (life === 'Cancelled by owner') return { ...base, state: 'Cancelled', label: 'Cancelled by owner', reasons: ['Excluded from covered-day denominator'], needsEscalation: false };
   if (task.reassignedToTaskId) return { ...base, state: 'Cancelled', label: 'Reassigned', reasons: ['Reassigned to a named person; the new task carries the evidence. Original kept.'], needsEscalation: false };
-  if (ctx.trustedHelperDay) return { ...base, state: 'Trusted', label: ctx.trustedCovered ? 'Covered (owner tap)' : 'Trusted helper — no check-ins', reasons: ['Trusted Helper mode: no check-ins, alerts or points'], needsEscalation: false };
-  if (task.returnCheck?.contradicted) return { ...base, state: 'Mismatch', label: 'Mismatch — under review', reasons: [`R-OWNER-CONTRADICT: ${task.returnCheck.contradicted}`, 'Owner return check beats helper evidence; points held up to 7 days'], needsEscalation: false };
+  if (ctx.trustedHelperDay) return { ...base, state: 'Trusted', label: ctx.trustedCovered ? 'Covered (owner tap)' : 'Trusted helper, no check-ins', reasons: ['Trusted Helper mode: no check-ins, alerts or points'], needsEscalation: false };
+  if (task.returnCheck?.contradicted) return { ...base, state: 'Mismatch', label: 'Mismatch, under review', reasons: [`R-OWNER-CONTRADICT: ${task.returnCheck.contradicted}`, 'Owner return check beats helper evidence; points held up to 7 days'], needsEscalation: false };
 
   const scored = scoreTaskSignals(task, r);
   const strong = scored.find(s => s.strong), weak = scored.find(s => s.weak), conflict = scored.find(s => s.conflict);
@@ -134,7 +134,7 @@ export function evaluateTask(task: CareTask, ctx: EvaluateContext): TaskEvaluati
     reasons.push(s.kind === 'photo' ? (s.code === 'today' ? 'R-PHOTO-CODE-OK: photo includes today’s code (no second channel)' : 'R-PHOTO-NOCODE: photo without code')
       : s.kind === 'voice' ? 'R-VOICE-NAMES-TASK: voice note names the task'
       : s.kind === 'ivr' ? 'R-IVR-CODE-OK: code entered after the task prompt' : 'R-FRIEND-PHOTO: photo from the covering friend');
-    if (one.late) reasons.push('R-LATE: evidence after the grace period — labelled late');
+    if (one.late) reasons.push('R-LATE: evidence after the grace period, labelled late');
     return { ...base, state: 'Likely', label: 'Likely', reasons, late: one.late, needsEscalation: false };
   }
   if (task.returnCheck?.matched) return { ...base, state: 'Matched', label: 'Matched (owner check)', reasons: ['R-OWNER-MATCH: owner checked on return; counts toward a covered day; no helper points'], needsEscalation: false };

@@ -32,12 +32,12 @@ export function Friends({ hh, onAsk }: { hh: string; onAsk: (name: string) => vo
 
   return <><AppBar title="Friends" right={<button className="btn sm primary" onClick={() => setInvite(true)}><Icon name="plus" size={16} />Invite</button>} /><main className="body">
     {msg && <Banner kind="info" icon="ℹ">{msg}</Banner>}
-    <p className="small muted">Friends who chose to help. Distances are approximate. Each request still needs their Yes.</p>
+    <p className="small muted">Friends who chose to help. Each request still needs their Yes.</p>
     {invite && <div className="card"><h3>Invite a friend</h3>
       <div className="field"><label htmlFor="fn">Name</label><input id="fn" className="input" value={inv.name} onChange={e => setInv({ ...inv, name: e.target.value })} /></div>
       <div className="field"><label htmlFor="fp">Phone</label><div className="row"><span className="tag">+91</span><input id="fp" className="input mono" inputMode="numeric" maxLength={10} value={inv.phone} onChange={e => setInv({ ...inv, phone: e.target.value })} /></div></div>
       <div className="field"><label htmlFor="fl">Message language</label><select id="fl" className="input" value={inv.language} onChange={e => setInv({ ...inv, language: e.target.value })}>{Object.entries(LANG).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
-      <div className="card flat small"><b>Getting an invite isn’t the same as opting in.</b> They choose whether to be findable, what they can help with and when.</div>
+      <div className="card flat small"><b>Getting an invite isn’t the same as opting in.</b> They choose if and when they help.</div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block" onClick={async () => { setErr(null); try { await api(`${H}/friends/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setInvite(false); setMsg('Invitation sent on WhatsApp (simulated).'); load(); } catch (e) { setErr(e instanceof ApiError ? 'Check the name and a 10-digit mobile number.' : 'Can’t reach Pawsure.'); } }}>Send WhatsApp invite</button></div>}
     <div className="list">{list.map(f => <button key={f.id} className="li" onClick={() => api<FriendProfileView>(`${H}/friends/${f.id}`).then(setOpen)}><span className="avatar">{f.name[0]}</span><div className="grow"><b>{f.name} {f.invited && <span className="tag">Invite sent</span>}</b><div className="small muted">{f.invited || !f.findable ? 'Not searchable until they opt in' : `${f.distance} · ${f.availability} · ${KEY[f.key]}`}</div></div><span className="chev">›</span></button>)}</div>
@@ -84,7 +84,7 @@ function HomeDetails({ hh, onSaved }: { hh: string; onSaved: () => void }) {
     <div className="field"><label htmlFor="pn">Your name</label><input id="pn" className="input" value={f.displayName} onChange={e => setF({ ...f, displayName: e.target.value })} /></div>
     <SocietyFields value={f} onChange={v => setF({ ...f, ...v })} />
     <div className="grid2"><div className="field"><label htmlFor="ptw">Tower / wing</label><input id="ptw" className="input" value={f.tower} onChange={e => setF({ ...f, tower: e.target.value })} /></div><div className="field"><label htmlFor="pfl">Flat (private)</label><input id="pfl" className="input" value={f.flat} onChange={e => setF({ ...f, flat: e.target.value })} /></div></div>
-    <div className="xs muted">Every owner of this home is told when the address changes. Friends see your society and tower only, and the flat only after you confirm them for a visit.</div>
+    <div className="xs muted">Friends see your society and tower. The flat only after you confirm them.</div>
     {err && <span className="errtext" role="alert">{err}</span>}
     <div className="btnrow"><button className="btn primary" disabled={!f.displayName.trim() || (!f.societyId && f.society.trim().length < 2)} onClick={save}>Save</button><button className="btn" onClick={() => { setEdit(false); load(); }}>Cancel</button></div></div>;
 }

@@ -26,10 +26,10 @@ export interface ReleaseItem { item: string; ok: boolean; detail: string }
 /** §4.2 / §18: the switches the pilot must start with. Values are the stored flag values. */
 export function releaseCheck(flags: Record<string, { value: unknown; locked: boolean }>, arms: boolean[]): ReleaseItem[] {
   const f = (k: string) => flags[k];
-  const off = (k: string, mustLock = false): ReleaseItem => ({ item: k, ok: f(k)?.value === false && (!mustLock || !!f(k)?.locked), detail: `${String(f(k)?.value)}${f(k)?.locked ? ' (locked)' : ''} — must be OFF${mustLock ? ' and locked' : ''}` });
+  const off = (k: string, mustLock = false): ReleaseItem => ({ item: k, ok: f(k)?.value === false && (!mustLock || !!f(k)?.locked), detail: `${String(f(k)?.value)}${f(k)?.locked ? ' (locked)' : ''}, must be OFF${mustLock ? ' and locked' : ''}` });
   const on = arms.filter(Boolean).length;
   return [
-    { item: 'helperRewards arms', ok: arms.length >= 2 && Math.abs(on - (arms.length - on)) <= 1, detail: arms.length < 2 ? `only ${arms.length} home — assign arms once the cohort has enrolled (10 of 20 ON)` : `${on} of ${arms.length} homes ON — must be half (10 of 20)` },
+    { item: 'helperRewards arms', ok: arms.length >= 2 && Math.abs(on - (arms.length - on)) <= 1, detail: arms.length < 2 ? `only ${arms.length} home, assign arms once the cohort has enrolled (10 of 20 ON)` : `${on} of ${arms.length} homes ON, must be half (10 of 20)` },
     off('helperShareRecord'), off('nearbyMemberFallback', true), off('friendThankYouPoints'), off('ownerCameraLookIn'), off('dayCare', true), off('verifiedCarers', true)
   ];
 }

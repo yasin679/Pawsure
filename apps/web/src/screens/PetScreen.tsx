@@ -27,16 +27,16 @@ export function PetScreen({ hh, pets, reload, onOpen }: { hh: string; pets: Pet[
     <div className="field"><label htmlFor="sp">Species</label><select id="sp" className="input" value={form.species} onChange={e => setForm({ ...form, species: e.target.value })}><option>Dog</option><option>Cat</option><option>Other</option></select></div>
     {FIELDS.map(([k, l, hint]) => <div key={k} className="field"><label htmlFor={'f-' + k}>{l}{REQUIRED.includes(k) && <span aria-hidden="true" style={{ color: 'var(--alert)' }}> *</span>}{REQUIRED.includes(k) && <span className="sr"> (required)</span>}</label><input id={'f-' + k} className="input" value={(form[k] as string) ?? ''} onChange={e => setForm({ ...form, [k]: e.target.value })} />{hint && <span className="hint">{hint}</span>}</div>)}
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" onClick={save}>Save</button><p className="xs muted">* Required: name, food and feeding, allergies, medicine instructions, and your vet’s name and phone. Saved as owner-provided with today’s date.</p>
+    <button className="btn primary block" onClick={save}>Save</button><p className="xs muted">* Required. “None” is a fine answer.</p>
   </main></>;
 
   if (mode === 'card' && pet) return <><AppBar title="Emergency card" onBack={() => setMode('view')} /><main className="body">
     <div className="card danger"><div className="row"><PetAvatar species={pet.species} size={60} /><div><h2>{pet.name}</h2><div className="small">{pet.species} · {pet.breed}</div></div></div>
       <dl className="kv"><dt>Allergies</dt><dd>{pet.allergies || '—'}</dd><dt>Medicine</dt><dd>{pet.medicines || '—'}</dd><dt>Notes</dt><dd>{[pet.fears, pet.notes].filter(Boolean).join(' ') || '—'}</dd></dl></div>
     <div className="list">{[['Own vet', pet.vet_name, pet.vet_phone], ['24x7 clinic', pet.clinic24_name, pet.clinic24_phone], ['Backup', pet.backup_name, pet.backup_phone]].map(([l, n, ph]) => <div key={l} className="li"><span className="avatar icon"><Icon name="phone" size={20} /></span><div className="grow"><b>{l}: {n || '—'}</b><div className="small muted mono">{ph || '—'}</div></div>{ph && <a className="btn sm primary" href={`tel:${ph.replace(/\s/g, '')}`}>Call</a>}</div>)}
-      <div className="li"><span className="avatar icon"><Icon name="vaccine" size={20} /></span><div className="grow"><b>Partner tele-consult</b><div className="small muted">Planned — not available until a partner agreement is signed</div></div></div></div>
+      <div className="li"><span className="avatar icon"><Icon name="vaccine" size={20} /></span><div className="grow"><b>Partner tele-consult</b><div className="small muted">Planned, not available until a partner agreement is signed</div></div></div></div>
     <span className="xs muted">{pet.source} · updated {pet.updated_at?.slice(0, 10)}</span>
-    <Banner kind="alert" icon="!">Pawsure is not a veterinary or emergency service. In an emergency, call your vet or the 24x7 clinic directly.</Banner>
+    <Banner kind="alert" icon="!">In an emergency, call your vet or the 24x7 clinic.</Banner>
   </main></>;
 
   return <><AppBar title="Pet" /><main className="body">

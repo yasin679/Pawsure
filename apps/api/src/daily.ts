@@ -58,7 +58,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     const b = z.object({ checklist: z.object({ water: z.boolean(), doors: z.boolean(), pads: z.boolean() }).nullable(), returnAt: z.number().int().min(0).max(1439), planB: z.string().max(80).nullable().optional() }).parse(await c.req.json());
     await upsertDay(hh, x.careDate(c), { leaving: JSON.stringify(b.checklist ?? { skipped: true }), left_at: now().toISOString(), return_at: b.returnAt, plan_b: b.planB ?? null });
     await audit(db, c.get('userId'), hh, 'day.leaving', { skipped: !b.checklist, returnAt: b.returnAt });
-    return c.json({ ok: true, note: 'Reminder list only — it does not check the home or pet.' });
+    return c.json({ ok: true, note: 'Reminder list only, it does not check the home or pet.' });
   });
   app.post('/v1/households/:hh/day/back', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'task', 'update'))) return x.deny(c);
@@ -99,13 +99,13 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     const ev: { at: number; kind: string; text: string }[] = [];
     for (const t of day.tasks) {
       ev.push({ at: t.due, kind: 'plan', text: `Planned: ${t.title}` });
-      t.signals.forEach(s => ev.push({ at: s.eventTime, kind: 'signal', text: `${s.kind === 'photo' ? 'Photo' : s.kind === 'voice' ? 'Voice note' : s.kind === 'ivr' ? 'IVR code' : 'Friend photo'} for ${t.title}${'duplicate' in s && s.duplicate ? ' — not counted (reused image)' : ''}${s.receivedTime - s.eventTime > 5 ? ` — received ${s.receivedTime - s.eventTime} min late` : ''}` }));
+      t.signals.forEach(s => ev.push({ at: s.eventTime, kind: 'signal', text: `${s.kind === 'photo' ? 'Photo' : s.kind === 'voice' ? 'Voice note' : s.kind === 'ivr' ? 'IVR code' : 'Friend photo'} for ${t.title}${'duplicate' in s && s.duplicate ? ', not counted (reused image)' : ''}${s.receivedTime - s.eventTime > 5 ? `, received ${s.receivedTime - s.eventTime} min late` : ''}` }));
       t.lifecycle.slice(1).forEach(l => ev.push({ at: l.at, kind: l.state === 'Missed' ? 'alert' : 'owner', text: `${t.title} → ${l.state}${l.note ? ' · ' + l.note : ''}` }));
       t.esc?.steps.filter(s => s.fired).forEach(s => ev.push({ at: s.at, kind: 'alert', text: `Escalation: ${s.kind.replace(/_/g, ' ')} (${t.title})` }));
       if (t.escalation.ackAt != null) ev.push({ at: t.escalation.ackAt, kind: 'owner', text: `“I’m on it” for ${t.title}` });
     }
     const vs = await db.query<{ kind: string; event_time: string; registered_number: boolean | null; owner_provided: boolean }>(`select s.* from checkin_signals s join care_visits v on v.id=s.visit_id where v.household_id=$1 and v.care_date=$2`, [hh, date]);
-    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (s.kind === 'call_arrive' ? 'Arrival missed call' : s.kind === 'call_exit' ? 'Exit missed call' : 'Gate entry (owner-provided)') + (s.registered_number === false ? ' — rejected (unregistered number)' : '') }));
+    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (s.kind === 'call_arrive' ? 'Arrival missed call' : s.kind === 'call_exit' ? 'Exit missed call' : 'Gate entry (owner-provided)') + (s.registered_number === false ? ', rejected (unregistered number)' : '') }));
     const inc = await db.query<{ severity: string; category: string; reported_at: string }>(`select * from incidents where household_id=$1 and reported_at >= $2 and reported_at < $3`, [hh, atMinute(date, 0).toISOString(), atMinute(date, 1440).toISOString()]);
     inc.forEach(i => ev.push({ at: m(i.reported_at), kind: 'alert', text: `${i.severity} report: ${i.category.replace(/_/g, ' ')}` }));
     if (day.day.leftAt != null) ev.push({ at: day.day.leftAt, kind: 'owner', text: 'You left' });
@@ -491,7 +491,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       if (!['due_soon', 'due', 'overdue'].includes(st)) continue;
       const key = `health:${r.id}:${st}`;
       const ins = await db.query(`insert into notifications(id, household_id, dedupe_key, recipient, channel, template, payload) values ($1,$2,$3,'owner','push','HEALTH-REMINDER',$4) on conflict (dedupe_key) do nothing returning id`, [uid('ntf'), hh, key, JSON.stringify({ label: r.label, state: st })]);
-      if (ins.length) { sent.push(key); await A.push.push('owner:' + hh, 'Health reminder', `${r.label}: ${st.replace('_', ' ')}. Pawsure only reminds — follow your vet’s advice.`); }
+      if (ins.length) { sent.push(key); await A.push.push('owner:' + hh, 'Health reminder', `${r.label}: ${st.replace('_', ' ')}. Pawsure only reminds, follow your vet’s advice.`); }
     }
     return sent;
   }

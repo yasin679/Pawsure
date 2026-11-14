@@ -28,7 +28,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     await signIn(page, '9700000008');
     const inc = page.locator('.card.danger', { hasText: 'S1 · pet hurt' });
     await inc.getByRole('button', { name: 'I’m on it' }).click();
-    await expect(page.getByText('Thanks — the owner will see that you’re on it.')).toBeVisible();
+    await expect(page.getByText('Thanks, the owner will see that you’re on it.')).toBeVisible();
   });
 
   test('M4 Staff who sign in on the owner app go to the console, not owner sign-up', async ({ page }) => {
@@ -66,7 +66,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     expect(status).toBe(401);
   });
 
-  test('M7 A new user sees only their own (empty) home — none of Neha’s pets, friends or requests', async ({ page }) => {
+  test('M7 A new user sees only their own (empty) home, none of Neha’s pets, friends or requests', async ({ page }) => {
     await boot(page); await signIn(page, '9811666777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();

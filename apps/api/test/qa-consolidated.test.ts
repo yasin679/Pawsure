@@ -278,7 +278,7 @@ describe('PAW-026, PAW-033, PAW-034, PAW-043, R-02, R-03 several pets, capacity 
     await setFriend(priya, { maxPets: 2 }); await setFriend(arjun, { maxPets: 2 });
     const r = (await manual(['bruno', 'misty'], 1080, ['feed', 'meds'])).body;
     expect(r.parsed.petIds).toEqual(['bruno', 'misty']);
-    expect(r.parsed.medsInstructions).toBe('Bruno: Joint supplement — 1 chewable with lunch, as on the vet’s card'); // Misty has none
+    expect(r.parsed.medsInstructions).toBe('Bruno: Joint supplement, 1 chewable with lunch, as on the vet’s card'); // Misty has none
     const s = await search(r.id);
     expect(s.body.top.map(t => t.id)).toEqual(['u_arjun']); // only Arjun gives medicines
     expect(s.body.top[0]!.message).toMatch(/Bruno और Misty|ब्रूनो और मिस्टी/); // Arjun reads Hindi
@@ -294,7 +294,7 @@ describe('PAW-026, PAW-033, PAW-034, PAW-043, R-02, R-03 several pets, capacity 
     expect(parseRequestRules('Feed Bruno at 7 pm, key with Ankita', ctx).parsed.petIds).toBeUndefined();
     const r = (await manual(['misty'], 1080, ['feed', 'meds'])).body;
     const e = await call<View>('PATCH', `${HH}/requests/${r.id}`, { fields: { petIds: ['misty', 'bruno'] } }, owner);
-    expect(e.body.parsed.medsInstructions).toBe('Bruno: Joint supplement — 1 chewable with lunch, as on the vet’s card');
+    expect(e.body.parsed.medsInstructions).toBe('Bruno: Joint supplement, 1 chewable with lunch, as on the vet’s card');
     expect((await call<View>('PATCH', `${HH}/requests/${r.id}`, { fields: { petIds: ['misty', 'u_other'] } }, owner)).status).toBe(400);
   });
   it('a friend who looks after one pet at a time is not offered a two-pet visit; a dogs-only friend is not offered the cat (PAW-026)', async () => {

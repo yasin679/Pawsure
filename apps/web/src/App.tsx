@@ -89,7 +89,7 @@ export function App() {
   const go = (t: Tab) => { setTab(t); setSub(null); if (t === 'today') load(); };
 
   return <div className="pwa">
-    {!online && <div className="offline">You’re offline. Showing the last saved view; missed-call check-ins still reach Pawsure.</div>}
+    {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
     {demo && hh && <DemoBar hh={hh} day={day} onChange={load} />}
     {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}

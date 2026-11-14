@@ -108,7 +108,7 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(page.getByText(/Look-in for (Bruno|Misty)/)).toBeVisible(); // both 1 PM visit tasks were missed
     await expect(page.getByText(/Not for backups to give/)).toBeVisible();
     await page.getByRole('button', { name: 'I’m on it' }).click();
-    await expect(page.getByText('Thanks — the owner will see that you’re on it.')).toBeVisible();
+    await expect(page.getByText('Thanks, the owner will see that you’re on it.')).toBeVisible();
     const link = await page.evaluate(() => location.hash);
     await api(page, 'POST', '/demo/clock', { advance: 20 });
     await page.evaluate(() => { location.hash = ''; });

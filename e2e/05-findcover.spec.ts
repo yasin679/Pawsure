@@ -38,12 +38,12 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await expect(page.locator('.card', { hasText: '1. Meera Joshi' })).toBeVisible();
     await page.getByRole('button', { name: 'Ask Meera' }).click();
     await expect(page.locator('.bub')).toContainText('ब्रुनो'); // message in Meera’s language
-    await expect(page.getByText('Not included until you confirm: flat number')).toBeVisible();
+    await expect(page.getByText('Address and key details are shared only after you confirm.')).toBeVisible();
     await page.getByText(/I approve sending/).click();
     await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
     await friendReply(page, 'Meera', 'हो');
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-    await expect(page.getByText(/Shared with Meera — minimum needed, this visit only/i)).toBeVisible();
+    await expect(page.getByText(/Shared with Meera, minimum needed, this visit only/i)).toBeVisible();
     await tab(page, 'Today');
     await expect(page.getByRole('heading', { name: 'A friend (Find cover)' })).toBeVisible();
     await expect(taskCard(page, 'Feed (friend cover)')).toBeVisible();
@@ -84,7 +84,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await expect(page.getByRole('button', { name: 'Search my friends' })).toBeDisabled();
     while (await q.count()) { await q.first().getByRole('button').first().click(); await page.waitForTimeout(300); }
     await expect(page.getByRole('button', { name: 'Search my friends' })).toBeEnabled();
-    await expect(page.getByText(/Medicine requests only go to friends who chose “Medicines”/)).toBeVisible();
+    await expect(page.getByText(/Medicine goes only to friends who chose it/)).toBeVisible();
   });
 
   test('G5 AI unavailable → simple form; matching still works', async ({ page }) => {

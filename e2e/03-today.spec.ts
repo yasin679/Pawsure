@@ -7,7 +7,7 @@ test.describe('D. Today: daily care', () => {
   test('D1 Who’s caring → Trusted Helper mode; tapping Covered makes the day covered', async ({ page }) => {
     await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
     await dialog(page).getByRole('button', { name: /Trusted Helper mode/ }).click();
-    await expect(page.getByRole('heading', { name: 'Sunita — Trusted Helper mode' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sunita, Trusted Helper mode' })).toBeVisible();
     await page.getByRole('button', { name: 'Covered', exact: true }).click();
     await expect(page.locator('.conf', { hasText: 'Covered day' }).first()).toBeVisible();
   });

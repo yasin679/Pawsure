@@ -86,7 +86,7 @@ test.describe('I. The friend’s own app', () => {
     await page.getByRole('button', { name: 'I’ve arrived' }).click();
     await expect(page.getByText('The owner has been told you arrived.')).toBeVisible();
     await page.getByRole('button', { name: 'Done' }).click();
-    await expect(page.getByText('Done — thank you! Access details have been removed.')).toBeVisible();
+    await expect(page.getByText('Done, thank you! Access details have been removed.')).toBeVisible();
     await signOut(page);
 
     await signInOwner(page);

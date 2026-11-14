@@ -107,6 +107,14 @@ From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and a
 
 **Not built, by decision**: route distance, live traffic ETA and GPS checks (PAW-039, PAW-045, PAW-046): Pawsure keeps no coordinates (D-23) and shows distance as bands; this needs a maps-provider decision. Nearby societies (PAW-038) stay behind the locked switch (PS-062). Telugu and Kannada (R-18) are not supported yet; they are refused, not half-translated. Friends need WhatsApp (PAW-049); basic phones work for helpers and backups. Breed and behaviour compatibility (R-16) goes no further than the large or anxious dogs choice and the handling note.
 
+### 3.3 New look (15 Nov 2026)
+
+- **Theme:** sage green, cream and a touch of gold, with softer buttons and cards.
+- **Splash:** sage gradient with the Pawsure paw mark, shown for at least 1.5 seconds.
+- **Sign-in:** opens straight on **Log in or create an account**: mascot, mark, one line, the number and **Send code**. Demo numbers sit behind **Try a demo number**.
+- **Phone frame:** on a laptop or tablet the app shows inside a phone with a status bar; on a phone it fills the screen.
+- **Plainer words:** long explanations cut to one short line, and the long dashes replaced with commas, in the app and in the WhatsApp and SMS messages.
+
 ## 4 Upgrade notes
 
 - QA update (14 Nov): migration `007_qa_consolidated.sql` adds friend capacity and species, a society list (name + city) and the home’s city, state and society id. Existing homes keep their society text; open Edit profile to pick the city and listed society. Rollback: `packages/db/rollback/007_qa_consolidated.down.sql`.

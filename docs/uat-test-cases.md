@@ -13,7 +13,7 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 15 Nov 2026, 00:07 IST |
+| Latest run | 15 Nov 2026, 00:47 IST |
 | Result | **123 of 123 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
@@ -141,7 +141,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | K2 | M | Ops on shift sees only their sections; overview shows each pilot gate with n and status | 1. Sign in 98110 00001 | Only ops sections; 6 gate metrics with n | Pass |
 | K3 | M | Households view masks phone numbers | 1. Households | Phones masked (+91 •••• ••21) | Pass |
 | K4 | M | Queues: a helper callback case can only be closed with a reason | 1. Queues → Close… without reason<br>2. Add reason → Close | Reason required; case closed | Pass |
-| K5 | M | Ops lead: switches — turn on the share record; locked switches cannot be changed | 1. Switches → helperShareRecord Turn on | Value true; locked switches disabled | Pass |
+| K5 | M | Ops lead: switches, turn on the share record; locked switches cannot be changed | 1. Switches → helperShareRecord Turn on | Value true; locked switches disabled | Pass |
 | K6 | M | Ops lead: a points hold needs a reason the helper can read; releasing it notifies her | 1. Rewards holds → Decide… → Release without reason<br>2. Add reason → Release | Reason required; hold released | Pass |
 | K7 | M | Privacy lead: answers and closes an owner’s rights request | 1. Rights requests → Handle… → reply → Reply and close | Request closed | Pass |
 | K8 | M | Privacy lead: breach rehearsal starts the 72 h clock; steps can be ticked | 1. Breach runbook → Start a rehearsal<br>2. Affected people notified<br>3. Tick a checklist item | 72 h clock shows hours left; step ticked; readiness 1/7 | Pass |
@@ -172,7 +172,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | M4 | H | Staff who sign in on the owner app go to the console, not owner sign-up | 1. Sign in on the owner app with a staff number | Sent to the ops console, not owner sign-up | Pass |
 | M5 | H | Shared phone: after sign-out the old session is dead and the next person sees none of the previous person’s data | 1. Owner signs out<br>2. Re-use the old token<br>3. Rohan signs in → Find cover | Token removed and refused (401); no trace of the previous person’s draft | Pass |
 | M6 | H | “Sign out of all devices” ends the owner’s other sessions too | 1. Me → Sign out of all devices<br>2. Use the other session | Other session refused (401) | Pass |
-| M7 | H | A new user sees only their own (empty) home — none of Neha’s pets, friends or requests | 1. Sign up<br>2. Look at Today, Friends, Find cover | Only Eve’s empty home; none of Neha’s pets, friends or requests | Pass |
+| M7 | H | A new user sees only their own (empty) home, none of Neha’s pets, friends or requests | 1. Sign up<br>2. Look at Today, Friends, Find cover | Only Eve’s empty home; none of Neha’s pets, friends or requests | Pass |
 | M8 | H | Friend login sees only requests sent to them, never household tabs | 1. Sign in as Priya | Only requests sent to Priya; no household tabs | Pass |
 | M9 | H | HTML typed into a pet name shows as text and never runs | 1. Add pet named <img src=x onerror=alert(1)> with the essential details | Shown as text; no script runs, no image injected | Pass |
 | M10 | H | Staff console: the owner’s session never opens it; signing out of the console ends that session only | 1. Open console<br>2. Sign in as ops lead<br>3. Sign out of console<br>4. Re-use the token | Owner session never opens the console and stays signed in; console session ended on the server (401) | Pass |

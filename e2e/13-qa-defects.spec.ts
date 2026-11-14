@@ -32,7 +32,7 @@ test.describe('Q. QA defect tracker (PAW)', () => {
     await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
     await expect(page.locator('.conf', { hasText: 'Sent' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Edit request' })).toHaveCount(0);
-    await expect(page.getByText(/Already sent to friends, so the details can’t be edited/)).toBeVisible();
+    await expect(page.getByText(/Already sent, so it can’t be edited/)).toBeVisible();
   });
 
   test('Q2 PAW-004/012 history shows the latest 3 with exact times; View all shows the rest', async ({ page }) => {
@@ -52,12 +52,12 @@ test.describe('Q. QA defect tracker (PAW)', () => {
   test('Q3 PAW-006 a pet profile change shows on an unsent request', async ({ page }) => {
     await ask(page, 'Can someone give Bruno his medicine at 6 pm? Spare key with Ankita.');
     // Before answering: the medicine question quotes the profile as it is now.
-    await api(page, 'PATCH', '/v1/households/hh_demo/pets/bruno', { medicines: 'Joint supplement — 2 chewables with lunch' });
+    await api(page, 'PATCH', '/v1/households/hh_demo/pets/bruno', { medicines: 'Joint supplement, 2 chewables with lunch' });
     await openFromList(page, 'Draft');
-    await expect(page.getByRole('button', { name: /Use Bruno’s profile: Joint supplement — 2 chewables/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Use Bruno’s profile: Joint supplement, 2 chewables/ })).toBeVisible();
     await page.getByRole('button', { name: /Use Bruno’s profile/ }).click();
     // After answering: a later profile change is flagged, and search uses the new text.
-    await api(page, 'PATCH', '/v1/households/hh_demo/pets/bruno', { medicines: 'Joint supplement — 1 chewable with dinner' });
+    await api(page, 'PATCH', '/v1/households/hh_demo/pets/bruno', { medicines: 'Joint supplement, 1 chewable with dinner' });
     await openFromList(page, 'Draft');
     await expect(page.getByText(/Bruno’s profile changed since you wrote this/)).toBeVisible();
   });

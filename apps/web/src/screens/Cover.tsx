@@ -87,7 +87,7 @@ function StatusBody({ j }: { j: JobView }) {
     {j.asks.length ? <div className="list">{j.asks.map((a, i) => <div key={i} className="li"><span className="avatar">{a.name[0]}</span><div className="grow"><b>{a.name}</b> {a.holdsKey && <span className="tag">Key</span>} {a.ownerArranged && <span className="tag sim">Owner-arranged, not verified by Pawsure</span>}
       <div className="small muted">Asked {fmt(a.at)} · {ASK_STATE[a.state] ?? a.state}{a.state === 'asked' && a.until != null ? ` until ${fmt(a.until)}` : ''}</div></div></div>)}</div> : <p className="small muted">Nobody has been asked yet.</p>}
     <div className="card flat"><span className="eyebrow">What happened</span>{j.log.map((l, i) => <div key={i} className="row small top"><span className="mono muted" style={{ minWidth: 58 }}>{fmt(l.at)}</span><span className="grow">{l.text}</span></div>)}</div>
-    <p className="xs muted">Every ask is shown here. Backups are people you pre-approved; nobody else is contacted without your tap.</p></>;
+    <p className="xs muted">Only people you approved are asked.</p></>;
 }
 function NotFoundBody({ j, err, onHandle, onCircle, onSkip, onSomeone, onMove, onFriend }: { j: JobView; err: string | null; onHandle: () => void; onCircle: () => void; onSkip: () => void; onSomeone: () => void; onMove: () => void; onFriend: () => void }) {
   const open = j.tasks.filter(t => t.open), must = open.filter(t => t.urgency === 'MustHappen'), asked = [...new Set(j.asks.map(a => a.name))].join(', ') || 'Nobody yet';
@@ -106,14 +106,14 @@ function NotFoundBody({ j, err, onHandle, onCircle, onSkip, onSomeone, onMove, o
     {must.length > 0 && <Banner kind="alert" icon="!"><b>{must.map(t => t.title).join(', ')} must happen</b>, so Move and Skip are not offered. {j.options.circleCallAt != null ? `Calling your care circle in 15 min if you don’t respond (at ${fmt(j.options.circleCallAt)}).` : j.circleCalled ? 'Your care circle was called.' : ''}</Banner>}
     {!must.length && !j.options.skip && <p className="xs muted">Skip isn’t offered: meals are time-sensitive. They can be moved.</p>}
     {err && <span className="errtext" role="alert">{err}</span>}
-    <p className="xs muted">Pawsure can’t promise that someone will come, and it is not an emergency service. The day isn’t counted as covered unless the task is done with evidence or matched by your return check.</p></>;
+    <p className="xs muted">Pawsure can’t promise someone will come. It is not an emergency service.</p></>;
 }
 function AskSomeone({ j, onClose, onSend, err }: { j: JobView; onClose: () => void; onSend: (name: string, phone: string) => void; err: string | null }) {
   const [name, setName] = useState(''), [phone, setPhone] = useState('');
   return <Sheet onClose={onClose}><h2>Ask someone else</h2><p className="small muted">{j.tasks.filter(t => t.open).map(t => t.title).join(', ')} · {j.time}</p>
     <div className="field"><label htmlFor="asn">Their name</label><input id="asn" className="input" value={name} onChange={e => setName(e.target.value)} /></div>
     <div className="field"><label htmlFor="asp">Their mobile</label><div className="row"><span className="tag">+91</span><input id="asp" className="input mono" inputMode="numeric" maxLength={10} value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} /></div></div>
-    <div className="card flat small"><b>What they get:</b> a one-time link that works for 15 minutes and for this task only, with the task, time and your tower. <b>Not shared:</b> your flat number, key or gate details, until they accept and you approve.</div>
+    <div className="card flat small"><b>What they get:</b> a one-time link for this task, valid 15 minutes. <b>Not shared:</b> your flat number, key or gate details, until they accept and you approve.</div>
     {err && <span className="errtext" role="alert">{err}</span>}
     <button className="btn primary block" disabled={!name.trim() || phone.length !== 10} onClick={() => onSend(name.trim(), '+91' + phone)}>Send one-time link</button></Sheet>;
 }
@@ -123,7 +123,7 @@ function MoveSheet({ j, onClose, onMove, err }: { j: JobView; onClose: () => voi
   return <Sheet onClose={onClose}><h2>Move the task</h2><p className="small muted">{j.tasks.filter(t => t.open).map(t => t.title).join(', ')} · was {j.time}</p>
     <div className="field"><label htmlFor="mvt">New time</label><select id="mvt" className="input" value={to} onChange={e => setTo(Number(e.target.value))}>{opts.map(t => <option key={t} value={t}>{fmt(t)}</option>)}</select></div>
     {j.options.moveWarning ? <Banner kind="warn" icon="!"><b>Time-sensitive.</b> {j.pet} would wait longer than planned. {j.lastCare}.</Banner> : <p className="small">This task can wait, so moving it is fine.</p>}
-    <p className="xs muted">You’ll do it yourself at the new time. It closes with evidence or your return check.</p>
+    <p className="xs muted">You’ll do it yourself at the new time.</p>
     {err && <span className="errtext" role="alert">{err}</span>}
     <button className="btn primary block" onClick={() => onMove(to)}>Move it</button></Sheet>;
 }
@@ -160,7 +160,7 @@ export function PreDepartureSheet({ hh, ov, pets, onClose, onLeave, reload }: { 
     ['leave_anyway', 'alert', 'Leave anyway', 'The day shows “No cover planned” and is not counted as covered']];
   return <Sheet onClose={onClose}><h2>Before you leave</h2>
     <Banner kind="warn" icon="!">{pd.messages.map(m => <div key={m}><b>{m}</b></div>)}</Banner>
-    <p className="small muted">Pawsure can’t promise that someone will come. Choose what to do before you go.</p>
+    <p className="small muted">Choose what to do before you go.</p>
     <div className="list">{opts.map(([k, i, t, s]) => <button key={k} className="li" data-option={k} onClick={() => pick(k)}><span className="avatar icon"><Icon name={i} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div><span className="chev">›</span></button>)}</div>
     {err && <span className="errtext" role="alert">{err}</span>}</Sheet>;
 }
@@ -184,7 +184,7 @@ export function DelaySheet({ hh, returnAt: current, now, onClose, reload }: { hh
       : <div className="card flat small">Alone window: longest gap {(plan.alone.longestMinutes / 60).toFixed(1)} h, within your {plan.alone.limitHours} h limit.</div>}
     <div className="card flat small">Medicine: {plan.medicine.length ? <><b>{plan.medicine.map(m => m.title).join(', ')}</b> falls in the extra time. It is passed on only with your written instructions.</> : 'no medicine falls in the extra time.'}</div>
     {!plan.planOnly && !asked && <><button className="btn primary block" onClick={() => api<{ asked: string }>(`/v1/households/${hh}/day/delay/${plan.id}/ask`, { body: {} }).then(r => { setAsked(r.asked); reload(); }).catch(e => setErr(errText(e)))}>{plan.ask.first === 'current_caregiver' ? 'Ask Sunita first' : 'Ask my backups'}</button>
-      <p className="xs muted">Your current caregiver is asked first: Yes / Only until __ / Can’t. Anything she can’t cover becomes a request for that part only.</p></>}
+      <p className="xs muted">Your caregiver is asked first. Anything she can’t cover is asked of others.</p></>}
     {asked && <div className="card info small">{asked === 'helper' ? 'Sunita was asked. If she doesn’t reply in 10 minutes, your backups are asked for these tasks only.' : 'Nobody is caring right now, so your backups are being asked for these tasks only.'}</div>}
     {err && <span className="errtext" role="alert">{err}</span>}</Sheet>;
 }
@@ -194,7 +194,7 @@ export function CoverHistory({ ov }: { ov: CoverOverview }) {
   const jobs = ov.jobs.filter(j => !j.tomorrow);
   if (!jobs.length && !ov.extensions.length && !ov.noCoverPlanned) return null;
   return <div className="card"><span className="eyebrow">Cover history</span>
-    {ov.noCoverPlanned && <Banner kind="alert" icon="!"><b>No cover planned.</b> You left with nobody confirmed. The day isn’t covered unless those tasks are done with evidence or matched by your return check.</Banner>}
+    {ov.noCoverPlanned && <Banner kind="alert" icon="!"><b>No cover planned.</b> Nobody is confirmed for these tasks yet.</Banner>}
     {jobs.map(j => <div key={j.id} className="small" style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}><b>{j.time} {j.tasks.map(t => t.title).join(', ')}</b><br />{j.reason} · now: <b>{STATE_TITLE[j.state] ?? j.state}</b>
       {j.asks.length > 0 && <><br />Asked: {j.asks.map(a => `${a.name} (${ASK_STATE[a.state]?.toLowerCase() ?? a.state})`).join(', ')}</>}{j.ffSkipped && <><br />Friend Finder skipped: too close to the task</>}{j.requestId && <><br />Friend Finder: {j.requestId}</>}</div>)}
     {ov.extensions.map(x => <div key={x.id} className="small" style={{ padding: '6px 0' }}><b>You were delayed:</b> return {fmt(x.old_return)} → {fmt(x.new_return)}{x.result ? <><br />{x.result}</> : null}</div>)}
@@ -220,18 +220,18 @@ export function BackupsScreen({ hh, onBack, onBuild }: { hh: string; onBack: () 
   return <><AppBar title="Backups" onBack={onBack} right={d.backups.length < d.max ? <button className="btn sm primary" onClick={() => setAdd(true)}><Icon name="plus" size={16} />Add</button> : undefined} /><main className="body">
     <p className="small muted">People you’ve pre-approved to step in, in the order they’re asked. Up to {d.max}. Two are asked at a time, 10 minutes per pair; key holders first when someone has to get in.</p>
     <ThinCard thin={{ keyHolders: keys, thin: keys < 2 }} onOpen={() => {}} />
-    <div className="card"><label className="switch" htmlFor="sa"><span className="grow"><b>Ask my backups automatically</b><br /><span className="xs muted">If a task is at risk, Pawsure messages these people in this order without asking you each time. <b>This is the only case where Pawsure contacts people without your tap.</b> You see every ask and can stop it. Off: you get the list with one tap to send.</span></span><input id="sa" type="checkbox" role="switch" checked={d.standingApproval} onChange={e => run(api(`${H}/cover/settings`, { method: 'PUT', body: { standingApproval: e.target.checked } }))} /></label></div>
+    <div className="card"><label className="switch" htmlFor="sa"><span className="grow"><b>Ask my backups automatically</b><br /><span className="xs muted">If a task is at risk, these people are asked in this order. <b>This is the only case where Pawsure contacts people without your tap.</b> You can stop any ask.</span></span><input id="sa" type="checkbox" role="switch" checked={d.standingApproval} onChange={e => run(api(`${H}/cover/settings`, { method: 'PUT', body: { standingApproval: e.target.checked } }))} /></label></div>
     {d.backups.map((b, i) => <div key={b.id} className="card backup" data-backup={b.id}><div className="row"><span className="avatar">{i + 1}</span><div className="grow"><b>{b.name}</b><div className="small muted">{b.relationship} · <span className="mono">{b.phone}</span></div></div>
       <button className="btn sm" aria-label={`Move ${b.name} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button><button className="btn sm" aria-label={`Move ${b.name} down`} disabled={i === d.backups.length - 1} onClick={() => move(i, 1)}>↓</button></div>
       {b.ownerArranged && <div><span className="tag sim">Owner-arranged, not verified by Pawsure</span></div>}
       <label className="switch"><span className="grow">Holds a key</span><input type="checkbox" role="switch" checked={b.holdsKey} onChange={e => run(api(`${H}/backups/${b.id}`, { method: 'PATCH', body: { holdsKey: e.target.checked } }))} /></label>
       <label className="switch"><span className="grow">Can give medicine<br /><span className="xs muted">Only from your written instructions</span></span><input type="checkbox" role="switch" checked={b.canGiveMedicine} onChange={e => run(api(`${H}/backups/${b.id}`, { method: 'PATCH', body: { canGiveMedicine: e.target.checked } }))} /></label>
-      {!b.caredBefore && <div className="xs muted">New to your home: they’ll read the handling note first, and you’ll get the gate and key checklist.</div>}
+      {!b.caredBefore && <div className="xs muted">New to your home: they read the handling note first.</div>}
       <button className="btn ghost sm" onClick={() => run(api(`${H}/backups/${b.id}`, { method: 'DELETE' }))}>Remove</button></div>)}
     {!d.backups.length && <div className="empty"><b>No backups yet</b><p>Cover is limited until you have a circle.</p><button className="btn primary" onClick={onBuild}>Build my circle</button></div>}
-    <div className="card"><label className="switch"><span className="grow"><b>Send the pre-visit reminder in Trusted Helper mode</b><br /><span className="xs muted">Default off. Tracked helpers always get one reminder per visit: Yes, I’ll do it · Can’t make it · Send someone else.</span></span><input type="checkbox" role="switch" checked={d.remindTrusted} onChange={e => run(api(`${H}/cover/settings`, { method: 'PUT', body: { remindTrusted: e.target.checked } }))} /></label>
+    <div className="card"><label className="switch"><span className="grow"><b>Send the pre-visit reminder in Trusted Helper mode</b><br /><span className="xs muted">Off by default. Tracked helpers always get one reminder per visit.</span></span><input type="checkbox" role="switch" checked={d.remindTrusted} onChange={e => run(api(`${H}/cover/settings`, { method: 'PUT', body: { remindTrusted: e.target.checked } }))} /></label>
       <label className="switch"><span className="grow"><b>Hot day: water tasks must happen</b><br /><span className="xs muted">Your choice; Pawsure gives no health advice.</span></span><input type="checkbox" role="switch" checked={d.hotDay} onChange={e => run(api(`${H}/cover/settings`, { method: 'PUT', body: { hotDay: e.target.checked } }))} /></label></div>
-    <p className="xs muted">Backups get the task and time only. Your flat number, gate and key details are shared after one of them says yes and you confirm.</p>
+    <p className="xs muted">Backups see the task and time. Address and key details only after you confirm someone.</p>
     {err && <span className="errtext" role="alert">{err}</span>}
     {add && <Sheet onClose={() => setAdd(false)}><h2>Add a backup</h2>
       <div className="field"><label htmlFor="bn">Name</label><input id="bn" className="input" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></div>
@@ -250,13 +250,13 @@ export function CircleBuilder({ hh, onDone, onBack }: { hh: string; onDone?: () 
   const [prov, setProv] = useState({ name: '', phone: '' });
   const row = (k: string, ic: string, t: string, s: string, action: () => void, extra?: React.ReactNode) => <div className="card" data-builder={k}><div className="row top"><span className="avatar icon"><Icon name={ic} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div></div>{extra}{done[k] ? <span className="tag flag-on">{done[k]}</span> : <button className="btn sm primary" onClick={action}>Start</button>}</div>;
   return <><AppBar title="Build your circle" onBack={onBack} /><main className="body">
-    <Banner kind="info" icon="ℹ"><b>Cover is limited until you have a circle.</b> Pawsure can’t create a carer where none exists. It will tell you early when a task is at risk, but there may be nobody to ask. Here are four ways to build your circle.</Banner>
+    <Banner kind="info" icon="ℹ"><b>Cover is limited until you have a circle.</b> Four easy ways to find someone who can step in.</Banner>
     {row('society_link', 'friends', 'Share an invite link in your society WhatsApp group', 'Neighbours who join choose what they can help with. Nobody sees your flat number.', () => go('society_link'))}
     {row('pet_swap', 'paw', 'Start a pet-parent swap', 'Pair up with another owner in your society: you cover for each other. Both of you must opt in.', () => go('pet_swap'))}
     {row('building_helper', 'user', 'Invite a helper who already works in your building', 'Only with her consent first. One helper can work for several homes without mixing them up.', () => go('building_helper'))}
     {row('paid_provider', 'star', 'Add your own paid walker or sitter', 'Shown as “owner-arranged, not verified by Pawsure”.', () => go('paid_provider', prov.name && prov.phone.length === 10 ? { name: prov.name, phone: '+91' + prov.phone } : {}),
       !done.paid_provider && <div className="grid2"><input className="input" aria-label="Provider name" placeholder="Name" value={prov.name} onChange={e => setProv({ ...prov, name: e.target.value })} /><input className="input mono" aria-label="Provider mobile" placeholder="Mobile (10 digits)" inputMode="numeric" maxLength={10} value={prov.phone} onChange={e => setProv({ ...prov, phone: e.target.value.replace(/\D/g, '') })} /></div>)}
-    <div className="card flat small muted">Pawsure doesn’t show a list of day cares here. Ungraded day cares are never offered as a stopgap.</div>
+    <div className="card flat small muted">Day cares aren’t listed here.</div>
     {onDone && <button className="btn primary block" onClick={onDone}>Continue</button>}
   </main></>;
 }

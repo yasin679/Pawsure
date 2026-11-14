@@ -55,7 +55,7 @@ test.describe('K. Operations console', () => {
     await expect(main(page).locator('tr', { hasText: 'Helper callback' }).locator('.tag')).toHaveText('closed');
   });
 
-  test('K5 Ops lead: switches — turn on the share record; locked switches cannot be changed', async ({ page }) => {
+  test('K5 Ops lead: switches, turn on the share record; locked switches cannot be changed', async ({ page }) => {
     await boot(page); await staff(page, PHONE.lead);
     await consoleSection(page, 'Switches');
     const share = main(page).locator('tr', { hasText: 'helperShareRecord' });
@@ -137,7 +137,7 @@ test.describe('K. Operations console', () => {
   test('K12 Ops: method mix hides groups under 5 and never lists a helper', async ({ page }) => {
     await boot(page); await staff(page, PHONE.ops);
     await consoleSection(page, 'Method mix');
-    await expect(main(page)).toContainText('fewer than 5 — hidden');
+    await expect(main(page)).toContainText('fewer than 5, hidden');
     await expect(main(page)).not.toContainText('Sunita');
   });
 });

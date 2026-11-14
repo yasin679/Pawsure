@@ -122,11 +122,11 @@ export function reduce(req0: FriendRequest, ev: FFEvent, now: Minutes, t: FFTime
       // yes. PAW-054: a second Yes from the same friend (app and WhatsApp together, or a retry) changes nothing.
       if (['accepted', 'waiting', 'confirmed'].includes(r.state)) return { req: req0, effects: [] };
       if (req.mode === 'all3') {
-        if (req.holdFriendId && req.holdFriendId !== r.friendId) { r.state = 'waiting'; fx.push({ type: 'message_friend', friendId: r.friendId, template: 'waiting_for_owner' }); req.history.push({ at: now, state: req.state, note: `${r.friendId} also said yes — no duplicate cover` }); break; }
+        if (req.holdFriendId && req.holdFriendId !== r.friendId) { r.state = 'waiting'; fx.push({ type: 'message_friend', friendId: r.friendId, template: 'waiting_for_owner' }); req.history.push({ at: now, state: req.state, note: `${r.friendId} also said yes, no duplicate cover` }); break; }
         r.state = 'accepted'; req.holdFriendId = r.friendId; req.holdAt = now; req.holdReminded = false;
         req.recipients.filter(x => x.friendId !== r.friendId && x.state === 'sent').forEach(x => fx.push({ type: 'message_friend', friendId: x.friendId, template: 'waiting_for_owner' }));
         fx.push({ type: 'notify_owner', template: 'friend_yes', friendId: r.friendId });
-        go('Provisional hold', `${r.friendId} said yes first — hold ${t.hold} min`);
+        go('Provisional hold', `${r.friendId} said yes first, hold ${t.hold} min`);
       } else {
         r.state = 'accepted'; fx.push({ type: 'message_friend', friendId: r.friendId, template: 'waiting_for_owner' }, { type: 'notify_owner', template: 'friend_yes', friendId: r.friendId });
         go('Accepted - pending owner confirmation', `${r.friendId} said yes`);

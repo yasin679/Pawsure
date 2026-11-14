@@ -139,7 +139,7 @@ describe('production mode (DEMO_MODE off)', () => {
     for (const p of ['/demo/outbox', '/demo/helper-thread/m_sunita', '/demo/friend-thread/u_priya']) expect((await prod.call('GET', p)).status).toBe(404);
     expect((await prod.call('POST', '/demo/clock', { advance: 5 })).status).toBe(404);
   });
-  it('the job runner refuses to run without its secret — even when the secret is not configured', async () => {
+  it('the job runner refuses to run without its secret, even when the secret is not configured', async () => {
     expect((await prod.call('POST', '/jobs/tick')).status).toBe(403);
     process.env.JOB_SECRET = 'job-secret-123';
     expect((await prod.call('POST', '/jobs/tick', undefined, undefined, { 'x-job-secret': 'wrong' })).status).toBe(403);
