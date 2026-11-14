@@ -425,7 +425,49 @@ describe('PAW-047, PAW-054, PAW-062, R-12, R-17 check-in, duplicate taps across 
   it('localisation: Hindi and Marathi friends get their language; unsupported languages are refused, not half-translated (R-18)', async () => {
     const r = (await manual(['bruno'], 1080, ['feed', 'walk'])).body; const s = await search(r.id);
     expect(s.body.top.find(t => t.id === 'u_arjun')?.message).toMatch(/नमस्ते/);
-    expect((await setFriend(priya, { language: 'te' })).status).toBe(400);
+    // Any of the 22 scheduled languages can be chosen; until messages are written in it, they go out in English.
+    expect((await setFriend(priya, { language: 'te' })).status).toBe(200);
+    const r2 = (await manual(['misty'], 1110, ['feed'])).body; const s2 = await search(r2.id);
+    expect(s2.body.top.find(t => t.id === 'u_priya')?.message).toMatch(/^Hi Priya!/);
+    expect((await setFriend(priya, { language: 'xx' })).status).toBe(400);
+    await setFriend(priya, { language: 'en' });
+  });
+});
+
+/* ================================================================ Names, places and languages (15 Nov) ====== */
+describe('15 Nov: names must be names, every state and city, every scheduled language', () => {
+  it('names made of numbers or with digits are refused for owner, friend, helper, circle and backup', async () => {
+    const t = await signIn('+919822200011');
+    for (const bad of ['12345', 'Priya2', '9', '..']) {
+      const r = await call<{ message: string }>('POST', '/v1/households', { displayName: bad, language: 'en', state: 'Maharashtra', city: 'Mumbai', societyId: 'soc_lakevista_mum' }, t);
+      expect([bad, r.status, r.body.message]).toEqual([bad, 400, 'Enter a real name using letters, not numbers.']);
+    }
+    expect((await call('POST', `${HH}/friends/invite`, { name: '99999', phone: '+919822200012', language: 'en' }, owner)).status).toBe(400);
+    expect((await call('POST', `${HH}/helpers/invite`, { name: '1234', phone: '+919822200013', language: 'hi' }, owner)).status).toBe(400);
+    expect((await call('POST', `${HH}/circle/invite`, { name: '000', phone: '+919822200014', role: 'family' }, owner)).status).toBe(400);
+    expect((await call('POST', `${HH}/backups`, { name: '42', phone: '+919822200015', relationship: 'Neighbour', holdsKey: false }, owner)).status).toBe(400);
+    // Real names in any script are fine.
+    for (const good of ['Asha Rao', 'प्रिया शाह', "D'Souza", 'Anne-Marie']) expect((await call('POST', `${HH}/friends/invite`, { name: good, phone: '+91982220' + String(Math.floor(1000 + Math.random() * 8999)), language: 'en' }, owner)).status, good).toBe(201);
+  });
+  it('lists all 36 states and union territories with cities; a city from another state is refused; a typed city is kept', async () => {
+    const all = (await call<{ states: string[] }>('GET', '/v1/societies', undefined, owner)).body;
+    expect(all.states).toHaveLength(36); expect(all.states).toEqual(expect.arrayContaining(['Kerala', 'Ladakh', 'Tamil Nadu', 'West Bengal', 'Delhi']));
+    const ka = (await call<{ cities: { city: string }[] }>('GET', '/v1/societies?state=Karnataka', undefined, owner)).body.cities.map(c => c.city);
+    expect(ka).toEqual(expect.arrayContaining(['Bengaluru', 'Mysuru']));
+    const t = await signIn('+919822200016');
+    const bad = await call<{ message: string }>('POST', '/v1/households', { displayName: 'Ravi', language: 'en', state: 'Kerala', city: 'Pune', society: 'Green Acres' }, t);
+    expect([bad.status, bad.body.message]).toEqual([400, 'Pune is in Maharashtra, not Kerala. Check the state.']);
+    const typed = await call<{ id: string }>('POST', '/v1/households', { displayName: 'Ravi', language: 'ml', state: 'Kerala', city: 'Chalakudy', society: 'Riverside Homes' }, t);
+    expect(typed.status).toBe(201);
+    expect((await db.query(`select state, city, society_verified from households where id=$1`, [typed.body.id]))[0]).toEqual({ state: 'Kerala', city: 'Chalakudy', society_verified: false });
+  });
+  it('a helper invited in Tamil gets English messages until Tamil ones are written; the choice is kept', async () => {
+    const r = await call<{ membershipId: string }>('POST', `${HH}/helpers/invite`, { name: 'Lakshmi', phone: '+919822200017', language: 'ta' }, owner);
+    expect(r.status).toBe(201);
+    const m = (await db.query<{ invite_language: string }>(`select invite_language from memberships where id=$1`, [r.body.membershipId]))[0]!;
+    expect(m.invite_language).toBe('ta');
+    const sent = adapters.outbox.filter(x => x.to === '+919822200017');
+    expect(sent.length).toBeGreaterThan(0);
   });
 });
 

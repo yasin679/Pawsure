@@ -1,7 +1,7 @@
 /** The friend’s side (F6 requests, F7 settings). Shown when a signed-in user is a friend, not a household member. */
 import { useEffect, useState } from 'react';
 import { api, ApiError, fmt, type FriendSelf } from '../api';
-import { AppBar, Art, Banner } from '../ui';
+import { LanguageOptions, AppBar, Art, Banner } from '../ui';
 
 const CAP: [string, string, string?][] = [['feed', 'Feeding / water'], ['walk', 'Short walks'], ['meds', 'Medicines', 'Only with the owner’s written instructions'], ['large', 'Large / anxious dogs']];
 interface Access { flat: string; tower: string; access: string; pet: Record<string, string>; notice: string }
@@ -74,7 +74,7 @@ export function FriendHome({ name, onSignOut }: { name: string; onSignOut: () =>
           {['Dog', 'Cat', 'Other'].map(sp => <label key={sp} className="check"><input type="checkbox" checked={(p?.species ?? ['Dog', 'Cat', 'Other']).includes(sp)} onChange={e => { const cur = p?.species ?? ['Dog', 'Cat', 'Other']; const next = e.target.checked ? [...cur, sp] : cur.filter(x => x !== sp); if (next.length) save({ species: next }); }} /><span>{sp === 'Other' ? 'Other pets' : sp + 's'}</span></label>)}</div>
         <div className="card"><span className="eyebrow">Tasks I’m comfortable with</span>{CAP.map(([k, l, hint]) => <label key={k} className="switch"><span className="grow"><b>{l}</b>{hint && <><br /><span className="xs muted">{hint}</span></>}</span><input type="checkbox" role="switch" checked={!!p?.capabilities?.[k]} onChange={e => save({ capabilities: { ...(p?.capabilities ?? {}), [k]: e.target.checked } })} /></label>)}</div>
         <div className="card"><div className="field"><label htmlFor="km">Keys</label><select id="km" className="input" value={p?.key_mode ?? 'handover'} onChange={e => save({ keyMode: e.target.value })}><option value="yes">I can hold a spare key</option><option value="handover">I can collect a key when needed</option><option value="no">No key visits</option></select></div>
-          <div className="field"><label htmlFor="lg">Message language</label><select id="lg" className="input" value={me.language} onChange={e => save({ language: e.target.value })}><option value="en">English</option><option value="hi">हिन्दी Hindi</option><option value="mr">मराठी Marathi</option></select></div>
+          <div className="field"><label htmlFor="lg">Message language</label><select id="lg" className="input" value={me.language} onChange={e => save({ language: e.target.value })}><LanguageOptions forMessages /></select></div>
           <label className="switch"><span className="grow"><b>Fine with stairs</b></span><input type="checkbox" role="switch" checked={p?.stairs_ok !== false} onChange={e => save({ stairsOk: e.target.checked })} /></label></div>
         <div className="card"><span className="eyebrow">Location</span><label className="switch"><span className="grow"><b>Live location only during an accepted visit</b><br /><span className="xs muted">Off by default. Deleted 24 h after the visit.</span></span><input type="checkbox" role="switch" checked={!!p?.live_location_allowed} onChange={e => save({ liveLocationAllowed: e.target.checked })} /></label></div>
         <div className="card"><label className="switch"><span className="grow"><b>Also help nearby Pawsure members</b><br /><span className="xs muted">Not active yet. Needs ID checks first.</span></span><input type="checkbox" role="switch" checked={!!p?.nearby_opt_in} onChange={e => save({ nearbyOptIn: e.target.checked })} /></label></div>

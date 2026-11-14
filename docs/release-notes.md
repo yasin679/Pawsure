@@ -18,7 +18,7 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | Source of truth | PRD v1.4, sections 7.7, 9.6, 8.8 (PS-127 to PS-141), 9.5, 10.4, 16.3, 17.1, Appendix F |
 | Repository | github.com/yasin679/Pawsure |
 | Database | Migration `006_cover_continuity.sql` (adds tables and columns only), with a rollback script |
-| Tests | 357 API, rules and database tests (211 in 1.0.1); 125 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
+| Tests | 360 API, rules and database tests (211 in 1.0.1); 126 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
 
 ## 2 What’s new: cover continuity
 
@@ -116,6 +116,14 @@ From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and a
 - **Pawly:** **Find with Pawly** shows the friend search step by step, then how many friends were found. A new **No friend is free right now** page offers another time, any distance, invite a friend and call your backup.
 - **Demo tools hidden:** the dark demo bar no longer shows on every page. A small **Demo tools** switch beside the phone (or **#tools** in the address) brings it back. The scenario and request-parser menus are gone.
 - **Plainer words:** long explanations cut to one short line, and the long dashes replaced with commas, in the app and in the WhatsApp and SMS messages.
+
+### 3.4 Languages, places and sign-up checks (15 Nov 2026)
+
+- **English and हिन्दी screens:** a switch on the sign-in screen and in Me changes the main owner screens (sign-in, Today, Find cover and Pawly, Friends, Pet, Me) to Hindi. Names, task titles and other things people type stay as typed. The Hindi wording needs a native-speaker review.
+- **All 22 scheduled languages:** owners, helpers and friends can choose any of them. Messages are written today in English, Hindi and Marathi; anyone who picks another language gets English messages until theirs are written, and the picker says so. Migration `008_languages.sql`.
+- **Every state and union territory:** sign-up and Edit profile ask for the state, then the city (main cities listed, others can be typed), then the society.
+- **Names must be names:** owner, friend, helper, care-circle and backup names need letters and no digits ("12345" or "Priya2" is refused, on screen and on the server). Pet and vet names need a letter.
+- **Consent in plain words:** **Read the Terms** and **Read the Privacy Notice** open a one-minute summary with its version (T-1.0, PN-1.0: the version of the text you agree to, recorded with the time). The pilot research toggle is removed.
 
 ## 4 Upgrade notes
 

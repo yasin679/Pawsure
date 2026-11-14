@@ -769,6 +769,12 @@
       "pre": "Demo tools switched off",
       "steps": "1. Sign in",
       "expected": "No demo bar on any page; tools come back with the Demo tools switch or #tools"
+    },
+    "R9": {
+      "role": "New owner",
+      "pre": "Sign-up",
+      "steps": "1. Read the Privacy Notice\n2. Accept both, Continue\n3. Type 12345 as the name",
+      "expected": "Plain summary with its version; no research toggle; the name is refused with a clear message; 23 languages offered"
     }
   },
   "defects": [

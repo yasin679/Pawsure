@@ -39,13 +39,14 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.locator('dl.kv')).toContainText('Tower B');
   });
 
-  test('R2 PAW-018/036 sign-up asks for the city first; Pune and Mumbai list their own Lake Vista CHS', async ({ page }) => {
+  test('R2 PAW-018/036 sign-up asks for the state and city first; Pune and Mumbai list their own Lake Vista CHS', async ({ page }) => {
     await signIn(page, '9822200077');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
     await page.locator('#nm').fill('Isha');
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await page.locator('#stt').selectOption('Maharashtra');
     await page.locator('#cty').selectOption('Pune');
     await expect(page.locator('#soc option', { hasText: 'Lake Vista CHS · Baner' })).toHaveCount(1);
     await expect(page.locator('#soc option', { hasText: 'Powai' })).toHaveCount(0);
@@ -131,6 +132,22 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await signInOwner(fresh);
     await expect(fresh.locator('.demobar')).toHaveCount(0);
     await expect(fresh.getByText('9:00 AM')).toHaveCount(0);
+  });
+
+  test('R9 consent explains the Terms and Privacy Notice in plain words; no research toggle; a name of numbers is refused', async ({ page }) => {
+    await signIn(page, '9822200078');
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
+    await expect(page.getByText('Pilot research interviews')).toHaveCount(0);
+    await page.getByRole('button', { name: /Read the Privacy Notice/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Privacy Notice' })).toContainText('Version PN-1.0');
+    await expect(page.getByRole('dialog')).toContainText('photos and voice notes 90 days');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.locator('#nm').fill('12345');
+    await expect(page.getByText('Enter a real name using letters, not numbers.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await expect(page.locator('#lg option')).toHaveCount(23);
   });
 
   test('R6 PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong', async ({ page }) => {

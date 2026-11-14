@@ -72,3 +72,14 @@ export interface HomeProfile { society: string; tower: string | null; flat: stri
 export interface Society { id: string; name: string; area: string | null; city: string; state: string }
 export interface Privacy { society: string; tower: string; loc_share: string; friendsSee: string[]; hiddenUntilConfirmed: string[]; nearbyFallback: { available: boolean; reason: string } }
 export interface FriendSelf { profile: { discoverable: boolean; opt_out_requested_at: string | null; paused: boolean; paused_until: string | null; windows: [number, number][]; capabilities: Record<string, boolean>; key_mode: string; stairs_ok: boolean; live_location_allowed: boolean; nearby_opt_in: boolean; pause_active?: boolean; resumes_on?: string | null; max_pets?: number; species?: string[] } | null; links: { household_id: string; status: string; society: string; tower: string; owner: string }[]; language: string; requests: { id: string; state: string; myState: string; taskTime: number | null; careDate?: string; tasks?: string[]; lateMin?: number | null; arrived?: boolean; confirmedForMe: boolean; accessActive: boolean; message: string }[]; messages: { request_id: string | null; direction: string; body: string; at: string }[] }
+
+/** Same rule as the server: letters (any script), spaces, . ' -; at least two letters; no digits. */
+export const nameError = (name: string): string | null => {
+  const n = name.trim();
+  if (!n) return 'Enter a name.';
+  if (/\d/.test(n) || !/^(?=(?:.*\p{L}){2})[\p{L}\p{M}][\p{L}\p{M} .'’&(),-]*$/u.test(n)) return 'Enter a real name using letters, not numbers.';
+  if (n.length > 60) return 'Keep the name under 60 characters.';
+  return null;
+};
+/** A server error as a sentence for the screen. */
+export const errMessage = (e: unknown, fallback: string) => (e instanceof ApiError && typeof e.body.message === 'string' ? e.body.message : e instanceof ApiError ? fallback : 'Can’t reach Pawsure.');

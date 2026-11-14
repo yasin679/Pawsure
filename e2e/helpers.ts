@@ -22,7 +22,8 @@ export async function api<T = any>(page: Page, method: string, path: string, bod
   }, [method, path, body, API] as const);
 }
 /** Sign-up asks for the city first, then a listed society or a typed one (PAW-018). */
-export async function fillSociety(page: Page, name: string, city = 'Mumbai') {
+export async function fillSociety(page: Page, name: string, city = 'Mumbai', state = 'Maharashtra') {
+  await page.locator('#stt').selectOption(state);
   await page.locator('#cty').selectOption(city);
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(name);

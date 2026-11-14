@@ -98,9 +98,9 @@ The app opens straight on **Log in or create an account**. There is one screen f
 
 | # | Item | What it does |
 |---|---|---|
-| 1 | **Terms of Use** | Required. The version you accepted is recorded with the time. |
-| 2 | **Privacy Notice** | Required. Explains what Pawsure collects, why, for how long, and your rights. |
-| 3 | **Optional** | Care alerts on WhatsApp and calls, and pilot research interviews. You can change these later. |
+| 1 | **Terms of Use** | Required. **Read the Terms** opens a one-minute summary. T-1.0 is the version of the text; Pawsure records the version and the time you agree. |
+| 2 | **Privacy Notice** | Required. **Read the Privacy Notice** explains what Pawsure keeps, why, who sees it, how long, and your rights under the DPDP Act (version PN-1.0). |
+| 3 | **Optional** | Care alerts on WhatsApp and calls. You can change this later. |
 
 ![Figure 6: About you](images/05-profile.jpg)
 

@@ -6,7 +6,7 @@
 import type { Hono, Context } from 'hono';
 import { z } from 'zod';
 import { uid, type Db } from '@pawsure/db';
-import { assignArms, releaseCheck, can, safeCuts, maskPhone, decideHold, rightsDue, boardReportDue, wallet, streak, MIN_GROUP, type Role, type Resource, type Action, type LedgerEntry } from '@pawsure/domain';
+import { msgLang, assignArms, releaseCheck, can, safeCuts, maskPhone, decideHold, rightsDue, boardReportDue, wallet, streak, MIN_GROUP, type Role, type Resource, type Action, type LedgerEntry } from '@pawsure/domain';
 import type { Deps } from './app.js';
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit, loadDay } from './care.js';
@@ -194,7 +194,7 @@ export function registerAdmin(app: Hono<Env>, d: Deps, mon: Monitor, cover?: imp
     const r = await db.query<{ helper_user_id: string }>(`update reward_ledger set state=$2, decided_at=$3, decided_by=$4, decision_note=$5 where id=$1 and state='held' returning helper_user_id`, [c.req.param('id'), state, now().toISOString(), c.get('userId'), b.note]);
     if (!r.length) return c.json({ error: 'not_found' }, 404);
     const u = (await db.query<{ phone_e164: string; language: string }>(`select phone_e164, language from users where id=$1`, [r[0]!.helper_user_id]))[0]!;
-    await A.whatsapp.sendTemplate(u.phone_e164, 'W_HOLD_DECIDED', (u.language ?? 'en') as 'en', { decision: b.decision, reason: b.note });
+    await A.whatsapp.sendTemplate(u.phone_e164, 'W_HOLD_DECIDED', msgLang(u.language), { decision: b.decision, reason: b.note });
     await audit(db, 'staff:' + c.get('userId'), null, 'reward.' + state, { entry: c.req.param('id'), note: b.note });
     return c.json({ ok: true, state });
   });

@@ -1,0 +1,123 @@
+/**
+ * Screen language: English or Hindi (हिन्दी). `t()` returns the Hindi text when it exists, else the English.
+ * Text that comes from the server (task names, reasons, people's names) stays as it is.
+ * Hindi wording needs a native-speaker review before launch.
+ */
+export type UiLang = 'en' | 'hi';
+const KEY = 'pawsure.uiLang';
+let lang: UiLang = (() => { try { return localStorage.getItem(KEY) === 'hi' ? 'hi' : 'en'; } catch { return 'en'; } })();
+const listeners = new Set<() => void>();
+export const uiLang = () => lang;
+export function setUiLang(l: UiLang) { lang = l; try { localStorage.setItem(KEY, l); } catch { /* private window */ } document.documentElement.lang = l; listeners.forEach(f => f()); }
+export const onUiLang = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
+export const t = (s: string) => (lang === 'hi' ? HI[s] ?? s : s);
+
+const HI: Record<string, string> = {
+  // tabs and titles
+  'Today': 'आज', 'Find cover': 'मदद ढूँढें', 'Friends': 'दोस्त', 'Pet': 'पालतू', 'Me': 'मैं',
+  'Before you start': 'शुरू करने से पहले', 'Enter the code': 'कोड डालें', 'About you': 'आपके बारे में', 'Your circle': 'आपका सर्कल',
+  'Check the details': 'विवरण जाँचें', 'Simple request form': 'आसान अनुरोध फ़ॉर्म', 'No friend free': 'कोई दोस्त खाली नहीं', 'Suggestions': 'सुझाव', 'Request': 'अनुरोध',
+  'Pawly': 'Pawly', 'Profile and privacy': 'प्रोफ़ाइल और गोपनीयता',
+  // sign-in
+  'Be sure, whoever’s caring.': 'देखभाल कोई भी करे, आप निश्चिंत रहें।', 'Log in or create an account': 'लॉग इन करें या खाता बनाएँ',
+  'We’ll text you a 6-digit code.': 'हम आपको 6 अंकों का कोड भेजेंगे।', 'Mobile number': 'मोबाइल नंबर', 'Send code': 'कोड भेजें',
+  'Evidence': 'सबूत', 'Task by task': 'हर काम का', 'Asked first': 'पहले पूछे जाते हैं', 'Alerts': 'अलर्ट', 'That escalate': 'जो आगे बढ़ते हैं',
+  'Try a demo number': 'डेमो नंबर आज़माएँ', 'Tap one to fill it in, or use any new number to start fresh.': 'भरने के लिए किसी पर टैप करें, या नया नंबर डालें।',
+  '6-digit code': '6 अंकों का कोड', 'Verify': 'पुष्टि करें', 'Resend code': 'कोड फिर भेजें', 'Demo mode: no SMS is sent. Your code is': 'डेमो मोड: कोई SMS नहीं भेजा जाता। आपका कोड है',
+  // consent and profile
+  'Pawsure stores your pet’s routine and sends alerts when care is missed. For that we need your OK.': 'Pawsure आपके पालतू की दिनचर्या रखता है और देखभाल छूटने पर अलर्ट भेजता है। इसके लिए आपकी सहमति चाहिए।',
+  'I accept the Terms of Use': 'मैं उपयोग की शर्तें स्वीकार करता/करती हूँ', 'Read the Terms (1 min)': 'शर्तें पढ़ें (1 मिनट)',
+  'I have read the Privacy Notice': 'मैंने गोपनीयता सूचना पढ़ ली है', 'Read the Privacy Notice (1 min)': 'गोपनीयता सूचना पढ़ें (1 मिनट)',
+  'Optional': 'वैकल्पिक', 'Care alerts on WhatsApp and calls': 'WhatsApp और कॉल पर देखभाल अलर्ट', 'Missed check-ins and emergencies': 'छूटे चेक-इन और आपात स्थिति',
+  'Continue': 'आगे बढ़ें', 'You can withdraw any time in Me → Your data rights.': 'आप कभी भी मैं → आपके डेटा अधिकार में सहमति वापस ले सकते हैं।',
+  'Got it': 'समझ गया', 'This is a summary. The full legal text is being reviewed by counsel before launch.': 'यह सारांश है। पूरा कानूनी पाठ लॉन्च से पहले वकील देख रहे हैं।',
+  'Your name': 'आपका नाम', 'Your language': 'आपकी भाषा', 'The app is in English for now. Messages to you use this language where they’re written.': 'संदेश इस भाषा में आएँगे, जहाँ वे लिखे जा चुके हैं।',
+  'Your location anchor. Friends see society and tower only.': 'दोस्त सिर्फ़ सोसाइटी और टावर देखते हैं।', 'Tower / wing': 'टावर / विंग', 'Flat (private)': 'फ़्लैट (निजी)',
+  'State': 'राज्य', 'Choose your state': 'अपना राज्य चुनें', 'City': 'शहर', 'Choose your city': 'अपना शहर चुनें', 'My city isn’t listed': 'मेरा शहर सूची में नहीं है',
+  'Choose from the list': 'सूची से चुनें', 'Society': 'सोसाइटी', 'Choose your society': 'अपनी सोसाइटी चुनें', 'My society isn’t listed': 'मेरी सोसाइटी सूची में नहीं है',
+  'Society name': 'सोसाइटी का नाम', 'Pawsure support checks new societies.': 'Pawsure सहायता नई सोसाइटी की जाँच करती है।',
+  'Do you have anyone who can look in on your pet?': 'क्या कोई है जो आपके पालतू को देख सके?', 'A family member, neighbour or friend who could step in if your helper can’t come.': 'परिवार, पड़ोसी या दोस्त जो आपके हेल्पर के न आने पर मदद कर सके।',
+  'Yes, I have someone': 'हाँ, कोई है', 'No one yet': 'अभी कोई नहीं', 'You can change this later in Me → Backups.': 'इसे बाद में मैं → बैकअप में बदल सकते हैं।',
+  // Today
+  'Loading today…': 'आज का दिन लोड हो रहा है…', 'SOS': 'SOS', 'Dismiss': 'हटाएँ', 'I’m on it': 'मैं देख रहा/रही हूँ', 'Open': 'खोलें', 'Mark resolved': 'हल हुआ',
+  'Who’s caring today?': 'आज देखभाल कौन कर रहा है?', 'Change': 'बदलें', 'Covered': 'हो गया', 'Ask my backups': 'मेरे बैकअप से पूछें', 'Ask a friend to cover': 'किसी दोस्त से पूछें',
+  'My help can’t come today': 'मेरी मदद आज नहीं आ सकती', 'Heading out?': 'बाहर जा रहे हैं?', '30-second leaving checklist': '30 सेकंड की जाने से पहले की सूची',
+  'I’m leaving': 'मैं जा रहा/रही हूँ', 'I’m delayed': 'मुझे देर हो रही है', 'I’m back': 'मैं वापस आ गया/गई', 'Quick return check (10 s)': 'वापसी पर जल्दी जाँच (10 सेकंड)', 'Start': 'शुरू करें',
+  'Plan & evidence': 'योजना और सबूत', 'Edit routine': 'दिनचर्या बदलें', 'Timeline': 'टाइमलाइन', 'Day report': 'दिन की रिपोर्ट', 'Visit': 'विज़िट', 'Arrived': 'पहुँचे', 'Left': 'गए', 'Late': 'देर',
+  'A Yes is a plan, not proof the task was done.': '“हाँ” एक योजना है, काम होने का सबूत नहीं।', 'Change this task': 'यह काम बदलें', 'Save': 'सहेजें', 'History is kept.': 'इतिहास रखा जाता है।',
+  'Help can’t come today': 'मदद आज नहीं आ सकती', 'Reason (optional, private)': 'कारण (वैकल्पिक, निजी)', 'Not given': 'नहीं बताया', 'Unwell': 'बीमार', 'Family emergency': 'पारिवारिक आपात स्थिति', 'Holiday': 'छुट्टी',
+  'Mark unavailable': 'अनुपलब्ध चिह्नित करें', 'Before you go': 'जाने से पहले', 'Expected return': 'वापसी का समय', 'Skip': 'छोड़ें', 'Quick return check': 'वापसी पर जल्दी जाँच',
+  'Coming up': 'आगे', 'Report a problem': 'समस्या बताएँ', 'Close': 'बंद करें',
+  // Find cover and Pawly
+  'Ask Pawsure': 'Pawsure से पूछें', 'Describe what you need': 'बताइए आपको क्या चाहिए', 'Speak': 'बोलें', 'Typing always works.': 'टाइप करना हमेशा काम करता है।',
+  'Nothing is sent until you approve.': 'आपकी मंज़ूरी के बिना कुछ नहीं भेजा जाता।', 'Simple form': 'आसान फ़ॉर्म', 'Requests': 'अनुरोध', 'No requests yet': 'अभी कोई अनुरोध नहीं',
+  'Ask in your own words. Nothing is sent until you approve it.': 'अपने शब्दों में पूछें। आपकी मंज़ूरी के बिना कुछ नहीं जाता।',
+  'You said': 'आपने कहा', 'Pawsure understood. Tap to correct': 'Pawsure ने यह समझा। ठीक करने के लिए टैप करें', 'Pets': 'पालतू', 'Time': 'समय', 'Duration': 'अवधि', 'Access': 'प्रवेश',
+  'Needs an answer': 'जवाब चाहिए', 'Medicine goes only to friends who chose it, with your written instructions.': 'दवा सिर्फ़ उन दोस्तों को जाती है जिन्होंने इसे चुना है, आपके लिखे निर्देशों के साथ।',
+  'Find with Pawly': 'Pawly से ढूँढें', 'Search my friends': 'मेरे दोस्तों में खोजें', 'Use the simple form instead': 'आसान फ़ॉर्म इस्तेमाल करें',
+  'What needs doing?': 'क्या करना है?', 'Which pets?': 'कौन से पालतू?', 'Key needed?': 'चाबी चाहिए?', 'Yes, key handover': 'हाँ, चाबी देनी होगी', 'No, someone is home': 'नहीं, घर पर कोई है',
+  'Pawly is finding a friend': 'Pawly दोस्त ढूँढ रहा है', 'Only your own friends. Nothing is sent until you approve.': 'सिर्फ़ आपके दोस्त। आपकी मंज़ूरी के बिना कुछ नहीं जाता।',
+  'No friend is free right now': 'अभी कोई दोस्त खाली नहीं है', 'Try another time': 'कोई और समय आज़माएँ', 'Someone may be free a little later': 'थोड़ी देर बाद कोई खाली हो सकता है',
+  'Search any distance': 'किसी भी दूरी तक खोजें', 'Include friends further away': 'दूर रहने वाले दोस्त भी', 'Invite a friend': 'दोस्त को बुलाएँ', 'More friends, more chances next time': 'ज़्यादा दोस्त, अगली बार ज़्यादा मौके',
+  'Call your backup': 'अपने बैकअप को कॉल करें', 'Declining never counts against anyone.': 'मना करना किसी के ख़िलाफ़ नहीं गिना जाता।', 'Nearby ID-checked members': 'पास के ID-जाँचे सदस्य', 'Switch OFF': 'बंद',
+  'Your own friends only. Nearest first.': 'सिर्फ़ आपके दोस्त। सबसे पास वाले पहले।', 'Ranked by distance, free time, tasks and keys.': 'दूरी, खाली समय, काम और चाबी के हिसाब से।', 'Open it': 'खोलें',
+  'Address and key details are shared only after you confirm.': 'पता और चाबी की जानकारी आपकी पुष्टि के बाद ही दी जाती है।', 'Send on WhatsApp': 'WhatsApp पर भेजें', 'Search again': 'फिर से खोजें',
+  'Nobody accepted.': 'किसी ने स्वीकार नहीं किया।', 'Try again': 'फिर से कोशिश करें', 'Thank on WhatsApp': 'WhatsApp पर धन्यवाद कहें', 'Edit request': 'अनुरोध बदलें', 'Cancel request': 'अनुरोध रद्द करें',
+  'Event history': 'घटनाओं का इतिहास',
+  // Friends and profile
+  'Invite': 'बुलाएँ', 'Invite sent': 'निमंत्रण भेजा गया', 'Friends who chose to help. Each request still needs their Yes.': 'जिन दोस्तों ने मदद चुनी है। हर अनुरोध पर उनकी “हाँ” ज़रूरी है।',
+  'Name': 'नाम', 'Phone': 'फ़ोन', 'Message language': 'संदेश की भाषा', 'Send WhatsApp invite': 'WhatsApp निमंत्रण भेजें', 'Cancel': 'रद्द करें', 'Block': 'ब्लॉक करें', 'Report': 'रिपोर्ट करें', 'Reason': 'कारण',
+  'Ask for help': 'मदद माँगें', 'Usually free': 'आमतौर पर खाली', 'Key': 'चाबी', 'Stairs': 'सीढ़ियाँ', 'Nearby Pawsure members': 'पास के Pawsure सदस्य',
+  'Edit profile': 'प्रोफ़ाइल बदलें', 'Tower': 'टावर', 'Not verified yet': 'अभी जाँच नहीं हुई', 'Loading…': 'लोड हो रहा है…', 'What friends can see': 'दोस्त क्या देख सकते हैं',
+  'Visible to friends': 'दोस्तों को दिखता है', 'Hidden until you confirm someone': 'किसी की पुष्टि करने तक छिपा', 'No public map. No exact pin, ever.': 'कोई सार्वजनिक नक्शा नहीं। कभी सटीक लोकेशन नहीं।', 'Location sharing': 'लोकेशन शेयरिंग',
+  'Friends see your society and tower. The flat only after you confirm them.': 'दोस्त आपकी सोसाइटी और टावर देखते हैं। फ़्लैट सिर्फ़ पुष्टि के बाद।',
+  // Pet
+  'Species': 'प्रजाति', 'Dog': 'कुत्ता', 'Cat': 'बिल्ली', 'Other': 'अन्य', 'Allergies': 'एलर्जी', 'Medicine': 'दवा', 'Notes': 'नोट्स', 'Call': 'कॉल करें', 'Food': 'खाना', 'Edit': 'बदलें', '+ Add': '+ जोड़ें',
+  'Emergency card': 'आपातकालीन कार्ड', 'Allergies, medicine, vet, 24x7 clinic, backup': 'एलर्जी, दवा, डॉक्टर, 24x7 क्लिनिक, बैकअप', 'Routine': 'दिनचर्या', 'Tasks, times, who does them': 'काम, समय, कौन करेगा',
+  'Health calendar': 'स्वास्थ्य कैलेंडर', 'Vaccines, deworming, follow-ups': 'टीके, कृमिनाशक, फ़ॉलो-अप', 'No pets yet. Add one to get started.': 'अभी कोई पालतू नहीं। शुरू करने के लिए जोड़ें।',
+  'In an emergency, call your vet or the 24x7 clinic.': 'आपात स्थिति में अपने डॉक्टर या 24x7 क्लिनिक को कॉल करें।', 'Fears / habits': 'डर / आदतें', 'Handling note': 'संभालने का नोट',
+  // Me
+  'Backups': 'बैकअप', 'Profile and what friends see': 'प्रोफ़ाइल और दोस्त क्या देखते हैं', 'Helper and check-ins': 'हेल्पर और चेक-इन', 'Care circle': 'देखभाल सर्कल', 'Wallet and points': 'वॉलेट और पॉइंट',
+  'Your data rights': 'आपके डेटा अधिकार', 'Consents': 'सहमतियाँ', 'Sign out': 'साइन आउट', 'Sign out of all devices': 'सभी डिवाइस से साइन आउट', 'Accept': 'स्वीकार करें',
+  'Language': 'भाषा',
+  'Confirmed': 'पक्का',
+  'Likely': 'संभावित',
+  'Not confirmed': 'पक्का नहीं',
+  'Missed': 'छूट गया',
+  'Matched': 'मेल खाया',
+  'Mismatch': 'मेल नहीं',
+  'Pending': 'बाक़ी',
+  'Trusted': 'भरोसेमंद',
+  'Cancelled': 'रद्द',
+  'Unknown': 'पता नहीं',
+  'In progress': 'चल रहा है',
+  'Planned': 'योजना में',
+  'Awaiting evidence': 'सबूत का इंतज़ार',
+  'Covered day': 'पूरा दिन कवर',
+  'Covered so far': 'अब तक कवर',
+  'Not covered yet': 'अभी कवर नहीं',
+  'Not covered': 'कवर नहीं',
+  'Unknown, tap Covered': 'पता नहीं, “हो गया” दबाएँ',
+  'No tasks today': 'आज कोई काम नहीं',
+  'No cover planned': 'कोई कवर तय नहीं',
+  'Sunita (tracked helper)': 'सुनीता (ट्रैक्ड हेल्पर)',
+  'Nobody yet, cover needed': 'अभी कोई नहीं, कवर चाहिए',
+  'A friend (Find cover)': 'एक दोस्त (मदद ढूँढें)',
+  'Good morning': 'सुप्रभात',
+  'Good afternoon': 'नमस्ते',
+  'Good evening': 'शुभ संध्या',
+  'Understand my request': 'मेरा अनुरोध समझें',
+  'Understanding… (up to 8 s)': 'समझ रहा है… (8 सेकंड तक)',
+  'e.g. Can someone feed Bruno and take him down at 5?': 'जैसे: क्या कोई 5 बजे Bruno को खाना खिलाकर नीचे घुमा सकता है?',
+  'Clear request': 'साफ़ अनुरोध',
+  'Medicine + vague time': 'दवा + अस्पष्ट समय',
+  'Urgent': 'तुरंत',
+  'People asked in order if a task is at risk · standing approval': 'काम पर ख़तरा हो तो क्रम से पूछे जाने वाले लोग',
+  'Edit name, city, society, tower and flat; privacy; nearby members (off)': 'नाम, शहर, सोसाइटी, टावर, फ़्लैट बदलें; गोपनीयता',
+  'Invite, consent, method, food-box code card': 'निमंत्रण, सहमति, तरीका, कोड कार्ड',
+  'Co-owners, backup, roles, remove access': 'सह-मालिक, बैकअप, भूमिकाएँ, पहुँच हटाएँ',
+  'Your helper’s points from this home': 'इस घर से आपके हेल्पर के पॉइंट',
+  'See, correct or delete your data; consents; complaints': 'अपना डेटा देखें, सुधारें या हटाएँ; सहमतियाँ; शिकायतें',
+  'Given': 'दी गई',
+  'Not given yet': 'अभी नहीं दी'
+};

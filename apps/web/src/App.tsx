@@ -1,8 +1,9 @@
 /** App shell: session, household, frozen navigation (PS-108), look-in route, demo tools in DEMO_MODE. */
+import { t as tr, onUiLang } from './i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, API, ApiError, endSession, session, fmt, type DayView, type Incident, type Me, type Pet } from './api';
-import { AppBar, Art, Icon } from './ui';
+import { AppBar, Art, Icon, LangSwitch } from './ui';
 import { Onboarding } from './screens/Onboarding';
 import { Today } from './screens/Today';
 import { PetScreen } from './screens/PetScreen';
@@ -40,6 +41,8 @@ function DemoToolsSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }
 }
 
 export function App() {
+  const [, setLangTick] = useState(0);
+  useEffect(() => onUiLang(() => setLangTick(x => x + 1)), []);
   // The hosted app uses /admin; the shareable demo can't use paths, so it also accepts #admin.
   const [hash, setHash] = useState(location.hash);
   useEffect(() => { const h = () => setHash(location.hash); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
@@ -113,23 +116,24 @@ export function App() {
     {!sub && tab === 'pet' && hh && <PetScreen hh={hh} pets={pets} reload={load} onOpen={setSub} />}
     {!sub && tab === 'find' && hh && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}
-    {!sub && tab === 'me' && <><AppBar title="Me" /><main className="body">
-      {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>Accept</button></div>)}
+    {!sub && tab === 'me' && <><AppBar title={tr('Me')} /><main className="body">
+      {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>{tr('Accept')}</button></div>)}
       <div className="card"><div className="row"><span className="avatar lg">{(me?.user.display_name ?? '?').split(' ').map(s => s[0]).join('').slice(0, 2)}</span><div className="grow"><h2>{me?.user.display_name}</h2><div className="small muted">{me?.memberships[0]?.society} · {me?.memberships[0]?.tower} · {role?.replace('_', '-')}</div></div></div></div>
       <ThinCard thin={thin} onOpen={() => setSub('backups')} />
       <div className="list">
-        <button className="li" onClick={() => setSub('backups')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>Backups</b><div className="small muted">People asked in order if a task is at risk · standing approval</div></div><span className="chev">›</span></button>
-        <button className="li" onClick={() => setSub('privacy')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>Profile and what friends see</b><div className="small muted">Edit name, city, society, tower and flat; privacy; nearby members (off)</div></div><span className="chev">›</span></button>
-        <button className="li" onClick={() => setSub('helper')}><span className="avatar icon"><Icon name="user" size={20} /></span><div className="grow"><b>Helper and check-ins</b><div className="small muted">Invite, consent, method, food-box code card</div></div><span className="chev">›</span></button>
-        <button className="li" onClick={() => setSub('circle')}><span className="avatar icon"><Icon name="friends" size={20} /></span><div className="grow"><b>Care circle</b><div className="small muted">Co-owners, backup, roles, remove access</div></div><span className="chev">›</span></button>
-        {(role === 'owner' || role === 'co_owner') && <button className="li" onClick={() => setSub('wallet')}><span className="avatar icon"><Icon name="star" size={20} /></span><div className="grow"><b>Wallet and points</b><div className="small muted">Your helper’s points from this home</div></div><span className="chev">›</span></button>}
-        <button className="li" onClick={() => setSub('rights')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>Your data rights</b><div className="small muted">See, correct or delete your data; consents; complaints</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => setSub('backups')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Backups')}</b><div className="small muted">{tr('People asked in order if a task is at risk · standing approval')}</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => setSub('privacy')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Profile and what friends see')}</b><div className="small muted">{tr('Edit name, city, society, tower and flat; privacy; nearby members (off)')}</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => setSub('helper')}><span className="avatar icon"><Icon name="user" size={20} /></span><div className="grow"><b>{tr('Helper and check-ins')}</b><div className="small muted">{tr('Invite, consent, method, food-box code card')}</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => setSub('circle')}><span className="avatar icon"><Icon name="friends" size={20} /></span><div className="grow"><b>{tr('Care circle')}</b><div className="small muted">{tr('Co-owners, backup, roles, remove access')}</div></div><span className="chev">›</span></button>
+        {(role === 'owner' || role === 'co_owner') && <button className="li" onClick={() => setSub('wallet')}><span className="avatar icon"><Icon name="star" size={20} /></span><div className="grow"><b>{tr('Wallet and points')}</b><div className="small muted">{tr('Your helper’s points from this home')}</div></div><span className="chev">›</span></button>}
+        <button className="li" onClick={() => setSub('rights')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Your data rights')}</b><div className="small muted">{tr('See, correct or delete your data; consents; complaints')}</div></div><span className="chev">›</span></button>
       </div>
-      <div className="card"><span className="eyebrow">Consents</span>{me?.consents.map((c, i) => <div key={i} className="row small"><span className="grow">{c.kind} <span className="mono muted">{c.version}</span></span><span className={`tag ${c.granted ? 'flag-on' : 'flag-off'}`}>{c.granted ? 'Given' : 'Not given'}</span></div>)}</div>
-      <button className="btn ghost block" onClick={() => signOut()}>Sign out</button>
-      <button className="btn ghost block" onClick={signOutAll}>Sign out of all devices</button>
+      <div className="card"><span className="eyebrow">{tr('Consents')}</span>{me?.consents.map((c, i) => <div key={i} className="row small"><span className="grow">{c.kind} <span className="mono muted">{c.version}</span></span><span className={`tag ${c.granted ? 'flag-on' : 'flag-off'}`}>{c.granted ? 'Given' : 'Not given'}</span></div>)}</div>
+      <div className="card row"><b className="grow">{tr('Language')}</b><LangSwitch compact /></div>
+        <button className="btn ghost block" onClick={() => signOut()}>{tr('Sign out')}</button>
+      <button className="btn ghost block" onClick={signOutAll}>{tr('Sign out of all devices')}</button>
     </main></>}
-    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} />{l}</button>)}</nav>
+    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} />{tr(l)}</button>)}</nav>
   </div>;
 }
 

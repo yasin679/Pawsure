@@ -3,7 +3,7 @@
  * what the API returns and sends the owner's choices. Visual reference: the updated prototype (Prototype/js/cover.js).
  */
 import { useEffect, useState } from 'react';
-import { api, ApiError, fmt, type Pet } from '../api';
+import { nameError, api, ApiError, fmt, type Pet } from '../api';
 import { AppBar, Banner, Icon } from '../ui';
 import { Sheet } from './Today';
 
@@ -239,7 +239,7 @@ export function BackupsScreen({ hh, onBack, onBuild }: { hh: string; onBack: () 
       <div className="field"><label htmlFor="br">Who are they?</label><select id="br" className="input" value={f.relationship} onChange={e => setF({ ...f, relationship: e.target.value })}>{['Spouse or co-owner', 'Family', 'Neighbour or friend', 'Own paid walker or sitter'].map(o => <option key={o}>{o}</option>)}</select></div>
       <label className="check"><input type="checkbox" checked={f.holdsKey} onChange={e => setF({ ...f, holdsKey: e.target.checked })} /><span>Holds a key</span></label>
       <div className="card flat small">A paid walker or sitter you arrange yourself is labelled <b>owner-arranged, not verified by Pawsure</b>. Pawsure hasn’t checked them.</div>
-      <button className="btn primary block" disabled={!f.name || f.phone.length !== 10} onClick={() => api(`${H}/backups`, { body: { name: f.name, phone: '+91' + f.phone, relationship: f.relationship, holdsKey: f.holdsKey, ownerArranged: f.relationship === 'Own paid walker or sitter' } }).then(() => { setAdd(false); load(); }).catch(e => setErr(errText(e)))}>Add to my backups</button></Sheet>}
+      <button className="btn primary block" disabled={!f.name || f.phone.length !== 10} onClick={() => { const ne = nameError(f.name); if (ne) { setErr(ne); return; } api(`${H}/backups`, { body: { name: f.name, phone: '+91' + f.phone, relationship: f.relationship, holdsKey: f.holdsKey, ownerArranged: f.relationship === 'Own paid walker or sitter' } }).then(() => { setAdd(false); load(); }).catch(e => setErr(errText(e))); }}>Add to my backups</button></Sheet>}
   </main></>;
 }
 

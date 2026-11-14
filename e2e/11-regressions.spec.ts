@@ -45,12 +45,12 @@ test.describe('N. Reported issues (regression)', () => {
   test('N4 A new user who reloads part-way through setup continues setup (no blank screen)', async ({ page }) => {
     await boot(page);
     await signIn(page, '9811777888');
-    await expect(page.getByRole('heading', { name: 'Terms and privacy' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     // simulate the app restarting with the session kept but no household yet
     await page.evaluate(() => { location.hash = 'admin'; });
     await page.getByRole('heading', { name: 'Staff sign-in' }).waitFor();
     await page.evaluate(() => { location.hash = ''; });
-    await expect(page.getByRole('heading', { name: 'Terms and privacy' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.locator('#nm').fill('Kiran'); await fillSociety(page, 'Hiranandani, Powai');

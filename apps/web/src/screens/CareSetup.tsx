@@ -1,7 +1,7 @@
 /** Routine (PS-010/011), health calendar (PS-040/041/046), helper & code card (PS-020–024, PS-109, PS-110), care circle (PS-005). */
 import { useEffect, useState } from 'react';
-import { api, ApiError, fmt, type CodeCardView, type HealthItem, type Helper, type Member, type Pet, type RoutineItem } from '../api';
-import { AppBar, Banner, Icon } from '../ui';
+import { nameError, api, ApiError, fmt, type CodeCardView, type HealthItem, type Helper, type Member, type Pet, type RoutineItem } from '../api';
+import { LanguageOptions, AppBar, Banner, Icon } from '../ui';
 
 const useLoad = <T,>(path: string, deps: unknown[] = []) => {
   const [data, setData] = useState<T | null>(null); const [n, setN] = useState(0);
@@ -98,10 +98,10 @@ export function HelperScreen({ hh, onBack }: { hh: string; onBack: () => void })
     {showInvite ? <div className="card"><h3>Invite a helper</h3>
       <div className="field"><label htmlFor="in">Name</label><input id="in" className="input" value={inv.name} onChange={e => setInv({ ...inv, name: e.target.value })} /></div>
       <div className="field"><label htmlFor="ip">Phone</label><div className="row"><span className="tag">+91</span><input id="ip" className="input mono" inputMode="numeric" maxLength={10} value={inv.phone} onChange={e => setInv({ ...inv, phone: e.target.value })} /></div></div>
-      <div className="field"><label htmlFor="il">Their language</label><select id="il" className="input" value={inv.language} onChange={e => setInv({ ...inv, language: e.target.value })}><option value="mr">मराठी Marathi</option><option value="hi">हिन्दी Hindi</option><option value="en">English</option></select></div>
+      <div className="field"><label htmlFor="il">Their language</label><select id="il" className="input" value={inv.language} onChange={e => setInv({ ...inv, language: e.target.value })}><LanguageOptions forMessages /></select></div>
       <div className="card flat small">Nothing is recorded until they say Yes.</div>
       {err && <span className="errtext" role="alert">{err}</span>}
-      <button className="btn primary block" onClick={async () => { setErr(null); try { await api(`/v1/households/${hh}/helpers/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setShowInvite(false); setMsg('Invitation sent on WhatsApp (simulated).'); reload(); } catch (e) { setErr(errText(e)); } }}>Send WhatsApp invite</button></div>
+      <button className="btn primary block" onClick={async () => { setErr(null); const ne = nameError(inv.name); if (ne) { setErr(ne); return; } try { await api(`/v1/households/${hh}/helpers/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setShowInvite(false); setMsg('Invitation sent on WhatsApp (simulated).'); reload(); } catch (e) { setErr(errText(e)); } }}>Send WhatsApp invite</button></div>
       : <button className="btn block" onClick={() => setShowInvite(true)}><Icon name="plus" size={18} />Invite another helper</button>}
 
     <h2 style={{ fontSize: 'var(--fs-l)' }}>Food-box code card</h2>
@@ -133,7 +133,7 @@ export function CircleScreen({ hh, onBack }: { hh: string; onBack: () => void })
       <div className="field"><label htmlFor="cp">Phone</label><div className="row"><span className="tag">+91</span><input id="cp" className="input mono" inputMode="numeric" maxLength={10} value={inv.phone} onChange={e => setInv({ ...inv, phone: e.target.value })} /></div></div>
       <div className="field"><label htmlFor="cr">Role</label><select id="cr" className="input" value={inv.role} onChange={e => setInv({ ...inv, role: e.target.value })}>{['co_owner', 'backup', 'family', 'viewer'].map(r => <option key={r} value={r}>{R[r]}: {P[r]}</option>)}</select></div>
       {err && <span className="errtext" role="alert">{err}</span>}
-      <button className="btn primary block" onClick={async () => { setErr(null); try { await api(`/v1/households/${hh}/circle/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setShow(false); reload(); } catch (e) { setErr(errText(e)); } }}>Send invite</button></div>}
+      <button className="btn primary block" onClick={async () => { setErr(null); const ne = nameError(inv.name); if (ne) { setErr(ne); return; } try { await api(`/v1/households/${hh}/circle/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setShow(false); reload(); } catch (e) { setErr(errText(e)); } }}>Send invite</button></div>}
     <p className="xs muted">They accept by signing in with their own number.</p>
   </main></>;
 }

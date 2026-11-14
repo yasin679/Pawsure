@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createHash, randomBytes, randomFillSync, timingSafeEqual } from 'node:crypto';
 import { uid, type Db } from '@pawsure/db';
 import { applyReturnCheck, checkCode, generateCard, dueSteps, severityOf, healthState, canOpenLookIn, photoSampleRate, COVERED_DAY_RULE, wallet, expiryFor, rightsDue, type LedgerEntry, type CodeCard, type ReturnAnswers, type Severity, type Resource, type Action, type Role } from '@pawsure/domain';
+import { isPersonName, NAME_MESSAGE, LANG_CODES, msgLang } from '@pawsure/domain';
 import type { Deps } from './app.js';
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit, loadDay, ingestSignal, runEscalations, hashImage } from './care.js';
@@ -179,13 +180,13 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   async function helperSay(hh: string, membershipId: string, template: Parameters<typeof render>[0], vars: Record<string, string> = {}, taskId?: string, buttons?: { id: string; label: string }[]) {
     const m = (await db.query<{ phone_e164: string; invite_language: string | null; language: string }>(`select u.phone_e164, m.invite_language, u.language from memberships m join users u on u.id=m.user_id where m.id=$1`, [membershipId]))[0];
     if (!m) return;
-    const lang = (m.invite_language ?? m.language ?? 'en') as Lang;
+    const lang = msgLang(m.invite_language ?? m.language);
     const body = render(template, lang, vars);
     await A.whatsapp.sendTemplate(m.phone_e164, template, lang, vars);
     await db.query(`insert into helper_messages(id, household_id, membership_id, direction, template, body, task_id, buttons, at) values ($1,$2,$3,'out',$4,$5,$6,$7,$8)`, [uid('hm'), hh, membershipId, template, body, taskId ?? null, buttons ? JSON.stringify(buttons) : null, now().toISOString()]);
   }
   const btn = (k: keyof typeof BUTTONS, lang: Lang, hh: string) => ({ id: `${k}:${hh}`, label: BUTTONS[k]![lang] });
-  const helperLang = async (mid: string) => ((await db.query<{ l: string }>(`select coalesce(m.invite_language, u.language) as l from memberships m join users u on u.id=m.user_id where m.id=$1`, [mid]))[0]?.l ?? 'en') as Lang;
+  const helperLang = async (mid: string): Promise<Lang> => msgLang((await db.query<{ l: string }>(`select coalesce(m.invite_language, u.language) as l from memberships m join users u on u.id=m.user_id where m.id=$1`, [mid]))[0]?.l);
   const consentOf = async (mid: string) => (await db.query<{ granted: boolean; kind: string }>(`select c.granted, c.kind from consent_records c join memberships m on m.user_id=c.user_id and m.household_id=c.household_id where m.id=$1 and c.kind in ('helper_monitoring','helper_withdrawal') order by c.recorded_at desc limit 1`, [mid]))[0];
   async function sendInvite(hh: string, mid: string) {
     const lang = await helperLang(mid);
@@ -205,7 +206,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   });
   app.post('/v1/households/:hh/helpers/invite', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'care_circle', 'create'))) return x.deny(c);
-    const b = z.object({ name: z.string().min(1).max(60), phone: z.string().regex(/^\+91[6-9]\d{9}$/), language: z.enum(['en', 'hi', 'mr']) }).parse(await c.req.json());
+    const b = z.object({ name: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), phone: z.string().regex(/^\+91[6-9]\d{9}$/), language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }) }).parse(await c.req.json());
     let user = (await db.query<{ id: string }>(`select id from users where phone_e164=$1`, [b.phone]))[0];
     if (!user) { user = { id: uid('u') }; await db.query(`insert into users(id, phone_e164, display_name, language) values ($1,$2,$3,$4)`, [user.id, b.phone, b.name, b.language]); }
     const existing = (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and user_id=$2 and role='helper'`, [hh, user.id]))[0];
@@ -503,7 +504,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   });
   app.post('/v1/households/:hh/circle/invite', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'care_circle', 'create'))) return x.deny(c);
-    const b = z.object({ name: z.string().min(1).max(60), phone: z.string().regex(/^\+91[6-9]\d{9}$/), role: z.enum(['co_owner', 'backup', 'family', 'viewer']), addressAuthorised: z.boolean().optional() }).parse(await c.req.json());
+    const b = z.object({ name: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), phone: z.string().regex(/^\+91[6-9]\d{9}$/), role: z.enum(['co_owner', 'backup', 'family', 'viewer']), addressAuthorised: z.boolean().optional() }).parse(await c.req.json());
     let user = (await db.query<{ id: string }>(`select id from users where phone_e164=$1`, [b.phone]))[0];
     if (!user) { user = { id: uid('u') }; await db.query(`insert into users(id, phone_e164, display_name) values ($1,$2,$3)`, [user.id, b.phone, b.name]); }
     const mid = uid('m');

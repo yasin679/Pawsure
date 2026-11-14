@@ -1,4 +1,6 @@
 /** UI kit shared with the prototype's design system (same class names, tokens, icons and mascot crops). */
+import { LANGUAGES } from '@pawsure/domain';
+import { setUiLang, uiLang, t as tr } from './i18n';
 import type { ReactNode } from 'react';
 
 const PATHS: Record<string, string> = {
@@ -45,10 +47,18 @@ const CONF: Record<string, [string, string]> = {
 /** Confidence is never colour-only: glyph + text label always present. */
 export function Conf({ state, label }: { state: string; label?: string }) {
   const [cls, g] = CONF[state] ?? ['c-pending', '○'];
-  return <span className={`conf ${cls}`}><span className="g" aria-hidden="true">{g}</span>{label ?? state}</span>;
+  return <span className={`conf ${cls}`}><span className="g" aria-hidden="true">{g}</span>{tr(label ?? state)}</span>;
 }
 
 export function AppBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }) {
   return <div className="appbar">{onBack && <button className="back" onClick={onBack} aria-label="Back">‹</button>}<h1>{title}</h1>{right}</div>;
 }
 export const Banner = ({ kind, icon, children }: { kind: 'alert' | 'warn' | 'info' | 'sim'; icon: string; children: ReactNode }) => <div className={`banner ${kind}`}><span className="bi" aria-hidden="true">{icon}</span><div className="grow">{children}</div></div>;
+
+/** Every scheduled Indian language plus English. Languages without written messages yet say so. */
+export const LanguageOptions = ({ forMessages }: { forMessages?: boolean }) => <>{LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.native === l.name ? l.name : `${l.native} ${l.name}`}{forMessages && !l.messages ? ' (messages in English for now)' : ''}</option>)}</>;
+
+/** English / हिन्दी switch for the screens. */
+export const LangSwitch = ({ compact }: { compact?: boolean }) => <div className={`langswitch${compact ? ' compact' : ''}`} role="group" aria-label="Screen language">
+  {([['en', 'English'], ['hi', 'हिन्दी']] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={uiLang() === k} onClick={() => setUiLang(k)}>{l}</button>)}
+</div>;

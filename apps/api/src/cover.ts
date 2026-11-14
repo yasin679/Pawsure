@@ -11,6 +11,7 @@ import {
   friendFinderOpen, friendFinderCutoff, notFoundOptions, circleCallDue, checklistReminderDue, preDepartureCheck, planDelay, splitExtension,
   thinCircle, coverMetrics, newRequest, reduce, isCantCome, parseSubstitute, clock, can,
   type CoverConfig, type CoverState, type CoverEvent, type BackupJob, type BackupContact, type Urgency, type CoverTaskView, type OwnerRoutineTask, type ExtensionReply
+  , msgLang
 } from '@pawsure/domain';
 import type { Deps } from './app.js';
 import { audit, loadDay, ingestSignal, materialiseDay, ensureCover, type DayView } from './care.js';
@@ -50,9 +51,9 @@ export function makeCover(d: Deps) {
   const contacts = async (hh: string): Promise<BackupContact[]> => (await backups(hh)).map(b => ({ id: b.id, rank: b.rank, holdsKey: b.holds_key, canGiveMedicine: b.can_give_medicine, ownerArranged: b.owner_arranged, firstTime: !b.cared_before }));
   async function person(hh: string, id: string): Promise<Person | null> {
     const b = (await db.query<Record<string, unknown>>(`select * from backup_contact where id=$1 and household_id=$2`, [id, hh]))[0];
-    if (b) return { id, kind: 'backup', name: b.name as string, first: first(b.name as string), phone: b.phone_e164 as string, lang: b.language as Lang, holdsKey: !!b.holds_key, meds: !!b.can_give_medicine, firstTime: !b.cared_before, ownerArranged: !!b.owner_arranged, relationship: b.relationship as string, userId: (b.user_id as string) ?? null };
+    if (b) return { id, kind: 'backup', name: b.name as string, first: first(b.name as string), phone: b.phone_e164 as string, lang: msgLang(b.language as string), holdsKey: !!b.holds_key, meds: !!b.can_give_medicine, firstTime: !b.cared_before, ownerArranged: !!b.owner_arranged, relationship: b.relationship as string, userId: (b.user_id as string) ?? null };
     const l = (await db.query<Record<string, unknown>>(`select * from task_links where id=$1 and household_id=$2`, [id, hh]))[0];
-    if (l) return { id, kind: l.kind === 'substitute' ? 'substitute' : 'adhoc', name: l.name as string, first: first(l.name as string), phone: l.phone_e164 as string, lang: (l.language as Lang) ?? 'en', holdsKey: false, meds: l.kind === 'adhoc', firstTime: true, ownerArranged: false, relationship: l.kind === 'substitute' ? 'Named by ' + (l.proposed_by_name ?? 'the helper') : 'Asked by the owner for one task', userId: null };
+    if (l) return { id, kind: l.kind === 'substitute' ? 'substitute' : 'adhoc', name: l.name as string, first: first(l.name as string), phone: l.phone_e164 as string, lang: msgLang(l.language as string), holdsKey: false, meds: l.kind === 'adhoc', firstTime: true, ownerArranged: false, relationship: l.kind === 'substitute' ? 'Named by ' + (l.proposed_by_name ?? 'the helper') : 'Asked by the owner for one task', userId: null };
     return null;
   }
   const canDo = (p: Pick<Person, 'meds'>, t: { type: string }) => !isMed(t) || p.meds;
@@ -94,7 +95,7 @@ export function makeCover(d: Deps) {
     await db.query(`insert into cover_messages(id, household_id, person_kind, person_id, direction, template, language, body, gloss, buttons, job_id, at) values ($1,$2,$3,$4,'out',$5,$6,$7,$8,$9,$10,$11)`, [uid('cm'), hh, p.kind, p.id, template, p.lang, body, p.lang === 'en' ? null : gloss, buttons ? JSON.stringify(buttons) : null, jobId ?? null, now().toISOString()]);
   }
   const reply = (hh: string, p: Person, key: string, v: Record<string, string> = {}, jobId?: string | null, buttons?: { id: string; label: string }[]) => sayTo(hh, p, null, renderReply(key, p.lang, v), renderReply(key, 'en', v), buttons, jobId);
-  async function helperOf(mid: string) { return (await db.query<{ phone: string; lang: Lang; name: string; household_id: string; paused: boolean; status: string }>(`select u.phone_e164 as phone, coalesce(m.invite_language, u.language, 'en') as lang, coalesce(m.display_label, u.display_name, 'Helper') as name, m.household_id, m.paused, m.status from memberships m join users u on u.id=m.user_id where m.id=$1`, [mid]))[0]; }
+  async function helperOf(mid: string) { const h = (await db.query<{ phone: string; lang: Lang; name: string; household_id: string; paused: boolean; status: string }>(`select u.phone_e164 as phone, coalesce(m.invite_language, u.language, 'en') as lang, coalesce(m.display_label, u.display_name, 'Helper') as name, m.household_id, m.paused, m.status from memberships m join users u on u.id=m.user_id where m.id=$1`, [mid]))[0]; return h ? { ...h, lang: msgLang(h.lang) } : h; }
   async function helperMsg(hh: string, mid: string, template: string | null, body: string, gloss: string | null, buttons?: { id: string; label: string }[], vars: Record<string, string> = {}) {
     const h = await helperOf(mid); if (!h) return;
     await A.whatsapp.sendTemplate(h.phone, template ?? 'session_reply', h.lang, vars);

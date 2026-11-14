@@ -2,7 +2,7 @@
 import type { Hono, Context } from 'hono';
 import { z } from 'zod';
 import { uid } from '@pawsure/db';
-import { COVER_V1 } from '@pawsure/domain';
+import { COVER_V1, isPersonName, NAME_MESSAGE, LANG_CODES } from '@pawsure/domain';
 import type { Ctx } from './daily.js';
 import type { CoverService } from './cover.js';
 import { audit } from './care.js';
@@ -38,7 +38,7 @@ export function registerCover(app: Hono<Env>, x: Ctx, cover: CoverService) {
   app.post('/v1/households/:hh/cover/jobs/:id/circle', jobAction('circle', z.object({})));
   app.post('/v1/households/:hh/cover/jobs/:id/skip', jobAction('skip', z.object({})));
   app.post('/v1/households/:hh/cover/jobs/:id/move', jobAction('move', z.object({ time: z.number().int().min(0).max(2879) })));
-  app.post('/v1/households/:hh/cover/jobs/:id/ask-someone', jobAction('someone', z.object({ name: z.string().trim().min(1).max(60), phone: PHONE })));
+  app.post('/v1/households/:hh/cover/jobs/:id/ask-someone', jobAction('someone', z.object({ name: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), phone: PHONE })));
   app.post('/v1/households/:hh/cover/jobs/:id/friend-finder', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'create'))) return x.deny(c);
     return send(c, await cover.friendFinderFor(H(c), c.req.param('id'), c.get('userId')));
@@ -91,7 +91,7 @@ export function registerCover(app: Hono<Env>, x: Ctx, cover: CoverService) {
   });
 
   /* ---------- PS-130 backups and settings ---------- */
-  const BackupIn = z.object({ name: z.string().trim().min(1).max(60), phone: PHONE, language: z.enum(['en', 'hi', 'mr']).default('en'), relationship: z.string().trim().min(1).max(60), holdsKey: z.boolean().default(false), canGiveMedicine: z.boolean().default(false), ownerArranged: z.boolean().default(false) });
+  const BackupIn = z.object({ name: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), phone: PHONE, language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }).default('en'), relationship: z.string().trim().min(1).max(60), holdsKey: z.boolean().default(false), canGiveMedicine: z.boolean().default(false), ownerArranged: z.boolean().default(false) });
   app.get('/v1/households/:hh/backups', async (c) => {
     if (!(await x.guard(c, H(c), 'backup_list', 'read'))) return x.deny(c);
     const rows = await cover.backups(H(c)), h = await cover.household(H(c));
@@ -147,7 +147,7 @@ export function registerCover(app: Hono<Env>, x: Ctx, cover: CoverService) {
   /* ---------- PS-140 circle builder ---------- */
   app.post('/v1/households/:hh/circle-builder', async (c) => {
     if (!(await x.guard(c, H(c), 'care_circle', 'create'))) return x.deny(c);
-    const b = z.object({ kind: z.enum(['society_link', 'pet_swap', 'building_helper', 'paid_provider']), name: z.string().max(60).optional(), phone: PHONE.optional() }).parse(await c.req.json());
+    const b = z.object({ kind: z.enum(['society_link', 'pet_swap', 'building_helper', 'paid_provider']), name: z.string().trim().max(60).refine(v => !v || isPersonName(v), NAME_MESSAGE).optional(), phone: PHONE.optional() }).parse(await c.req.json());
     const id = uid('cb'), token = b.kind === 'society_link' ? uid('j').slice(2, 10) : null;
     await db.query(`insert into circle_builder_invite(id, household_id, kind, token) values ($1,$2,$3,$4)`, [id, H(c), b.kind, token]);
     let note = '';

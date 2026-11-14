@@ -5,7 +5,7 @@ test.describe('A. Sign-in and onboarding', () => {
   test('A1 New owner signs up: phone, code, consents, profile, then lands on Today', async ({ page }) => {
     await boot(page);
     await signIn(page, '9811222333');
-    await expect(page.getByRole('heading', { name: 'Terms and privacy' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     await page.getByText('I accept the Terms of Use').click();
     await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();

@@ -7,7 +7,8 @@ import { z } from 'zod';
 import { uid, type Db } from '@pawsure/db';
 import {
   matchFriends, newRequest, reduce, searchBlockedReasons, correctedCriticalFields, parseRequestRules, parseProposedTime, historySummary, petsOf,
-  type FriendProfile, type FriendRequest, type FFEvent, type Effect, type ParsedRequest, type Clarification, type ParseResult, type ParseContext, type FFTask
+  type FriendProfile, type FriendRequest, type FFEvent, type Effect, type ParsedRequest, type Clarification, type ParseResult, type ParseContext, type FFTask,
+  isPersonName, NAME_MESSAGE, LANG_CODES, msgLang
 } from '@pawsure/domain';
 import type { Deps } from './app.js';
 import type { Ctx } from './daily.js';
@@ -60,7 +61,7 @@ export function makeFriendFinder(d: Deps) {
       const windows = (r.windows as [number, number][] | null) ?? [];
       return {
         id: r.friend_user_id as string, userId: r.friend_user_id as string, phone: r.phone_e164 as string, displayName: (r.name as string) ?? 'Friend',
-        distanceBand: band, distanceLabel: BAND_LABEL[band] ?? 'Hidden until they opt in', language: ((r.language as string) ?? 'en') as Lang,
+        distanceBand: band, distanceLabel: BAND_LABEL[band] ?? 'Hidden until they opt in', language: msgLang(r.language as string),
         inviteAccepted: r.status === 'accepted', discoverable: !!r.discoverable, optOutPending: !!r.opt_out_requested_at, blocked: r.status === 'blocked',
         paused: pauseState(r).active, pausedUntil: pauseState(r).until, windows,
         windowsLabel: windows.map(([a, b]) => `${fmt(a)}–${fmt(b)}`).join(', ') || '—', capabilities: (r.capabilities as FriendProfile['capabilities']) ?? {},
@@ -88,10 +89,10 @@ export function makeFriendFinder(d: Deps) {
   }
   async function friendSay(hh: string | null, requestId: string | null, friendUserId: string, body: string, template: string, buttons?: { id: string; label: string }[]) {
     const u = (await db.query<{ phone_e164: string; language: string }>(`select phone_e164, language from users where id=$1`, [friendUserId]))[0]!;
-    await A.whatsapp.sendTemplate(u.phone_e164, template, (u.language ?? 'en') as Lang, { request: requestId ?? '' });
+    await A.whatsapp.sendTemplate(u.phone_e164, template, msgLang(u.language), { request: requestId ?? '' });
     await db.query(`insert into friend_messages(id, request_id, friend_user_id, household_id, direction, template, body, buttons, at) values ($1,$2,$3,$4,'out',$5,$6,$7,$8)`, [uid('fm'), requestId, friendUserId, hh, template, body, buttons ? JSON.stringify(buttons) : null, now().toISOString()]);
   }
-  const langOf = async (userId: string) => ((await db.query<{ language: string }>(`select language from users where id=$1`, [userId]))[0]?.language ?? 'en') as Lang;
+  const langOf = async (userId: string): Promise<Lang> => msgLang((await db.query<{ language: string }>(`select language from users where id=$1`, [userId]))[0]?.language);
 
   async function messageFor(hh: string, row: ReqRow, friendUserId: string) {
     const o = await ownerInfo(hh); const l = await langOf(friendUserId);
@@ -289,12 +290,12 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   app.post('/v1/households/:hh/friends/invite', async (c) => {
     if (!(await x.guard(c, H(c), 'friend_request', 'create'))) return x.deny(c);
     if (await overLimit(H(c), 'friend.invited', x.d.limits?.invitesPerDay ?? 20, 24 * 60)) return c.json({ error: 'rate_limited', note: 'Up to 20 friend invites a day.' }, 429);
-    const b = z.object({ name: z.string().min(1).max(60), phone: z.string().regex(/^\+91[6-9]\d{9}$/), language: z.enum(['en', 'hi', 'mr']) }).parse(await c.req.json());
+    const b = z.object({ name: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), phone: z.string().regex(/^\+91[6-9]\d{9}$/, 'Enter a 10-digit Indian mobile number.'), language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }) }).parse(await c.req.json());
     let u = (await db.query<{ id: string }>(`select id from users where phone_e164=$1`, [b.phone]))[0];
     if (!u) { u = { id: uid('u') }; await db.query(`insert into users(id, phone_e164, display_name, language) values ($1,$2,$3,$4)`, [u.id, b.phone, b.name, b.language]); }
     await db.query(`insert into friend_links(household_id, friend_user_id, status, display_label) values ($1,$2,'invited',$3) on conflict (household_id, friend_user_id) do nothing`, [H(c), u.id, b.name]);
     const o = await ff.ownerInfo(H(c));
-    await ff.friendSay(H(c), null, u.id, `${o.owner.split(' ')[0]} (${o.tower}) ${FRIEND_MSG.invite![b.language]}`, 'FF-INV-1', [{ id: `ff_invite_accept:${H(c)}`, label: 'Set up my profile' }]);
+    await ff.friendSay(H(c), null, u.id, `${o.owner.split(' ')[0]} (${o.tower}) ${FRIEND_MSG.invite![msgLang(b.language)]}`, 'FF-INV-1', [{ id: `ff_invite_accept:${H(c)}`, label: 'Set up my profile' }]);
     await audit(db, c.get('userId'), H(c), 'friend.invited', { note: 'invitation is not discoverability consent' });
     return c.json({ id: u.id }, 201);
   });
@@ -532,7 +533,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   });
   app.put('/v1/me/friend', async (c) => {
     const b = z.object({ discoverable: z.boolean().optional(), paused: z.boolean().optional(), pausedUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), pauseDays: z.number().int().min(1).max(30).optional(), maxPets: z.number().int().min(1).max(4).optional(), species: z.array(z.enum(['Dog', 'Cat', 'Other'])).min(1).optional(),
-      windows: z.array(z.tuple([z.number().int().min(0).max(1440), z.number().int().min(0).max(1440)]).refine(([a, w]) => a !== w, 'A free time needs a different start and end.')).max(4).optional(), capabilities: z.object({ feed: z.boolean(), walk: z.boolean(), meds: z.boolean(), large: z.boolean() }).partial().optional(), keyMode: z.enum(['yes', 'handover', 'no']).optional(), stairsOk: z.boolean().optional(), liveLocationAllowed: z.boolean().optional(), nearbyOptIn: z.boolean().optional(), language: z.enum(['en', 'hi', 'mr']).optional() }).parse(await c.req.json());
+      windows: z.array(z.tuple([z.number().int().min(0).max(1440), z.number().int().min(0).max(1440)]).refine(([a, w]) => a !== w, 'A free time needs a different start and end.')).max(4).optional(), capabilities: z.object({ feed: z.boolean(), walk: z.boolean(), meds: z.boolean(), large: z.boolean() }).partial().optional(), keyMode: z.enum(['yes', 'handover', 'no']).optional(), stairsOk: z.boolean().optional(), liveLocationAllowed: z.boolean().optional(), nearbyOptIn: z.boolean().optional(), language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }).optional() }).parse(await c.req.json());
     const uidv = c.get('userId');
     await db.query(`insert into friend_profiles(user_id) values ($1) on conflict do nothing`, [uidv]);
     const sets: string[] = [], vals: unknown[] = [uidv];

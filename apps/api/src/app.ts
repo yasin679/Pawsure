@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { createHash, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Db } from '@pawsure/db';
 import { uid } from '@pawsure/db';
-import { can, transition, severityOf, dueSteps, type Role, type Resource, type Action, type LifecycleState } from '@pawsure/domain';
+import { LANG_CODES, can, transition, severityOf, dueSteps, INDIA, INDIA_STATES, stateOfCity, isPersonName, hasLetter, NAME_MESSAGE, type Role, type Resource, type Action, type LifecycleState } from '@pawsure/domain';
 import type { Adapters } from './adapters.js';
 import { type Clock, istDate, minutesOnDay } from './clock.js';
 import { audit, loadDay, ingestSignal } from './care.js';
@@ -127,7 +127,7 @@ export function createApp(input: Deps) {
   });
 
   app.post('/v1/consents', async (c) => {
-    const b = z.object({ items: z.array(z.object({ kind: z.string(), version: z.string(), granted: z.boolean() })), language: z.enum(['en', 'hi', 'mr']) }).parse(await c.req.json());
+    const b = z.object({ items: z.array(z.object({ kind: z.string(), version: z.string(), granted: z.boolean() })), language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }) }).parse(await c.req.json());
     if (!b.items.some(i => i.kind === 'terms' && i.granted) || !b.items.some(i => i.kind === 'privacy' && i.granted)) return c.json({ error: 'terms_and_privacy_required' }, 400);
     for (const i of b.items) await db.query(`insert into consent_records(id, user_id, kind, version, language, granted) values ($1,$2,$3,$4,$5,$6)`, [uid('cr'), c.get('userId'), i.kind, i.version, b.language, i.granted]);
     await audit(db, c.get('userId'), null, 'consent.recorded', b);
@@ -136,14 +136,18 @@ export function createApp(input: Deps) {
 
   /* ---------- Societies (PAW-018, PAW-036): a society is a name in a city; same-named societies stay apart ---------- */
   type Soc = { id: string; name: string; area: string | null; city: string; state: string };
+  /** All states and union territories; ?state= gives its cities; ?city= gives that city's listed societies. */
   app.get('/v1/societies', async (c) => {
-    const city = c.req.query('city') ?? '', q = (c.req.query('q') ?? '').trim().toLowerCase();
-    const cities = (await db.query<{ city: string; state: string }>(`select distinct city, state from societies order by city`));
+    const state = c.req.query('state') ?? '', city = c.req.query('city') ?? '', q = (c.req.query('q') ?? '').trim().toLowerCase();
+    const cities = state ? (INDIA[state] ?? []).map(n => ({ city: n, state })) : INDIA_STATES.flatMap(s => INDIA[s]!.map(n => ({ city: n, state: s })));
     const rows = city ? await db.query<Soc>(`select id, name, area, city, state from societies where city=$1 order by name`, [city]) : [];
-    return c.json({ cities, societies: rows.filter(r => !q || `${r.name} ${r.area ?? ''}`.toLowerCase().includes(q)) });
+    return c.json({ states: INDIA_STATES, cities, societies: rows.filter(r => !q || `${r.name} ${r.area ?? ''}`.toLowerCase().includes(q)) });
   });
   /** Resolve what the owner chose: a listed society (verified), or a typed name kept as unverified for ops to check. */
-  const resolveSociety = async (b: { city?: string; societyId?: string; society?: string }) => {
+  const resolveSociety = async (b: { state?: string; city?: string; societyId?: string; society?: string }) => {
+    if (b.state && !INDIA[b.state]) return { error: 'Choose your state from the list.' } as const;
+    const listedIn = b.city ? stateOfCity(b.city) : null;
+    if (b.state && listedIn && listedIn !== b.state && !INDIA[b.state]!.some(x => x.toLowerCase() === b.city!.toLowerCase())) return { error: `${b.city} is in ${listedIn}, not ${b.state}. Check the state.` } as const;
     if (b.societyId) {
       const s = (await db.query<Soc>(`select id, name, area, city, state from societies where id=$1`, [b.societyId]))[0];
       if (!s) return { error: 'Choose a society from the list, or type its name.' } as const;
@@ -151,10 +155,11 @@ export function createApp(input: Deps) {
       return { society: `${s.name}${s.area ? ', ' + s.area : ''}`, city: s.city, state: s.state, societyId: s.id, verified: true } as const;
     }
     if (!b.society || b.society.trim().length < 2) return { error: 'Enter your society name.' } as const;
-    const st = b.city ? (await db.query<{ state: string }>(`select state from societies where city=$1 limit 1`, [b.city]))[0]?.state ?? null : null;
+    if (!hasLetter(b.society)) return { error: 'Enter your society’s name, not just numbers.' } as const;
+    const st = b.state ?? (b.city ? stateOfCity(b.city) : null);
     return { society: b.society.trim(), city: b.city ?? null, state: st, societyId: null, verified: false } as const;
   };
-  const HouseIn = z.object({ displayName: z.string().trim().min(1).max(80), language: z.enum(['en', 'hi', 'mr']), city: z.string().trim().min(2).max(60).optional(), societyId: z.string().max(40).optional(), society: z.string().max(120).optional(), tower: z.string().max(40).optional(), flat: z.string().max(20).optional() });
+  const HouseIn = z.object({ displayName: z.string().trim().max(60).refine(isPersonName, NAME_MESSAGE), language: z.enum(LANG_CODES, { error: 'Choose a language from the list.' }), state: z.string().trim().max(60).optional(), city: z.string().trim().min(2, 'Enter your city.').max(60).refine(hasLetter, 'Enter your city’s name, not numbers.').optional(), societyId: z.string().max(40).optional(), society: z.string().max(120).optional(), tower: z.string().max(40).optional(), flat: z.string().max(20).optional() });
   app.post('/v1/households', async (c) => {
     const b = HouseIn.parse(await c.req.json());
     const soc = await resolveSociety(b); if ('error' in soc) return c.json({ error: 'invalid_society', message: soc.error }, 400);
@@ -185,7 +190,7 @@ export function createApp(input: Deps) {
     const me = (await db.query<{ display_name: string | null; language: string }>(`select display_name, language from users where id=$1`, [c.get('userId')]))[0]!;
     if ((b.displayName != null && b.displayName !== me.display_name) || (b.language && b.language !== me.language)) { await db.query(`update users set display_name=coalesce($2, display_name), language=coalesce($3, language) where id=$1`, [c.get('userId'), b.displayName ?? null, b.language ?? null]); if (b.displayName != null && b.displayName !== me.display_name) changed.push('name'); }
     if (b.societyId || b.society || (b.city && b.city !== cur.city)) {
-      const soc = await resolveSociety({ city: b.city ?? cur.city ?? undefined, societyId: b.societyId, society: b.society ?? (b.city && b.city !== cur.city ? undefined : cur.society) });
+      const soc = await resolveSociety({ state: b.state, city: b.city ?? cur.city ?? undefined, societyId: b.societyId, society: b.society ?? (b.city && b.city !== cur.city ? undefined : cur.society) });
       if ('error' in soc) return c.json({ error: 'invalid_society', message: soc.error }, 400);
       if (soc.society !== cur.society || soc.city !== cur.city || soc.societyId !== cur.society_id) {
         await db.query(`update households set society=$2, city=$3, state=$4, society_id=$5, society_verified=$6 where id=$1`, [hh, soc.society, soc.city, soc.state, soc.societyId, soc.verified]);
@@ -216,7 +221,7 @@ export function createApp(input: Deps) {
   /* ---------- Pets (PS-003, PS-004) ---------- */
   // Essential care and medical details are required ("None" is a valid answer); the rest is optional.
   const need = (max: number, what: string) => z.string().trim().min(1, `${what} is required`).max(max);
-  const PetIn = z.object({ name: need(40, 'Name'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), handling_note: z.string().trim().max(400).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().max(80).optional(), backup_phone: z.string().max(30).optional() });
+  const PetIn = z.object({ name: need(40, 'Name').refine(hasLetter, 'Give your pet a name with letters.'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), handling_note: z.string().trim().max(400).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet').refine(hasLetter, 'Enter your vet’s name.'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().trim().max(80).refine(v => !v || isPersonName(v), NAME_MESSAGE).optional(), backup_phone: z.string().max(30).optional() });
   app.get('/v1/households/:hh/pets', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'pet', 'read'))) return deny(c);
     return c.json(await db.query('select * from pets where household_id=$1 order by name', [hh]));
