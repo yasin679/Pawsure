@@ -757,6 +757,18 @@
       "pre": "Sunita signs in",
       "steps": "1. Wrong society or tower? Tell the owner",
       "expected": "Confirmation shown; owner asked to check; no edit rights for the helper (PAW-019)"
+    },
+    "R7": {
+      "role": "Owner",
+      "pre": "Find cover",
+      "steps": "1. Ask for a 6 PM feed → Find with Pawly\n2. Ask for 10:30 PM → Find with Pawly\n3. Invite a friend",
+      "expected": "Pawly shows its steps, then the friends found; with nobody free, the no-friend page offers another time, any distance, invite and call your backup"
+    },
+    "R8": {
+      "role": "Owner",
+      "pre": "Demo tools switched off",
+      "steps": "1. Sign in",
+      "expected": "No demo bar on any page; tools come back with the Demo tools switch or #tools"
     }
   },
   "defects": [

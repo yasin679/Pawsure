@@ -6,7 +6,9 @@ export const DAY = '2026-11-06';
 export const PHONE = { neha: '9800000021', rohan: '9800000022', priya: '9900000012', arjun: '9800000077', meera: '9700000090', ops: '9811000001', lead: '9811000002', priv: '9811000003', audit: '9811000004' };
 export const SUNITA = '+919000000035';
 
-export async function boot(page: Page, hash = '') {
+/** Opens the demo. Tests switch the demo tools on (clock, simulated phones); real users see them only on request. */
+export async function boot(page: Page, hash = '', opts: { tools?: boolean } = {}) {
+  if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools', '1'); } catch { /* ignore */ } });
   await page.goto('/demo.html' + hash);
   await page.waitForSelector('html[data-demo-ready]', { state: 'attached', timeout: 90_000 });
 }

@@ -23,7 +23,19 @@ let manualDraft: { tasks: FFTask[]; petId: string; petIds?: string[]; time: numb
 
 type View = { k: 'ask' } | { k: 'review'; id: string } | { k: 'manual'; id?: string; reason?: string } | { k: 'suggest'; id: string } | { k: 'approve'; id: string; ids: string[]; mode: 'one' | 'all3' } | { k: 'request'; id: string };
 
-export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void }) {
+/** Pawly: the friendly name for the friend search. It shows its steps while the normal, rules-based search runs. */
+const PAWLY_STEPS = (time: string) => ['Reading your request', `Checking who’s free at ${time}`, 'Matching tasks, pets and keys', 'Picking the closest friends'];
+function PawlyThinking({ step, time }: { step: number; time: string }) {
+  return <><AppBar title="Pawly" /><main className="body pawly-think" aria-live="polite">
+    <div className="pawly-orb" aria-hidden="true"><span>✦</span></div>
+    <h2>Pawly is finding a friend</h2>
+    <ul className="pawly-steps">{PAWLY_STEPS(time).map((t, i) => <li key={t} className={i < step ? 'done' : i === step ? 'now' : ''}><span className="dot">{i < step ? '✓' : ''}</span>{t}</li>)}</ul>
+    <p className="xs muted">Only your own friends. Nothing is sent until you approve.</p>
+  </main></>;
+}
+
+export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onInvite }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void; onInvite?: () => void }) {
+  const [thinking, setThinking] = useState<{ step: number; time: string } | null>(null); const [byPawly, setByPawly] = useState(false);
   const [v, setV] = useState<View>({ k: 'ask' });
   const [reqs, setReqs] = useState<ReqView[]>([]); const [req, setReq] = useState<ReqView | null>(null); const [sr, setSr] = useState<SearchResult | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [approved, setApproved] = useState(false); const [sel, setSel] = useState<string[]>([]);
@@ -38,6 +50,15 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
   useEffect(() => { if (v.k !== 'request') return; const t = setInterval(() => loadReq(v.id), 5000); return () => clearInterval(t); }, [v]);
   const run = async (fn: () => Promise<void>) => { if (busy) return; setErr(null); setDupErr(null); setBusy(true); try { await fn(); } catch (e) { if (e instanceof ApiError && e.body.duplicateOf) setDupErr(String(e.body.duplicateOf)); setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
   const petName = (id: string | null) => pets.find(p => p.id === id)?.name ?? '';
+  /** Run the normal search with Pawly's steps on screen (at least ~2.6 s, so the steps can be read). */
+  const askPawly = (time: number | null | undefined, go: () => Promise<SearchResult>) => run(async () => {
+    const t0 = Date.now(); setThinking({ step: 0, time: time != null ? fmt(time) : 'that time' });
+    const iv = setInterval(() => setThinking(s => s && { ...s, step: Math.min(s.step + 1, 4) }), 650);
+    try {
+      const r = await go(); const wait = 2600 - (Date.now() - t0); if (wait > 0) await new Promise(res => setTimeout(res, wait));
+      setSr(r); setSel([]); setByPawly(true); setV({ k: 'suggest', id: r.request.id });
+    } finally { clearInterval(iv); setThinking(null); }
+  });
   /** PAW-033: every pet on the request. */
   const petIdsOf = (x: { petId: string | null; petIds?: string[] }) => x.petIds?.length ? x.petIds : x.petId ? [x.petId] : [];
   const petNames = (x: { petId: string | null; petIds?: string[] }) => petIdsOf(x).map(petName).join(' and ');
@@ -48,6 +69,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
     const r = new SR(); r.lang = 'en-IN'; r.onresult = (e) => onDraft(e.results[0]![0].transcript); r.start();
   };
 
+  if (thinking) return <PawlyThinking step={thinking.step} time={thinking.time} />;
   if (v.k === 'review' && req) {
     const p = req.parsed;
     const patch = (body: unknown) => run(async () => setReq(await api<ReqView>(`${H}/requests/${req.id}`, { method: 'PATCH', body })));
@@ -65,7 +87,8 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
         <div className="xs muted">{[p.sources.time && 'Time: ' + p.sources.time, p.sources.access && 'Access: ' + p.sources.access, p.sources.pet && 'Pet: ' + p.sources.pet].filter(Boolean).join(' · ')}</div></div>}
       {p?.tasks.includes('meds') && <Banner kind="info" icon="✚">Medicine goes only to friends who chose it, with your written instructions.</Banner>}
       {err && <span className="errtext" role="alert">{err}</span>}
-      <button className="btn primary block" disabled={busy || req.blocked.length > 0} onClick={() => run(async () => { setSr(await api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} })); setSel([]); setV({ k: 'suggest', id: req.id }); })}>Search my friends</button>
+      <button className="btn pawly block lg" disabled={busy || req.blocked.length > 0} onClick={() => askPawly(req.parsed?.time, () => api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} }))}><span aria-hidden="true">✦</span> Find with Pawly</button>
+      <button className="btn ghost block" disabled={busy || req.blocked.length > 0} onClick={() => run(async () => { setSr(await api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} })); setSel([]); setByPawly(false); setV({ k: 'suggest', id: req.id }); })}>Search my friends</button>
       {req.blocked.length > 0 && <p className="xs muted">Search is blocked until the highlighted questions are answered.</p>}
       <button className="btn ghost block" onClick={() => setV({ k: 'manual', id: req.id })}>Use the simple form instead</button>
     </main></>;
@@ -79,27 +102,34 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened }: {
       <div className="field"><label htmlFor="mt">Time</label><select id="mt" className="input" value={manual.time} onChange={e => { const val = Number(e.target.value); setManual(m => ({ ...m, time: val })); }}>{Array.from({ length: 34 }, (_, i) => 420 + i * 30).map(m => <option key={m} value={m}>{fmt(m)}</option>)}</select></div></div>
     <div className="field"><label htmlFor="mk">Key needed?</label><select id="mk" className="input" value={manual.access} onChange={e => { const val = e.target.value; setManual(m => ({ ...m, access: val })); }}><option value="Key handover">Yes, key handover</option><option value="Someone at home">No, someone is home</option></select></div>
     {err && <span className="errtext" role="alert">{err}</span>}
-    <button className="btn primary block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; setSr(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} })); setSel([]); setV({ k: 'suggest', id: r.id }); })}>Search my friends</button>
+    <button className="btn pawly block lg" disabled={busy || !manual.tasks.length} onClick={() => askPawly(manual.time, async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; return api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} }); })}><span aria-hidden="true">✦</span> Find with Pawly</button>
+    <button className="btn ghost block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; setSr(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} })); setSel([]); setByPawly(false); setV({ k: 'suggest', id: r.id }); })}>Search my friends</button>
   </main></>;
 
   if (v.k === 'suggest' && sr) {
     const ex = Object.entries(sr.excludedCounts), nEx = ex.reduce((a, [, n]) => a + n, 0);
-    if (!sr.top.length) return <><AppBar title="No friend is free" onBack={() => setV({ k: 'ask' })} /><main className="body">
-      <div className="card flat small">{summary(sr.request)}</div>
-      <div className="empty"><Art name="box" width={140} /><b>None of your friends can do this right now.</b><span>We won’t guess or contact anyone you haven’t chosen.</span></div>
-      {nEx > 0 && <details className="card flat small"><summary><b>{nEx} friends not shown</b>, why</summary>{ex.map(([k, n]) => <div key={k}>{n} · {k}</div>)}<div className="xs muted">Declining never counts against anyone.</div></details>}
-      <div className="card"><span className="eyebrow">Safe next steps</span><div className="stack">
-        <button className="btn" onClick={() => setV({ k: 'review', id: sr.request.id })}>Try a different time</button>
-        <button className="btn" onClick={() => run(async () => { await api(`${H}/requests/${sr.request.id}`, { method: 'PATCH', body: { maxBand: 3 } }); setSr(await api<SearchResult>(`${H}/requests/${sr.request.id}/search`, { body: {} })); })}>Widen to any distance</button>
-        <a className="btn" href={`tel:${pets[0]?.backup_phone?.replace(/\s/g, '') ?? ''}`}>Call your backup</a></div></div>
+    if (!sr.top.length) return <><AppBar title="No friend free" onBack={() => setV({ k: 'ask' })} /><main className="body">
+      <div className="nofriend">
+        <img src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={150} height={146} alt="" />
+        <h2>No friend is free right now</h2>
+        <p className="muted">{byPawly ? 'Pawly checked all your friends.' : 'We checked all your friends.'} None of them can do this one: {summary(sr.request)}.</p>
+      </div>
+      <div className="list">
+        <button className="li" onClick={() => setV({ k: 'review', id: sr.request.id })}><span className="avatar icon"><Icon name="list" size={20} /></span><div className="grow"><b>Try another time</b><div className="small muted">Someone may be free a little later</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => askPawly(sr.request.parsed?.time, async () => { await api(`${H}/requests/${sr.request.id}`, { method: 'PATCH', body: { maxBand: 3 } }); return api<SearchResult>(`${H}/requests/${sr.request.id}/search`, { body: {} }); })}><span className="avatar icon"><Icon name="search" size={20} /></span><div className="grow"><b>Search any distance</b><div className="small muted">Include friends further away</div></div><span className="chev">›</span></button>
+        {onInvite && <button className="li" onClick={onInvite}><span className="avatar icon"><Icon name="friends" size={20} /></span><div className="grow"><b>Invite a friend</b><div className="small muted">More friends, more chances next time</div></div><span className="chev">›</span></button>}
+        <a className="li" href={`tel:${pets[0]?.backup_phone?.replace(/\s/g, '') ?? ''}`}><span className="avatar icon"><Icon name="phone" size={20} /></span><div className="grow"><b>Call your backup</b><div className="small muted">{pets[0]?.backup_name ?? 'Your backup'}</div></div><span className="chev">›</span></a>
+      </div>
+      {nEx > 0 && <details className="card flat small"><summary><b>Why {nEx} friends weren’t suggested</b></summary>{ex.map(([k, n]) => <div key={k}>{n} · {k}</div>)}<div className="xs muted">Declining never counts against anyone.</div></details>}
       <div className="card flat"><div className="row"><b className="grow">Nearby ID-checked members</b><span className="tag flag-off">Switch OFF</span></div><div className="xs muted">{sr.nearbyFallback.reason}</div></div>
-      <p className="xs muted">{sr.laterOptions}</p></main></>;
+    </main></>;
     return <><AppBar title="Suggestions" onBack={() => setV({ k: 'review', id: sr.request.id })} /><main className="body">
-      <div className="card flat small"><b>{summary(sr.request)}</b> · {sr.request.parsed?.access}<br /><span className="xs muted">Your own friends only. Nearest first. No paid placement, ever.</span></div>
+      {byPawly && <div className="pawly-found"><span aria-hidden="true">✦</span> Pawly found {sr.top.length} {sr.top.length === 1 ? 'friend' : 'friends'} who can help</div>}
+      <div className="card flat small"><b>{summary(sr.request)}</b> · {sr.request.parsed?.access}<br /><span className="xs muted">Your own friends only. Nearest first.</span></div>
       {sr.request.duplicateOf && <Banner kind="warn" icon="!"><b>You already have a request out to friends for this.</b> Same pet, about the same time. <button className="btn sm" onClick={() => setV({ k: 'request', id: sr.request.duplicateOf! })}>Open it</button></Banner>}
       {sr.top.map((t, i) => <div key={t.id} className="card"><div className="row"><span className="avatar">{t.name[0]}</span><div className="grow"><b>{i + 1}. {t.name}</b><div className="small muted">{t.distance} · {({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</div></div>
         <label className="check" style={{ padding: 0 }}><input type="checkbox" aria-label={'Select ' + t.name} checked={sel.includes(t.id)} onChange={e => { const on = e.target.checked; setSel(s => on ? [...s, t.id] : s.filter(x => x !== t.id)); }} /></label></div>
-        <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{t.reasons.map(r => <li key={r}>{r}</li>)}</ul>
+        <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{t.reasons.slice(0, 3).map(r => <li key={r}>{r}</li>)}</ul>
         <button className="btn sm primary" onClick={() => { setApproved(false); setV({ k: 'approve', id: sr.request.id, ids: [t.id], mode: 'one' }); }}>Ask {t.name.split(' ')[0]}</button></div>)}
       {nEx > 0 && <details className="card flat small"><summary><b>{nEx} friends not shown</b>, why</summary>{ex.map(([k, n]) => <div key={k}>{n} · {k}</div>)}<div className="xs muted">Declining never counts against anyone.</div></details>}
       {sr.top.length > 1 && <button className="btn dark block" onClick={() => { setApproved(false); setV({ k: 'approve', id: sr.request.id, ids: sel.length > 1 ? sel : sr.top.map(t => t.id), mode: 'all3' }); }}>Ask {sel.length > 1 ? `these ${sel.length}` : `all ${sr.top.length}`}</button>}

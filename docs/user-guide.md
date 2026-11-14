@@ -424,6 +424,10 @@ Medicine requests only go to friends who chose *Medicines*, and they get your wr
 
 ### 6.3 Suggestions
 
+**Find with Pawly** runs the search with its steps on screen: reading your request, checking who is free, matching tasks, pets and keys, and picking the closest friends. Pawly is the friendly name for Pawsure’s friend search; it follows the same rules as **Search my friends** and sends nothing until you approve.
+
+If nobody is free, the **No friend is free right now** page offers: try another time, search any distance, invite a friend, or call your backup.
+
 ![Figure 32: Suggestions](images/32-suggestions.jpg)
 
 | # | Item | What it does |
@@ -686,4 +690,4 @@ The shared demo runs the whole app in your browser with the demo household; noth
 | Arjun (friend, Hindi) | 98000 00077 |
 | Meera (friend, Marathi) | 97000 00090 |
 
-The demo bar at the top lets you move the clock forward (**+5m**, **+15m**, **+1h**), open **Sunita’s phone** or the **friends’ phones** to reply as them, open the **Ops console**, and simulate AI being slow or unavailable.
+The demo tools are hidden so the app looks like the real thing. On a laptop, tap **Demo tools** at the bottom left of the page (on a phone, add **#tools** to the address). A bar then appears at the top: move the clock forward (**+5m**, **+15m**, **+1h**), open **Sunita’s phone**, the **friends’ phones** or the **backups’ phones** to reply as them, or open the **Ops console**. Tap **Hide demo tools** to hide it again.

@@ -253,10 +253,9 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     expect(((await card.innerText()).match(/Planned/g) ?? []).length).toBeLessThanOrEqual(1);
     await expect(card.locator('.coverline')).toContainText('Sunita · assigned');
   });
-  test('P4 The request label and the demo parser switch say the same thing (no AI connected)', async ({ page }) => {
+  test('P4 The request label says rules (no AI connected); the demo bar has no parser or scenario menus', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await expect(page.locator('.demobar select[data-parser]')).toHaveValue('ok');
-    await expect(page.locator('.demobar select[data-parser] option:checked')).toHaveText('rules (no AI connected)');
+    await expect(page.locator('.demobar select')).toHaveCount(0);
     const r = (await api(page, 'POST', `${HH}/requests`, { text: 'Can someone feed Bruno at 6 pm?' })).body;
     expect(r.parsedBy).toBe('rules (no AI connected)');
   });
@@ -287,7 +286,7 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     };
     for (let i = 1; i <= 14; i++) {
       await boot(page); await signInOwner(page);
-      await page.getByLabel('Load a v1.4 scenario').selectOption(`O${i}`);
+      await page.evaluate(id => (window as unknown as { pawsureDemo: { preset(id: string): Promise<void> } }).pawsureDemo.preset(id), `O${i}`);
       await expect(page.getByRole('status').filter({ hasText: `O${i} ` })).toBeVisible();
       if (expectations[`O${i}`]) await expectations[`O${i}`]!(page);
     }

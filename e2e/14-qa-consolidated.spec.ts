@@ -104,6 +104,35 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     expect((await api<{ state: string }>(page, 'GET', `/v1/households/hh_demo/requests/${id}`)).body.state).toBe('Interrupted');
   });
 
+  test('R7 Pawly finds friends with its steps on screen; with nobody free it shows the no-friend page', async ({ page }) => {
+    await signInOwner(page);
+    await tab(page, 'Find cover');
+    await page.locator('#ask').fill('Can someone feed Bruno at 6 pm? Spare key with Ankita.');
+    await page.getByRole('button', { name: 'Understand my request' }).click();
+    await page.getByRole('button', { name: /Find with Pawly/ }).click();
+    await expect(page.getByRole('heading', { name: 'Pawly is finding a friend' })).toBeVisible();
+    await expect(page.getByText(/Pawly found \d friends? who can help/)).toBeVisible();
+    await page.locator('.appbar').getByRole('button', { name: 'Back' }).click();
+    await page.locator('.appbar').getByRole('button', { name: 'Back' }).click();
+    await page.locator('#ask').fill('Can someone feed Bruno at 10:30 pm?');
+    await page.getByRole('button', { name: 'Understand my request' }).click();
+    await page.getByRole('button', { name: /Find with Pawly/ }).click();
+    await expect(page.getByRole('heading', { name: 'No friend is free right now' })).toBeVisible();
+    await expect(page.getByText('Pawly checked all your friends.', { exact: false })).toBeVisible();
+    await page.getByRole('button', { name: /Invite a friend/ }).click();
+    await expect(page.getByRole('heading', { name: 'Friends' })).toBeVisible();
+  });
+
+  test('R8 The demo tools are hidden unless switched on', async ({ page }) => {
+    const fresh = await page.context().newPage(); // the shared setup switched the tools on for the first page
+    await boot(fresh, '', { tools: false });
+    await fresh.evaluate(() => localStorage.removeItem('pawsure.demoTools'));
+    await fresh.reload(); await fresh.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await signInOwner(fresh);
+    await expect(fresh.locator('.demobar')).toHaveCount(0);
+    await expect(fresh.getByText('9:00 AM')).toHaveCount(0);
+  });
+
   test('R6 PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong', async ({ page }) => {
     await signIn(page, '9000000035');
     await expect(page.getByRole('heading', { name: /Hello Sunita/ })).toBeVisible();

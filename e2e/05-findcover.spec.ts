@@ -88,7 +88,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
   });
 
   test('G5 AI unavailable → simple form; matching still works', async ({ page }) => {
-    await page.locator('.demobar select[data-parser]').selectOption('down');
+    await api(page, 'POST', '/demo/llm', { mode: 'down' });
     await tab(page, 'Find cover');
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
@@ -100,7 +100,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
   });
 
   test('G6 AI times out (8 s) → simple form', async ({ page }) => {
-    await page.locator('.demobar select[data-parser]').selectOption('timeout');
+    await api(page, 'POST', '/demo/llm', { mode: 'timeout' });
     await tab(page, 'Find cover');
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
@@ -110,7 +110,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
   test('G7 No friend free (10:30 PM) → honest empty result; nearby members stay switched off', async ({ page }) => {
     await ask(page, 'Can someone feed Bruno at 10:30 pm?');
     await page.getByRole('button', { name: 'Search my friends' }).click();
-    await expect(page.getByText('None of your friends can do this right now.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No friend is free right now' })).toBeVisible();
     await expect(page.locator('.card', { hasText: 'Nearby ID-checked members' })).toContainText('Switch OFF');
   });
 

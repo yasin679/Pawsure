@@ -75,7 +75,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         : d.backAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>I’m delayed</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>I’m back</button></div></div>
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">Quick return check (10 s)</b><button className="btn primary sm" onClick={() => setSheet('return')}>Start</button></div></div> : null}
 
-      <div className="row wrap"><h2 className="grow" style={{ fontSize: 'var(--fs-l)', whiteSpace: 'nowrap' }}>Plan & evidence</h2>
+      <h2 style={{ fontSize: 'var(--fs-l)', margin: '4px 0 -6px' }}>Plan & evidence</h2><div className="row wrap" style={{ gap: 4 }}>
         {onEditRoutine && <button className="btn ghost sm" onClick={onEditRoutine}>Edit routine</button>}
         <button className="btn ghost sm" onClick={() => run(async () => { setTimeline(await api<TimelineItem[]>(`${H}/day/timeline`)); setSheet('timeline'); }, () => {})}>Timeline</button>
         <button className="btn ghost sm" onClick={() => run(async () => { setReport(await api<DayReport>(`${H}/day/report`)); setSheet('report'); }, () => {})}>Day report</button></div>

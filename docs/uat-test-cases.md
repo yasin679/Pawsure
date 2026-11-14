@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 123 acceptance test cases with steps, expected results and the latest result
+subtitle: 125 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 15 Nov 2026, 00:47 IST |
-| Result | **123 of 123 passed** |
+| Latest run | 15 Nov 2026, 01:27 IST |
+| Result | **125 of 125 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -212,7 +212,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | P1 | M | A friend’s Yes before the cutoff can still be confirmed after it; new requests are blocked at the cutoff | 1. Priya says Yes at 4:28<br>2. Owner confirms at 4:35<br>3. Owner tries a new request at 4:35 | Confirm works; the new request is blocked with “Too close to the task for Friend Finder” | Pass |
 | P2 | M | Alert text uses the past tense once the backup step has happened | 1. Advance to 4:30 PM | Alert says “Your backup was alerted at 2:00 PM.” | Pass |
 | P3 | M | “Planned” appears once on a task card | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
-| P4 | M | The request label and the demo parser switch say the same thing (no AI connected) | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
+| P4 | M | The request label says rules (no AI connected); the demo bar has no parser or scenario menus | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
 | P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the app (Log in or create an account) | The mascot is a transparent image with no beige box | Pass |
 | P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
 | P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
@@ -237,6 +237,8 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | R4 | M | PAW-026/033 a two-pet request: both pets ticked, summary names both; capacity and overnight hours in settings | 1. Priya sets 2 pets, tries 9 PM–6 AM<br>2. Owner: Simple form, Feed, tick Misty too → Search | Overnight end shows (next day); suggestion names Bruno and Misty and says 2 pets at once (PAW-026, PAW-033, R-13) | Pass |
 | R5 | M | PAW-041/056 Priya says she is running late, then has an emergency after feeding: the owner sees both | 1. Running late 20 min<br>2. I’ve arrived<br>3. Emergency, tick Fed → Send<br>4. Owner opens the request | Owner told about the delay; the visit is Interrupted with Feed finished; backups asked (PAW-041, PAW-056, PAW-060) | Pass |
 | R6 | M | PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong | 1. Wrong society or tower? Tell the owner | Confirmation shown; owner asked to check; no edit rights for the helper (PAW-019) | Pass |
+| R7 | M | Pawly finds friends with its steps on screen; with nobody free it shows the no-friend page | 1. Ask for a 6 PM feed → Find with Pawly<br>2. Ask for 10:30 PM → Find with Pawly<br>3. Invite a friend | Pawly shows its steps, then the friends found; with nobody free, the no-friend page offers another time, any distance, invite and call your backup | Pass |
+| R8 | M | The demo tools are hidden unless switched on | 1. Sign in | No demo bar on any page; tools come back with the Demo tools switch or #tools | Pass |
 
 ## 20 Sign-off
 

@@ -247,7 +247,7 @@ Errors are JSON `{ error, note? }`: 400 invalid input, 401 no session, 403 not a
 | Rules (`packages/domain/test`) | 151 | Evidence, escalation, covered day, emergency, lifecycle, rewards, ledger, Friend Finder (with the v1.4 cutoff), cohort, cover continuity (state machine with property tests, reminders, at risk, backup runner, urgency, pre-departure, delay, permissions, metrics) |
 | Database | 4 | Migrations, append-only, idempotency, multi-household helper |
 | API, security, login isolation, acceptance, regressions, cover continuity, QA trackers (13 and 14 Nov, with a 7-day clock run) | 202 | Every flow end to end at the API, all 24 mandatory P0 scenarios, red-team and per-login data access |
-| End-to-end browser (Playwright, Chrome) | 123 | Every screen and login type against the demo build, the 14 new v1.4 scenarios and the six demo fixes |
+| End-to-end browser (Playwright, Chrome) | 125 | Every screen and login type against the demo build, the 14 new v1.4 scenarios and the six demo fixes |
 
 Results and evidence: UAT Test Cases (PS-UAT-06) and Test Evidence (PS-TE-08).
 

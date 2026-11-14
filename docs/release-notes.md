@@ -18,7 +18,7 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | Source of truth | PRD v1.4, sections 7.7, 9.6, 8.8 (PS-127 to PS-141), 9.5, 10.4, 16.3, 17.1, Appendix F |
 | Repository | github.com/yasin679/Pawsure |
 | Database | Migration `006_cover_continuity.sql` (adds tables and columns only), with a rollback script |
-| Tests | 357 API, rules and database tests (211 in 1.0.1); 123 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
+| Tests | 357 API, rules and database tests (211 in 1.0.1); 125 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
 
 ## 2 What’s new: cover continuity
 
@@ -113,6 +113,8 @@ From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and a
 - **Splash:** sage gradient with the Pawsure paw mark, shown for at least 1.5 seconds.
 - **Sign-in:** opens straight on **Log in or create an account**: mascot, mark, one line, the number and **Send code**. Demo numbers sit behind **Try a demo number**.
 - **Phone frame:** on a laptop or tablet the app shows inside a phone with a status bar; on a phone it fills the screen.
+- **Pawly:** **Find with Pawly** shows the friend search step by step, then how many friends were found. A new **No friend is free right now** page offers another time, any distance, invite a friend and call your backup.
+- **Demo tools hidden:** the dark demo bar no longer shows on every page. A small **Demo tools** switch beside the phone (or **#tools** in the address) brings it back. The scenario and request-parser menus are gone.
 - **Plainer words:** long explanations cut to one short line, and the long dashes replaced with commas, in the app and in the WhatsApp and SMS messages.
 
 ## 4 Upgrade notes

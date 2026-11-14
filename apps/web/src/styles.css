@@ -179,7 +179,7 @@ textarea.input{min-height:88px;resize:vertical}
 .input.err{border-color:var(--alert)}
 .errtext{color:var(--alert);font-size:var(--fs-s);font-weight:700}
 .check{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
-.check input{width:20px;height:20px;margin-top:2px;accent-color:#E0A800;flex:none}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
 /* toggle: yellow track, white knob (board 05) */
 .switch{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0}
 .switch input{appearance:none;width:48px;height:28px;border-radius:var(--r-pill);background:var(--line);border:1.5px solid var(--line-2);position:relative;flex:none;cursor:pointer;transition:background .15s}
@@ -442,3 +442,37 @@ body{background:var(--stage)}
   #root > .pwa:has(.simdock){margin-left:calc(50% - 470px)}
   #root > .pwa:has(.simdock) > .simdock{top:18px;max-height:calc(100vh - 36px)}
 }
+
+/* ---------- Pawly: the friend search, shown with its steps ---------- */
+.btn.pawly{background:linear-gradient(135deg,#CC7655,#B65A3C);color:#fff;border:0;box-shadow:0 8px 18px -10px rgba(182,90,60,.8)}
+.btn.pawly:hover{filter:brightness(1.05)}
+.btn.pawly span{font-size:1.1em}
+.pawly-think{align-items:center;justify-content:center;text-align:center;gap:16px}
+.pawly-think h2{margin:0}
+.pawly-orb{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:42px;background:radial-gradient(circle at 35% 30%,#F2C14E,#CC7655 55%,#9C4A30);box-shadow:0 0 0 0 rgba(204,118,85,.45);animation:orb 1.6s ease-out infinite}
+.pawly-orb span{animation:spin 3s linear infinite;display:inline-block}
+@keyframes orb{0%{box-shadow:0 0 0 0 rgba(204,118,85,.45)}100%{box-shadow:0 0 0 26px rgba(204,118,85,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pawly-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;max-width:290px}
+.pawly-steps li{display:flex;align-items:center;gap:10px;color:var(--ink-3);font-weight:700;transition:color .3s}
+.pawly-steps li .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);display:grid;place-items:center;font-size:.75rem;color:#fff;flex:none}
+.pawly-steps li.now{color:var(--ink)}
+.pawly-steps li.now .dot{border-color:#CC7655;border-top-color:transparent;animation:spin .8s linear infinite}
+.pawly-steps li.done{color:var(--ink)}
+.pawly-steps li.done .dot{background:var(--sage);border-color:var(--sage)}
+.pawly-found{display:flex;align-items:center;gap:8px;background:#F7E3D9;color:#8E4128;font-weight:800;border-radius:16px;padding:10px 14px}
+.nofriend{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px 4px}
+.nofriend img{opacity:.9;filter:saturate(.75)}
+.nofriend h2{margin:6px 0 0}
+.nofriend p{margin:0}
+@media (prefers-reduced-motion:reduce){.pawly-orb,.pawly-orb span,.pawly-steps li.now .dot{animation:none}}
+
+/* ---------- Demo tools: hidden unless switched on ---------- */
+.demo-toggle{position:fixed;left:16px;bottom:16px;z-index:40;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-3);border-radius:99px;padding:6px 12px;font:700 12px/1 var(--f-body);opacity:.75}
+.demo-toggle:hover{opacity:1}
+@media (max-width:599px),(max-height:639px){.demo-toggle{display:none}}
+
+a.li{color:inherit;text-decoration:none}
+fieldset.field{border:0;padding:0;margin:0;min-width:0}
+fieldset.field legend{font-weight:700;font-size:var(--fs-s);padding:0;margin-bottom:4px}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
