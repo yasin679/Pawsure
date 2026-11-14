@@ -25,7 +25,7 @@ OUT = DOCS / "pdf"
 PRODUCT = "Pawsure"
 VERSION = "1.1.0"
 DATE = "13-Nov-2026"
-AUTHOR = "Yasin Jariwala"
+AUTHOR = "BYOP Group G"
 CLASSIFICATION = "Internal — pilot"
 REPO = "github.com/yasin679/Pawsure"
 
@@ -44,7 +44,7 @@ HISTORY = [("1.0", "10-Nov-2026", AUTHOR, "First release: P0 pilot build (phases
            ("1.1.0", DATE, AUTHOR, "Cover continuity (PRD v1.4, PS-127 to PS-141) and six fixes from demo testing")]
 
 FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">'
-MERMAID = '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{fontFamily:"Nunito, sans-serif",primaryColor:"#FFF1BC",primaryBorderColor:"#20201D",primaryTextColor:"#20201D",lineColor:"#47463E",secondaryColor:"#F4EED8",tertiaryColor:"#FFFDF0"}});</script>'
+MERMAID = '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{fontFamily:"Nunito, sans-serif",primaryColor:"#E5ECD9",primaryBorderColor:"#263027",primaryTextColor:"#263027",lineColor:"#4A5248",secondaryColor:"#F1ECDD",tertiaryColor:"#FBF8EF"}});</script>'
 CALLOUT_TITLES = {"NOTE": "Note", "TIP": "Tip", "IMPORTANT": "Important", "WARNING": "Warning", "CAUTION": "Caution"}
 # Phone screenshots are tall: show them narrower than wide (console) screenshots.
 PHONE_W, WIDE_W = 46, 100
@@ -136,7 +136,7 @@ def related_rows(current_id):
 
 CSS = """
 @page { size: A4; }
-:root { --ink:#20201D; --ink2:#47463E; --ink3:#6E6A57; --line:#E9E2C7; --line2:#CFC8AC; --cream:#FFFDF0; --beige:#F4EED8; --yellow:#FFC400; --ysoft:#FFF1BC;
+:root { --ink:#263027; --ink2:#4A5248; --ink3:#737A6E; --line:#E6E0CE; --line2:#D3CCB6; --cream:#FBF8EF; --beige:#F1ECDD; --yellow:#6F8F4E; --ysoft:#E5ECD9;
   --marigold:#A84C08; --msoft:#FFE6D0; --alert:#B3261E; --asoft:#FBE1DC; --info:#2D5B87; --isoft:#E3EDF7; --ok:#2B7034; --oksoft:#E2F2E2; }
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -199,32 +199,29 @@ COVER_CSS = """
 @page { size: A4; margin: 0; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; font-family: "Nunito", sans-serif; }
-.cover { width: 210mm; height: 296.5mm; background: #FFFDF0; color: #20201D; position: relative; overflow: hidden; }
-.cover .band { position: absolute; left: 0; right: 0; top: 0; height: 92mm; background: #FFC400; border-bottom: 1.4mm solid #20201D; }
-.cover .blob { position: absolute; right: -30mm; top: 40mm; width: 120mm; height: 120mm; border-radius: 50%; background: #FFF1BC; border: 1.2mm solid #20201D; }
-.cover .art { position: absolute; right: 18mm; top: 46mm; width: 86mm; height: 84mm; background-repeat: no-repeat; background-color: #fff; border: 1.2mm solid #20201D; border-radius: 9mm; box-shadow: 2.5mm 2.5mm 0 #20201D; }
+.cover { width: 210mm; height: 296.5mm; background: #FBF8EF; color: #263027; position: relative; overflow: hidden; }
+.cover .band { position: absolute; left: 0; right: 0; top: 0; height: 92mm; background: linear-gradient(180deg,#587539,#6F8F4E); border-radius: 0 0 18mm 18mm; }
+.cover .blob { position: absolute; right: -30mm; top: 40mm; width: 120mm; height: 120mm; border-radius: 50%; background: #E5ECD9; }
+.cover .art { position: absolute; right: 18mm; top: 42mm; width: 92mm; height: 90mm; background-repeat: no-repeat; background-position: center; background-size: contain; }
 .cover .brand { position: absolute; left: 20mm; top: 22mm; display: flex; gap: 4mm; align-items: center; }
-.cover .mark { width: 15mm; height: 15mm; border-radius: 4.5mm; background: #20201D; display: grid; place-items: center; }
-.cover .brand b { display: block; font: 800 24pt/1 "Baloo 2", sans-serif; }
-.cover .brand small { display: block; font-size: 9pt; font-weight: 700; margin-top: 1mm; color: #47463E; }
+.cover .mark { width: 15mm; height: 15mm; border-radius: 50%; background: #FBF8EF; display: grid; place-items: center; }
+.cover .brand b { display: block; font: 800 24pt/1 "Baloo 2", sans-serif; color: #FBF8EF; }
+.cover .brand small { display: block; font-size: 9pt; font-weight: 700; margin-top: 1mm; color: #E5ECD9; }
 .cover .titles { position: absolute; left: 20mm; right: 22mm; top: 146mm; }
-.cover .eyebrow { display: inline-block; background: #20201D; color: #FFC400; letter-spacing: .14em; font-size: 8.5pt; font-weight: 800; text-transform: uppercase; padding: 1.4mm 3.2mm; border-radius: 10mm; margin-bottom: 6mm; }
+.cover .eyebrow { display: inline-block; background: #E5ECD9; color: #587539; letter-spacing: .14em; font-size: 8.5pt; font-weight: 800; text-transform: uppercase; padding: 1.4mm 3.2mm; border-radius: 10mm; margin-bottom: 6mm; }
 .cover h1 { font: 800 38pt/1.02 "Baloo 2", sans-serif; margin: 0 0 5mm; }
-.cover .sub { font-size: 13.5pt; color: #47463E; line-height: 1.45; max-width: 150mm; font-weight: 600; }
-.cover .meta { position: absolute; left: 20mm; right: 20mm; bottom: 34mm; border-left: 2.2mm solid #FFC400; padding: 1mm 0 1mm 6mm; font-size: 9.5pt; color: #47463E; line-height: 1.8; }
-.cover .meta b { color: #20201D; }
-.cover .foot { position: absolute; left: 20mm; right: 20mm; bottom: 14mm; display: flex; justify-content: space-between; font-size: 8pt; color: #6E6A57; border-top: .4mm solid #CFC8AC; padding-top: 3mm; font-weight: 700; }
+.cover .sub { font-size: 13.5pt; color: #4A5248; line-height: 1.45; max-width: 150mm; font-weight: 600; }
+.cover .meta { position: absolute; left: 20mm; right: 20mm; bottom: 34mm; border-left: 2.2mm solid #6F8F4E; padding: 1mm 0 1mm 6mm; font-size: 9.5pt; color: #4A5248; line-height: 1.8; }
+.cover .meta b { color: #263027; }
+.cover .foot { position: absolute; left: 20mm; right: 20mm; bottom: 14mm; display: flex; justify-content: space-between; font-size: 8pt; color: #737A6E; border-top: .4mm solid #D3CCB6; padding-top: 3mm; font-weight: 700; }
 """
-PAW = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFC400" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="15.5" rx="4.2" ry="3.6"/><circle cx="6.2" cy="10.6" r="1.8"/><circle cx="9.6" cy="6.6" r="1.9"/><circle cx="14.4" cy="6.6" r="1.9"/><circle cx="17.8" cy="10.6" r="1.8"/></svg>'
+PAW = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#587539" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="15.5" rx="4.2" ry="3.6"/><circle cx="6.2" cy="10.6" r="1.8"/><circle cx="9.6" cy="6.6" r="1.9"/><circle cx="14.4" cy="6.6" r="1.9"/><circle cx="17.8" cy="10.6" r="1.8"/></svg>'
 
 
 def cover_art():
     """The ‘family’ mascot crop from the design board (same crop as the app: x 60, y 785, 165 × 160 of 1600 × 1072)."""
-    board = DOCS.parent / "apps/web/public/assets/design-board.jpg"
-    data = base64.b64encode(board.read_bytes()).decode()
-    scale = 86 / 165  # mm per source pixel for an 86 mm wide crop
-    return (f"background-image:url(data:image/jpeg;base64,{data});background-size:{1600*scale:.1f}mm {1072*scale:.1f}mm;"
-            f"background-position:-{60*scale:.1f}mm -{785*scale:.1f}mm")
+    img = DOCS.parent / "apps/web/public/assets/mascot-family.png"
+    return f"background-image:url(data:image/png;base64,{base64.b64encode(img.read_bytes()).decode()})"
 
 
 def build(slug, out_name, browser, art_style):
@@ -242,11 +239,11 @@ def build(slug, out_name, browser, art_style):
 <section><h2>Document control</h2><table><tbody>
 <tr><td>Document</td><td>{html.escape(title)}</td></tr><tr><td>Document ID</td><td>{doc_id}</td></tr>
 <tr><td>Version</td><td>{VERSION}</td></tr><tr><td>Date</td><td>{DATE}</td></tr>
-<tr><td>Prepared by</td><td>{AUTHOR}</td></tr><tr><td>Product</td><td>{PRODUCT} v{VERSION} (P0 pilot build)</td></tr>
+<tr><td>Published by</td><td>{AUTHOR}</td></tr><tr><td>Product</td><td>{PRODUCT} v{VERSION} (P0 pilot build)</td></tr>
 <tr><td>Audience</td><td>{html.escape(meta.get('audience', ''))}</td></tr><tr><td>Classification</td><td>{CLASSIFICATION}</td></tr>
 <tr><td>Source</td><td>{REPO} · docs/{slug}.md</td></tr>
 </tbody></table></section>
-<section><h2>Version history</h2><table><thead><tr><th style="width:12%">Version</th><th style="width:16%">Date</th><th style="width:20%">Author</th><th>Changes</th></tr></thead><tbody>{history}</tbody></table></section>
+<section><h2>Version history</h2><table><thead><tr><th style="width:12%">Version</th><th style="width:16%">Date</th><th style="width:20%">Created by</th><th>Changes</th></tr></thead><tbody>{history}</tbody></table></section>
 <section><h2>Related documents</h2><table><thead><tr><th style="width:22%">ID</th><th>Document</th></tr></thead><tbody>{related_rows(doc_id)}</tbody></table></section>
 </div>
 <div style="break-before:page"></div>
@@ -255,9 +252,9 @@ def build(slug, out_name, browser, art_style):
 """
         return f'<!doctype html><html><head><meta charset="utf-8">{FONTS}<style>{CSS}</style>{MERMAID}</head><body class="{cls}">{front}{body}</body></html>'
 
-    header = (f'<div style="width:100%;font:7.5pt Nunito,sans-serif;color:#6E6A57;padding:0 16mm;display:flex;justify-content:space-between">'
-              f'<span><b style="color:#20201D">{PRODUCT}</b> <span style="display:inline-block;width:6pt;height:6pt;border-radius:50%;background:#FFC400;border:.8pt solid #20201D;vertical-align:middle"></span></span><span>{html.escape(title)}</span></div>')
-    footer = (f'<div style="width:100%;font:7.5pt Nunito,sans-serif;color:#6E6A57;padding:0 16mm;display:flex;justify-content:space-between">'
+    header = (f'<div style="width:100%;font:7.5pt Nunito,sans-serif;color:#737A6E;padding:0 16mm;display:flex;justify-content:space-between">'
+              f'<span><b style="color:#263027">{PRODUCT}</b> <span style="display:inline-block;width:6pt;height:6pt;border-radius:50%;background:#6F8F4E;vertical-align:middle"></span></span><span>{html.escape(title)}</span></div>')
+    footer = (f'<div style="width:100%;font:7.5pt Nunito,sans-serif;color:#737A6E;padding:0 16mm;display:flex;justify-content:space-between">'
               f'<span>{doc_id} · Version {VERSION} · {CLASSIFICATION}</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>')
     page = browser.new_page()
     tmp = DOCS / f".build-{slug}.html"   # loaded from a file so relative image paths resolve
@@ -285,7 +282,7 @@ def build(slug, out_name, browser, art_style):
     body_pdf = render(page_html(pages))
     tmp.unlink(missing_ok=True)
 
-    meta_line = f"<b>Document ID</b> {doc_id} · <b>Version</b> {VERSION} · <b>Date</b> {DATE}<br><b>Prepared by</b> {AUTHOR}<br><b>Audience</b> {html.escape(meta.get('audience', ''))}"
+    meta_line = f"<b>Document ID</b> {doc_id} · <b>Version</b> {VERSION} · <b>Date</b> {DATE}<br><b>Published by</b> {AUTHOR}<br><b>Audience</b> {html.escape(meta.get('audience', ''))}"
     cover = f"""<!doctype html><html><head><meta charset="utf-8">{FONTS}<style>{COVER_CSS}</style></head><body><div class="cover">
 <div class="band"></div><div class="blob"></div><div class="art" style="{art_style}"></div>
 <div class="brand"><div class="mark">{PAW}</div><div><b>{PRODUCT}</b><small>Be sure, whoever’s caring.</small></div></div>

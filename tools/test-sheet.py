@@ -16,9 +16,9 @@ vt = json.loads((ROOT / '.data/vitest.json').read_text(encoding='utf-8'))
 cat = json.loads((ROOT / 'e2e/cases.json').read_text(encoding='utf-8'))
 
 FONT = 'Arial'
-H_FILL = PatternFill('solid', start_color='20201D'); H_FONT = Font(name=FONT, bold=True, color='FFFDF0')
+H_FILL = PatternFill('solid', start_color='587539'); H_FONT = Font(name=FONT, bold=True, color='FBF8EF')
 PASS_FILL = PatternFill('solid', start_color='E2F2E2'); FAIL_FILL = PatternFill('solid', start_color='FBE1DC')
-THIN = Side(style='thin', color='CFC8AC'); BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+THIN = Side(style='thin', color='D3CCB6'); BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 WRAP = Alignment(wrap_text=True, vertical='top')
 def style_table(ws, header_row, ncols, nrows, widths):
     for c in range(1, ncols + 1):
@@ -150,5 +150,6 @@ for col in 'BCDE': s.column_dimensions[col].width = 13
 wb.calculation.fullCalcOnLoad = True  # Excel computes the summary formulas on open
 out = ROOT / 'docs/test-evidence/PS-TE-08_Test_Evidence_v1.1.0.xlsx'
 out.parent.mkdir(exist_ok=True)
+wb.properties.creator = wb.properties.lastModifiedBy = 'BYOP Group G'
 wb.save(out)
 print(json.dumps({'file': str(out), 'e2e': n_e2e, 'e2e_passed': sum(c['status'] == 'Passed' for c in e2e), 'api': n_api, 'api_passed': sum(r[4] == 'Passed' for r in rows), 'scenarios': len(scen), 'scen_passed': sum(1 for l in scen if '| Pass |' in l), 'missing_catalog': [c['id'] for c in e2e if c['id'] not in cat['cases']]}))
