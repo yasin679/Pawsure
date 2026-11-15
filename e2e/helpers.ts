@@ -96,9 +96,20 @@ export async function signUp(page: Page, phone10: string) {
   await page.getByRole('button', { name: 'Sign up', exact: true }).click();
   await signIn(page, phone10);
 }
-export async function signInOwner(page: Page) {
+/** Owner sign-in. Home shows the day's tasks once the owner has headed out, so by default this heads out at 9 AM
+ *  (back around 7 PM, no checklist) through the API; pass { home: true } for tests about the leaving flow itself. */
+export async function signInOwner(page: Page, o: { home?: boolean } = {}) {
   await signIn(page, PHONE.neha);
   await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
+  if (!o.home) await headOut(page);
+}
+/** Heads out (I'm leaving, no checklist) so Home shows the day's tasks. */
+export async function headOut(page: Page) {
+  const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+  await api(page, 'POST', `/v1/households/${hh}/day/leaving`, { checklist: null, returnAt: 1140, planB: null });
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Me' }).click();
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByText(/Out since/)).toBeVisible();
 }
 /** Signs out with the app's own button (owner: Me → Sign out; friend: Sign out). The page isn't reloaded, so data is kept. */
 export async function signOut(page: Page) {

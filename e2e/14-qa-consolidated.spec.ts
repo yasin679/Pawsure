@@ -132,7 +132,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await boot(fresh, '', { tools: false });
     await fresh.evaluate(() => localStorage.removeItem('pawsure.demoTools'));
     await fresh.reload(); await fresh.waitForSelector('html[data-demo-ready]', { state: 'attached' });
-    await signInOwner(fresh);
+    await signInOwner(fresh, { home: true });
     await expect(fresh.locator('.demobar')).toHaveCount(0);
     await expect(fresh.getByText('9:00 AM')).toHaveCount(0);
   });

@@ -141,11 +141,9 @@ test.describe('O. Cover continuity (v1.4)', () => {
   });
 
   test('O9 “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned', async ({ page }) => {
-    await boot(page); await signInOwner(page);
-    await openPlan(page);
+    await boot(page); await signInOwner(page, { home: true });
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
-    await openPlan(page);
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await expect(dialog(page)).toContainText('Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet.');
     await expect(dialog(page).locator('[data-option]')).toHaveCount(6);
@@ -158,12 +156,10 @@ test.describe('O. Cover continuity (v1.4)', () => {
   });
 
   test('O10 “I’m delayed” 7 → 9 PM: Sunita only until 8 → a request for the dinner only', async ({ page }) => {
-    await boot(page); await signInOwner(page);
-    await openPlan(page);
+    await boot(page); await signInOwner(page, { home: true });
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
     await clockTo(page, '18:30');
-    await openPlan(page);
     await page.getByRole('button', { name: 'I’m delayed' }).click();
     await dialog(page).locator('#dlt').selectOption(String(21 * 60));
     await dialog(page).getByRole('button', { name: 'See what changes' }).click();
@@ -294,7 +290,7 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     const expectations: Record<string, (p: Page) => Promise<void>> = {
       O5: async p => { await expect(p.locator('.card.atrisk').first()).toContainText('Asking: Mrs Desai and Ankita'); },
       O7: async p => { await expect(dialog(p)).toContainText('Cover not found'); },
-      O9: async p => { await openPlan(p); await expect(p.getByText(/Sunita can’t come today/)).toBeVisible(); },
+      O9: async p => { await expect(p.getByText(/Sunita can’t come today/)).toBeVisible(); },
       O11: async p => { await expect(p.locator('.gatekey').first()).toContainText('Mrs Desai'); }
     };
     for (let i = 1; i <= 14; i++) {

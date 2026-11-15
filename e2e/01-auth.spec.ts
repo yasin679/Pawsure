@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, intake, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, intake, PHONE, headOut } from './helpers';
 
 test.describe('A. Sign-in and onboarding', () => {
   test('A1 New owner signs up: phone, code, consents, profile, then lands on Today', async ({ page }) => {
@@ -40,7 +40,9 @@ test.describe('A. Sign-in and onboarding', () => {
   test('A5 Existing owner signs in and sees both pets on Today', async ({ page }) => {
     await boot(page);
     await signInOwner(page);
-    await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
+    await expect(page.locator('.help-card')).toBeVisible(); // Home before heading out: your help today + Heading out?
+  await headOut(page);
+  await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
     await expect(page.locator('.petchip', { hasText: 'Misty' })).toBeVisible();
   });
 
@@ -56,6 +58,8 @@ test('A7 Co-owner Rohan signs in and sees the same household', async ({ page }) 
   await boot(page);
   await signIn(page, PHONE.rohan);
   await expect(page.getByRole('heading', { name: /Rohan/ })).toBeVisible();
+  await expect(page.locator('.help-card')).toBeVisible(); // Home before heading out: your help today + Heading out?
+  await headOut(page);
   await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
 });
 
@@ -66,7 +70,9 @@ test.describe('A+. Separate Log in and Sign up (15 Nov)', () => {
     await signIn(page, PHONE.neha);
     await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Before you start' })).toHaveCount(0);
-    await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
+    await expect(page.locator('.help-card')).toBeVisible(); // Home before heading out: your help today + Heading out?
+  await headOut(page);
+  await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
     await expect(page.locator('.petchip', { hasText: 'Misty' })).toBeVisible();
     await expect(page.locator('button.task').first()).toBeVisible();
   });
@@ -83,7 +89,9 @@ test.describe('A+. Separate Log in and Sign up (15 Nov)', () => {
     await signIn(page, '8860750239');
     await expect(page.getByRole('heading', { name: /Owner/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Before you start' })).toHaveCount(0);
-    await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
+    await expect(page.locator('.help-card')).toBeVisible(); // Home before heading out: your help today + Heading out?
+  await headOut(page);
+  await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
     await expect(page.locator('button.task').first()).toBeVisible();
   });
 

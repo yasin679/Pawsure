@@ -30,10 +30,8 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G1 Helper can’t come → ask Meera → she says Yes (Marathi) → owner confirms → only Bruno’s lunch moves to her', async ({ page }) => {
     await clockTo(page, '11:00');
-    await openPlan(page);
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
-    await openPlan(page);
     await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await page.getByRole('button', { name: 'Search my friends' }).click();
@@ -47,7 +45,6 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     await expect(page.getByText(/Shared with Meera, minimum needed, this visit only/i)).toBeVisible();
     await tab(page, 'Today');
-    await openPlan(page);
     await expect(page.getByRole('heading', { name: 'A friend (Find cover)' })).toBeVisible();
     await closePlan(page);
     await expect(taskCard(page, 'Feed (friend cover)')).toBeVisible();
