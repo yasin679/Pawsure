@@ -36,12 +36,11 @@ function Me({ text, onEdit }: { text: string; onEdit?: () => void }) {
     ? <button type="button" className="cb me edit" onClick={onEdit} aria-label={`Change: ${text}`}>{text}<span className="cb-edit" aria-hidden="true">✎</span></button>
     : <div className="cb me">{text}</div>}</div>;
 }
-/** The card that opens each playbook: what Pawly will ask in this part, ticked off as it is answered. */
-function Playbook({ n, title, intro, items }: { n: number; title: string; intro: string; items: [string, boolean][] }) {
-  return <section className="pb-card" aria-label={`Playbook ${n} of 3: ${title}`}>
-    <div className="pb-head"><span className="pb-num" aria-hidden="true">{n}</span><div className="grow"><div className="pb-eyebrow">Playbook {n} of 3</div><h2 className="pb-title">{title}</h2></div><span className="pb-count">{items.filter(i => i[1]).length}/{items.length}</span></div>
+/** The card that opens each playbook: its number, title and what it is for. */
+function Playbook({ n, title, intro }: { n: number; title: string; intro: string }) {
+  return <section className="pb-card" aria-label={`${title}: step ${n} of 3`}>
+    <div className="pb-head"><span className="pb-num" aria-hidden="true">{n}</span><div className="grow"><h2 className="pb-title">{title}</h2></div></div>
     <p className="pb-intro">{intro}</p>
-    <ul className="pb-list">{items.map(([t, d]) => <li key={t} className={d ? 'done' : ''}><span className="pb-tick" aria-hidden="true">{d ? <Icon name="check" size={14} /> : null}</span>{t}<span className="sr-only">{d ? ' (done)' : ''}</span></li>)}</ul>
   </section>;
 }
 function Typing() { return <div className="cb-row bot"><span className="cb-av" aria-hidden="true"><Art name="dogFace" width={30} /></span><div className="cb bot typing" aria-label="Pawly is typing"><i /><i /><i /></div></div>; }
@@ -275,13 +274,11 @@ export function Intake({ onDone }: { onDone: () => void }) {
   function send(label: string, disabled: boolean, onSend: () => void) { return <button type="submit" className="cb-send" disabled={disabled} aria-label={label} onClick={e => { e.preventDefault(); onSend(); }}><Icon name="send" size={20} /></button>; }
 
   /* ---------- playbook cards: what each part covers, ticked as it is answered ---------- */
-  const done = (k: string) => steps.findIndex(s => s.key === k) < pos && steps.some(s => s.key === k);
-  const lastPet = pets.length - 1;
   const playbook = (n: 0 | 1 | 2) => n === 0
-    ? <Playbook n={1} title={tr(CHAPTERS[0])} intro={tr('So your helper, friends and Pawsure know who you are and where home is.')} items={[[tr('Your name'), done('name')], [tr('Message language'), done('lang')], [tr('Home location'), done('society')], [tr('Tower and flat'), done('flat')]]} />
+    ? <Playbook n={1} title={tr(CHAPTERS[0])} intro={tr('So your helper, friends and Pawsure know who you are and where home is.')} />
     : n === 1
-    ? <Playbook n={2} title={tr(CHAPTERS[1])} intro={tr('A profile for each pet: everything someone needs to care for them safely.')} items={[[tr('Name and type'), done(`p${lastPet}.species`)], [tr('Age'), done(`p${lastPet}.age`)], [tr('Food and feeding'), done(`p${lastPet}.food`)], [tr('Allergies and medicines'), done(`p${lastPet}.medicines`)], [tr('Vet'), done(`p${lastPet}.more`) || done(`p${lastPet}.vetPhone`)]]} />
-    : <Playbook n={3} title={tr(CHAPTERS[2])} intro={tr('Your daily routine, so the right person is reminded at the right time.')} items={[[tr('Feeding times'), done('feed')], ...(dogs.length ? [[tr('Walks'), done('walk')] as [string, boolean]] : []), ...(cats.length ? [[tr('Litter tray'), done('litter')] as [string, boolean]] : []), [tr('Who looks after them'), atCircle], [tr('Backup circle'), circle === 'yes' || circle === 'no']]} />;
+    ? <Playbook n={2} title={tr(CHAPTERS[1])} intro={tr('A profile for each pet: everything someone needs to care for them safely.')} />
+    : <Playbook n={3} title={tr(CHAPTERS[2])} intro={tr('Your daily routine, so the right person is reminded at the right time.')} />;
 
   const shown = steps.slice(0, Math.min(pos, steps.length));
   return <>
