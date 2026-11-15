@@ -43,7 +43,8 @@ test('sign-in and onboarding', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue' }).click();
   const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.locator('#nm').fill('Asha Rao'); await send(); await page.getByRole('button', { name: 'English', exact: true }).click();
-  await page.locator('#stt').selectOption('Maharashtra'); await page.locator('#cty').selectOption('Mumbai');
+  await page.locator('#stt').click(); await page.getByRole('option', { name: 'Maharashtra', exact: true }).click();
+  await page.locator('#cty').click(); await page.getByRole('option', { name: 'Mumbai', exact: true }).click();
   await page.getByRole('button', { name: 'My society isn’t listed' }).click(); await page.locator('#sct').fill('Raheja Vihar, Powai'); await send();
   await page.locator('#tw').fill('C'); await send(); await page.locator('#fl').fill('C-702'); await send();
   await mark(page, [[page.locator('.cb-sum'), 1], [page.getByRole('button', { name: 'Create my home' }), 2]]); await shot(page, '05-profile');

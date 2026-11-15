@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, meItem, api, PHONE } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, meItem, api, pick, PHONE } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -47,11 +47,12 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
     await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: 'English', exact: true }).click();
-    await page.locator('#stt').selectOption('Maharashtra');
-    await page.locator('#cty').selectOption('Pune');
-    await expect(page.locator('#soc option', { hasText: 'Lake Vista CHS · Baner' })).toHaveCount(1);
-    await expect(page.locator('#soc option', { hasText: 'Powai' })).toHaveCount(0);
-    await page.locator('#soc').selectOption({ label: 'Lake Vista CHS · Baner' });
+    await pick(page, 'stt', 'Maharashtra');
+    await pick(page, 'cty', 'Pune');
+    await page.locator('#soc').click();
+    await expect(page.getByRole('option', { name: 'Lake Vista CHS · Baner' })).toHaveCount(1);
+    await expect(page.getByRole('option', { name: /Powai/ })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Lake Vista CHS · Baner' }).click();
     await expect(page.getByRole('button', { name: 'Change: Lake Vista CHS, Baner' })).toBeVisible();
     await expect(page.locator('#tw')).toBeVisible();
   });
@@ -151,7 +152,8 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
     await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: 'Another language' }).click();
-    await expect(page.locator('#lg option')).toHaveCount(23);
+    await page.locator('#lg').click();
+    await expect(page.getByRole('option')).toHaveCount(23);
   });
 
   test('R6 PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong', async ({ page }) => {
@@ -159,5 +161,32 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('heading', { name: /Hello Sunita/ })).toBeVisible();
     await page.getByRole('button', { name: 'Wrong society or tower? Tell the owner' }).click();
     await expect(page.getByText('Thanks. The owner has been asked to check, and Pawsure support can help.')).toBeVisible();
+  });
+});
+
+test.describe('S. Onboarding conversation (15 Nov)', () => {
+  test('S1 A typed city in another state is caught at the city question, and the home is created after fixing the state', async ({ page }) => {
+    await boot(page); await signIn(page, '9822200099');
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.locator('#nm').fill('Isha'); await send();
+    await page.getByRole('button', { name: 'English', exact: true }).click();
+    await pick(page, 'stt', 'Karnataka');
+    await page.getByRole('button', { name: 'My city isn’t listed' }).click();
+    await page.locator('#ctt').fill('Mumbai');
+    await expect(page.getByText(/Mumbai is in Maharashtra, not Karnataka/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Change: Karnataka' }).click();
+    await pick(page, 'stt', 'Maharashtra');
+    await pick(page, 'cty', 'Mumbai');
+    await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+    await page.locator('#sct').fill('12345');
+    await expect(page.getByText('Enter your society’s name, not just numbers.')).toBeVisible();
+    await page.locator('#sct').fill('Green Acres CHS'); await send();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await page.getByRole('button', { name: 'Create my home' }).click();
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
   });
 });

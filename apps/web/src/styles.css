@@ -605,3 +605,23 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 @keyframes cb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes cb-dot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:.9;transform:translateY(-3px)}}
 @media (prefers-reduced-motion:reduce){.cb-row,.cb.typing i{animation:none}}
+
+/* In-app picker (Intake.tsx): replaces native selects, whose pop-up escapes the phone frame */
+.picker{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0 7px 0 18px;border:1.5px solid var(--line-2);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font-weight:700;text-align:left}
+.picker.empty{color:var(--ink-3);font-weight:600}
+.picker:hover{border-color:var(--accent)}
+.picker:disabled{opacity:.6;cursor:default}
+.picker-chev{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--sage-dark)}
+.picker-sheet{background:var(--surface);width:100%;max-width:480px;max-height:78%;border-radius:24px 24px 0 0;padding:8px 16px 18px;display:flex;flex-direction:column;gap:10px;animation:sheet-up .22s ease-out}
+.picker-sheet h2{font-size:var(--fs-l)}
+.picker-grab{width:40px;height:5px;border-radius:5px;background:var(--line-2);align-self:center;margin-bottom:2px;flex:none}
+.picker-search{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line-2);border-radius:var(--r-pill);padding:0 6px 0 14px;color:var(--ink-3);flex:none}
+.picker-search .input{border:0;box-shadow:none;padding-left:0;min-height:42px;background:transparent}
+.picker-list{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:2px;margin:0 -6px}
+.picker-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;border:0;background:none;text-align:left;padding:12px;border-radius:14px;font-weight:700;color:var(--ink);flex:none}
+.picker-opt:hover{background:var(--surface-2)}
+.picker-opt[aria-selected="true"]{background:var(--accent-soft);color:var(--sage-dark)}
+.picker-none{padding:12px}
+@keyframes sheet-up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.picker-sheet{animation:none}}
+.cb-fix{display:block;margin-bottom:6px;padding:8px 10px;border-radius:12px;background:var(--marigold-soft);color:var(--marigold);font-weight:700;font-size:var(--fs-s)}

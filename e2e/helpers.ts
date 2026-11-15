@@ -28,13 +28,18 @@ export async function fillSociety(page: Page, name: string, city = 'Mumbai', sta
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(name);
 }
+/** Opens one of the in-app pickers (state, city, society, language) and taps an option. */
+export async function pick(page: Page, id: string, option: string) {
+  await page.locator('#' + id).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
 /** Onboarding is a conversation with Pawly: name → language → state → city → society → tower → flat → create my home. */
 export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string } = {}) {
   const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.locator('#nm').fill(name); await send();
   await page.getByRole('button', { name: 'English', exact: true }).click();
-  await page.locator('#stt').selectOption(o.state ?? 'Maharashtra');
-  await page.locator('#cty').selectOption(o.city ?? 'Mumbai');
+  await pick(page, 'stt', o.state ?? 'Maharashtra');
+  await pick(page, 'cty', o.city ?? 'Mumbai');
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(society); await send();
   if (o.tower) { await page.locator('#tw').fill(o.tower); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
