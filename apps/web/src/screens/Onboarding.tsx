@@ -46,12 +46,6 @@ function LegalSheet({ kind, onClose }: { kind: 'terms' | 'privacy'; onClose: () 
   </div></div>;
 }
 
-/** Pawsure mark: a paw with a gold heart in the pad. */
-function PawMark() {
-  return <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="var(--sage-dark)"><ellipse cx="11" cy="17" rx="4.2" ry="5.4" transform="rotate(-18 11 17)" /><ellipse cx="19.5" cy="9.5" rx="4.4" ry="5.6" /><ellipse cx="28.5" cy="9.5" rx="4.4" ry="5.6" /><ellipse cx="37" cy="17" rx="4.2" ry="5.4" transform="rotate(18 37 17)" /></g>
-    <path d="M24 21c-7.5 0-13 6.3-13 12.6C11 39.8 16.6 43 24 43s13-3.2 13-9.4C37 27.3 31.5 21 24 21z" fill="none" stroke="var(--sage-dark)" strokeWidth="3.4" />
-    <path d="M24 38.5s-6-3.6-6-7.4a3.2 3.2 0 0 1 6-1.6 3.2 3.2 0 0 1 6 1.6c0 3.8-6 7.4-6 7.4z" fill="var(--gold)" /></svg>;
-}
 function DemoNumbers({ onPick }: { onPick: (phone: string) => void }) {
   return <details className="demo-link">
     <summary>{tr('Try a demo number')}</summary>
@@ -93,7 +87,7 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
     <div className="login-lang"><LangSwitch compact /></div>
     <div className="login-hero">
       <img className="login-mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={178} height={173} alt="" />
-      <div className="brandmark"><PawMark /><div><div className="login-word">Pawsure</div><p className="login-tag">{tr('Be sure, whoever’s caring.')}</p></div></div>
+      <div className="brandmark"><div><div className="login-word">Pawsure</div><p className="login-tag">{tr('Be sure, whoever’s caring.')}</p></div></div>
     </div>
     <div className="login-sheet">
       <h1>{tr('Log in or create an account')}</h1>
@@ -101,11 +95,6 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       <div className="field"><label htmlFor="ph">{tr('Mobile number')}</label><div className="phone-in"><span className="cc">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>{tr('Send code')}</button>
-    </div>
-    <div className="perks">
-      <span><Icon name="check" size={22} /><b>{tr('Evidence')}</b>{tr('Task by task')}</span>
-      <span><Icon name="friends" size={22} /><b>{tr('Friends')}</b>{tr('Asked first')}</span>
-      <span><Icon name="bell" size={22} /><b>{tr('Alerts')}</b>{tr('That escalate')}</span>
     </div>
     <DemoNumbers onPick={setPhone} />
   </div>;
