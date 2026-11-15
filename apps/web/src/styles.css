@@ -409,10 +409,6 @@ body{background:var(--stage)}
 .perks span b{font-size:.84rem;color:var(--ink)}
 .perks svg{width:22px;height:22px;color:var(--sage-dark)}
 .perks .ic,.perks .avatar{background:transparent;border:0}
-.demo-link{margin:14px 14px 24px;font-size:.85rem}
-.demo-link > summary{cursor:pointer;color:var(--sage-dark);font-weight:800;text-align:center;list-style:none}
-.demo-link > summary::-webkit-details-marker{display:none}
-.demo-link[open] > summary{margin-bottom:8px}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){.login-mascot{animation:none}}
 

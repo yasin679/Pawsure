@@ -14,13 +14,6 @@ const ERR: Record<string, string> = {
   terms_and_privacy_required: 'Please accept the Terms and the Privacy Notice to continue.'
 };
 
-/** Every seeded person who can sign in (packages/db/src/seed.ts). Tap a number to fill the field. */
-const DEMO_PEOPLE: [group: string, people: [name: string, role: string, phone: string][]][] = [
-  ['Neha’s home', [['Neha', 'owner', '9800000021'], ['Rohan', 'co-owner', '9800000022'], ['Sunita', 'helper · Marathi', '9000000035'], ['Ankita', 'backup', '9700000008']]],
-  ['Friends', [['Priya', 'friend', '9900000012'], ['Arjun', 'friend · Hindi', '9800000077'], ['Kavya', 'friend', '9600000045'], ['Meera', 'friend · Marathi', '9700000090'], ['Farhan', 'friend', '9500000031']]],
-  ['Ops console (staff sign-in)', [['Ops on shift', 'ops', '9811000001'], ['Ops lead', 'ops lead', '9811000002'], ['Privacy lead', 'privacy', '9811000003'], ['Auditor', 'auditor', '9811000004']]]
-];
-const spaced = (p: string) => `${p.slice(0, 5)} ${p.slice(5)}`;
 /** Plain-language summaries of the Terms and the Privacy Notice. The version label is what Pawsure records with your OK. */
 const LEGAL = {
   terms: { title: 'Terms of Use', version: 'T-1.0 · 1 Nov 2026', points: [
@@ -44,17 +37,6 @@ function LegalSheet({ kind, onClose }: { kind: 'terms' | 'privacy'; onClose: () 
     <p className="xs muted">{tr('This is a summary. The full legal text is being reviewed by counsel before launch.')}</p>
     <button className="btn primary block" onClick={onClose}>{tr('Got it')}</button>
   </div></div>;
-}
-
-function DemoNumbers({ onPick }: { onPick: (phone: string) => void }) {
-  return <details className="demo-link">
-    <summary>{tr('Try a demo number')}</summary>
-    {DEMO_PEOPLE.map(([g, ps]) => <div key={g}><div className="eyebrow">{g}</div><div className="list">
-      {ps.map(([n, r, p]) => <button key={p} type="button" className="li" onClick={() => onPick(p)} aria-label={`Use ${n}'s number, ${r}`}>
-        <div className="grow"><b>{n}</b> <span className="muted">{r}</span></div><span className="mono">{spaced(p)}</span></button>)}
-    </div></div>)}
-    <div className="xs muted">{tr('Tap one to fill it in, or use any new number to start fresh.')}</div>
-  </details>;
 }
 
 export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; start?: Step }) {
@@ -96,7 +78,6 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>{tr('Send code')}</button>
     </div>
-    <DemoNumbers onPick={setPhone} />
   </div>;
 
   if (step === 'otp') return <><AppBar title={tr('Enter the code')} onBack={() => setStep('phone')} /><div className="body">
