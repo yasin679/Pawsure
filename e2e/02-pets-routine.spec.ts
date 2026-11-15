@@ -73,6 +73,6 @@ test.describe('B. Pets and C. routine and health', () => {
     await expect(page.getByText(/Added to today’s plan: Extra play time at 6:00 PM/)).toBeVisible();
     await expect(page.locator('button.li', { hasText: 'Extra play time' })).toContainText('today only');
     await page.locator('.appbar', { hasText: 'Routine' }).getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByRole('button', { name: /6:00 Extra play time/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Extra play time 6:00 PM/ })).toBeVisible();
   });
 });
