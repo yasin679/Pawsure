@@ -33,7 +33,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const H = `/v1/households/${hh}`;
   const close = () => { setSheet(null); setErr(null); setNote(''); };
   const run = async (fn: () => Promise<unknown>, after?: () => void) => { setErr(null); try { await fn(); reloadAll(); after ? after() : close(); } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? e.body.issues ?? e.body.error) : 'Can’t reach Pawsure. Try again.'); } };
-  if (!day) return <><AppBar title={tr('Today')} /><div className="body"><div className="empty">{tr('Loading today…')}</div></div></>;
+  if (!day) return <><AppBar title={tr('Today')} hideTitle /><div className="body"><div className="empty">{tr('Loading today…')}</div></div></>;
 
   const [cs, cl] = COVER_LABEL[day.covered.household] ?? ['Pending', day.covered.household];
   const greet = day.now < 720 ? 'Good morning' : day.now < 1020 ? 'Good afternoon' : 'Good evening';
@@ -48,7 +48,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const needsCover = d.helperUnavailable || d.mode === 'uncovered' || d.mode === 'friend';
 
   return <>
-    <AppBar title={tr('Today')} right={<button className="btn sm danger" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency">{tr('SOS')}</button>} />
+    <AppBar title={tr('Today')} hideTitle right={<button className="btn sm danger" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency">{tr('SOS')}</button>} />
     <main className="body">
       <div className="row top"><div className="grow"><div className="small muted">{day.careDate} · IST</div><h2 style={{ fontSize: 'var(--fs-xl)', lineHeight: 1.3 }}>{tr(greet)}, {ownerName.split(' ')[0]}</h2></div>{ov?.noCoverPlanned && day.covered.household !== 'Covered' ? <Conf state="Missed" label="No cover planned" /> : <Conf state={cs} label={cl} />}</div>
       <div className="petchips">{pets.map(p => <span key={p.id} className="petchip"><PetAvatar species={p.species} size={34} /><span><b>{p.name}</b><span className="xs muted">{p.species}{p.age ? ' · ' + p.age : ''}</span></span></span>)}</div>

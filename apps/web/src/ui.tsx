@@ -50,8 +50,9 @@ export function Conf({ state, label }: { state: string; label?: string }) {
   return <span className={`conf ${cls}`}><span className="g" aria-hidden="true">{g}</span>{tr(label ?? state)}</span>;
 }
 
-export function AppBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }) {
-  return <div className="appbar">{onBack && <button className="back" onClick={onBack} aria-label="Back">‹</button>}<h1>{title}</h1>{right}</div>;
+/** Screen header. `hideTitle` keeps the title for screen readers only (Today shows the greeting instead). */
+export function AppBar({ title, onBack, right, hideTitle }: { title: string; onBack?: () => void; right?: ReactNode; hideTitle?: boolean }) {
+  return <div className="appbar">{onBack && <button className="back" onClick={onBack} aria-label="Back">‹</button>}{hideTitle ? <><h1 className="sr-only">{title}</h1><span className="grow" /></> : <h1>{title}</h1>}{right}</div>;
 }
 export const Banner = ({ kind, icon, children }: { kind: 'alert' | 'warn' | 'info' | 'sim'; icon: string; children: ReactNode }) => <div className={`banner ${kind}`}><span className="bi" aria-hidden="true">{icon}</span><div className="grow">{children}</div></div>;
 
