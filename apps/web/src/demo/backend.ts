@@ -3,7 +3,7 @@
  * visitor's own browser, seeded with the demo household. Nothing leaves the browser; every visitor gets their own copy,
  * and it starts fresh on each page load. Vendors are the same mock adapters the server uses in demo mode.
  */
-import { openDb, migrate, seedDemo, type MigrationSource } from '@pawsure/db';
+import { openDb, migrate, seedDemo, DEMO, type MigrationSource } from '@pawsure/db';
 import { createApp } from '../../../api/src/app';
 import { mockAdapters } from '../../../api/src/adapters';
 import { demoClock } from '../../../api/src/clock';
@@ -19,6 +19,10 @@ export async function start() {
   const db = await openDb({ dataDir: 'memory', pglite: { fsBundle } });
   await migrate(db, MIGRATIONS);
   await seedDemo(db);
+  // The product owner's own number logs straight into the demo home as a co-owner (no onboarding).
+  // Demo build only: the server's seed and its tests are unchanged. Every other new number goes through sign-up.
+  await db.query(`insert into users(id, phone_e164, display_name, language) values ('u_demo_owner', '+918860750239', 'Owner', 'en') on conflict do nothing`);
+  await db.query(`insert into memberships(id, household_id, user_id, role, status, accepted_at) values ('m_demo_owner', $1, 'u_demo_owner', 'co_owner', 'active', now()) on conflict do nothing`, [DEMO.household]);
   const app = createApp({ db, adapters: mockAdapters(), clock: demoClock('2026-11-06T09:00:00+05:30', { live: true }), pepper: 'demo-pepper-not-secret', demoMode: true });
   await app.request('/jobs/tick', { method: 'POST' });
   return app;

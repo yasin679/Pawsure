@@ -71,12 +71,20 @@ test.describe('A+. Separate Log in and Sign up (15 Nov)', () => {
     await expect(page.locator('button.task').first()).toBeVisible();
   });
 
-  test('A11 Log in with a number that has no account: told so after the code, and can create one with it', async ({ page }) => {
+  test('A11 Log in with a new number goes straight into the full sign-up journey', async ({ page }) => {
     await boot(page);
     await signIn(page, '9811222335');
-    await expect(page.getByRole('heading', { name: 'There’s no Pawsure account for this number yet' })).toBeVisible();
-    await page.getByRole('button', { name: 'Create my account' }).click();
+    await expect(page.getByText('There’s no account for this number yet, so let’s set one up.')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
+  });
+
+  test('A13 The product owner’s number (88607 50239) logs straight into the demo home: pets and today’s tasks, no onboarding', async ({ page }) => {
+    await boot(page);
+    await signIn(page, '8860750239');
+    await expect(page.getByRole('heading', { name: /Owner/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toHaveCount(0);
+    await expect(page.locator('.petchip', { hasText: 'Bruno' })).toBeVisible();
+    await expect(page.locator('button.task').first()).toBeVisible();
   });
 
   test('A12 Sign up with a number that already has an account goes straight to that home', async ({ page }) => {

@@ -2,10 +2,10 @@
 import { t as tr } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api, ApiError, session, setSessionMode } from '../api';
-import { LangSwitch, AppBar, Art, Banner } from '../ui';
+import { LangSwitch, AppBar, Banner } from '../ui';
 import { Intake } from './Intake';
 
-type Step = 'phone' | 'otp' | 'noaccount' | 'consent' | 'profile';
+type Step = 'phone' | 'otp' | 'consent' | 'profile';
 /** Log in: number + code, then straight home. Sign up: number + code, then consent and the Pawly conversation. */
 type Mode = 'login' | 'signup';
 const ERR: Record<string, string> = {
@@ -43,6 +43,8 @@ function LegalSheet({ kind, onClose }: { kind: 'terms' | 'privacy'; onClose: () 
 export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; start?: Step }) {
   const [step, setStep] = useState<Step>(start);
   const [mode, setMode] = useState<Mode>('login');
+  // A number with no account, entered on Log in, goes straight into sign-up (with a note saying so).
+  const [newNumber, setNewNumber] = useState(false);
   // Already signed in but setup not finished (for example after leaving and coming back): continue setup.
   useEffect(() => {
     if (start !== 'phone' || !session.get()) return;
@@ -77,15 +79,6 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
     </div>
   </div>;
 
-  // Log in with a number that has no account yet: offer to create one with the number just verified.
-  if (step === 'noaccount') return <><AppBar title={tr('No account yet')} /><div className="body">
-    <div className="art-stage"><Art name="box" width={120} /></div>
-    <h2>{tr('There’s no Pawsure account for this number yet')}</h2>
-    <p className="muted">+91 {phone.replace(/\D/g, '').replace(/^(\d{5})(\d{5})$/, '$1 $2')} {tr('is verified. Would you like to create an account with it? It takes about two minutes.')}</p>
-    <button className="btn primary block" onClick={() => { setMode('signup'); setStep('consent'); }}>{tr('Create my account')}</button>
-    <button className="btn ghost block" onClick={() => { session.set(null); setCode(''); setDemoCode(null); setStep('phone'); }}>{tr('Use a different number')}</button>
-  </div></>;
-
   if (step === 'otp') return <><AppBar title={tr('Enter the code')} onBack={() => setStep('phone')} /><div className="body">
     <p className="muted">Sent to {e164}.</p>
     <div className="field"><label htmlFor="otp">{tr('6-digit code')}</label><input id="otp" className="input mono" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value)} style={{ fontSize: '1.4rem', letterSpacing: '.4em', textAlign: 'center' }} /></div>
@@ -97,13 +90,14 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       if (me.memberships.length) { onDone(); return; }
       if (await api('/admin/me').then(() => true, () => false)) { const s = session.get(); session.set(null); setSessionMode('staff'); session.set(s); location.hash = 'admin'; return; }
       const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
-      if (fr.links.length || fr.profile) onDone(); else setStep(mode === 'login' ? 'noaccount' : 'consent');
+      if (fr.links.length || fr.profile) onDone(); else { if (mode === 'login') setNewNumber(true); setStep('consent'); }
     })}>{tr('Verify')}</button>
     <button className="btn ghost block" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); })}>{tr('Resend code')}</button>
     {demoCode && <Banner kind="sim" icon="⚙">Demo mode: no SMS is sent. Your code is <b className="mono">{demoCode}</b>.</Banner>}
   </div></>;
 
   if (step === 'consent') return <><AppBar title={tr('Before you start')} /><div className="body">
+    {newNumber && <Banner kind="info" icon="👋">{tr('There’s no account for this number yet, so let’s set one up. It takes about three minutes.')}</Banner>}
     <p className="muted" style={{ margin: 0 }}>{tr('Pawsure stores your pet’s routine and sends alerts when care is missed. For that we need your OK.')}</p>
     <div className="card">
       <label className="check"><input type="checkbox" checked={c.terms} onChange={e => setC({ ...c, terms: e.target.checked })} /><span><b>{tr('I accept the Terms of Use')}</b></span></label>

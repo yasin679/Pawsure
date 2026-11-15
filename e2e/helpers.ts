@@ -33,8 +33,8 @@ export async function pick(page: Page, id: string, option: string) {
   await page.locator('#' + id).click();
   await page.getByRole('option', { name: option, exact: true }).click();
 }
-/** Onboarding is a conversation with Pawly: name → language → state → city → society → tower → flat → create my home. */
-export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string } = {}) {
+/** Onboarding is a conversation with Pawly in three playbooks: your information (→ create my home), your pet, care details. The circle question follows. */
+export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string; pet?: string } = {}) {
   const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.locator('#nm').fill(name); await send();
   await page.getByRole('button', { name: 'English', exact: true }).click();
@@ -45,6 +45,23 @@ export async function intake(page: Page, name: string, society: string, o: { tow
   if (o.tower) { await page.locator('#tw').fill(o.tower); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   if (o.flat) { await page.locator('#fl').fill(o.flat); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Create my home' }).click();
+  await petAndCare(page, o.pet ?? 'Coco');
+}
+/** Playbooks 2 and 3 of the onboarding conversation: one dog, fed at 8 AM, no walks, cared for by the owner. */
+export async function petAndCare(page: Page, pet = 'Coco') {
+  await page.locator('#pn0').fill(pet); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: /Dog/ }).click();
+  await page.getByRole('button', { name: '1–3 years' }).click();
+  await page.locator('#pf0').fill('1 cup kibble at 8 AM and 7 PM'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: 'None known', exact: true }).click();
+  await page.getByRole('button', { name: 'None', exact: true }).click();
+  await page.locator('#pv0').fill('Dr. Rao, Powai Pet Clinic'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: 'No, that’s all' }).click();
+  // Playbook 3: Care details
+  await page.getByRole('button', { name: 'Morning · 8 AM' }).click(); await page.getByRole('button', { name: /^Done/ }).click();
+  await page.getByRole('button', { name: 'No walks' }).click();
+  await page.getByRole('button', { name: 'Me or my family' }).click();
 }
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});
 export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 'POST', '/webhooks/whatsapp', { messageId: 'e2e-' + Math.random().toString(36).slice(2), ...body });

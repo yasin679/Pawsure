@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, PHONE } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -43,7 +43,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await signUp(page, '9822200077');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your information', level: 1 })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
     await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: 'English', exact: true }).click();
@@ -186,6 +186,7 @@ test.describe('S. Onboarding conversation (15 Nov)', () => {
     await page.locator('#sct').fill('Green Acres CHS'); await send();
     await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
     await page.getByRole('button', { name: 'Create my home' }).click();
+    await petAndCare(page);
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
   });
