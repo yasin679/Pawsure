@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { api, ApiError, session, setSessionMode } from '../api';
 import { LangSwitch, AppBar, Banner } from '../ui';
 import { Intake } from './Intake';
+import { Intro, introSeen } from './Intro';
 
-type Step = 'phone' | 'otp' | 'consent' | 'profile';
+type Step = 'intro' | 'phone' | 'otp' | 'consent' | 'profile';
 /** Log in: number + code, then straight home. Sign up: number + code, then consent and the Pawly conversation. */
 type Mode = 'login' | 'signup';
 const ERR: Record<string, string> = {
@@ -41,7 +42,8 @@ function LegalSheet({ kind, onClose }: { kind: 'terms' | 'privacy'; onClose: () 
 }
 
 export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; start?: Step }) {
-  const [step, setStep] = useState<Step>(start);
+  // First visit: the welcome screens come before Log in / Sign up.
+  const [step, setStep] = useState<Step>(start === 'phone' && !session.get() && !introSeen() ? 'intro' : start);
   const [mode, setMode] = useState<Mode>('login');
   // A number with no account, entered on Log in, goes straight into sign-up (with a note saying so).
   const [newNumber, setNewNumber] = useState(false);
@@ -59,6 +61,8 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
   const [c, setC] = useState({ terms: false, privacy: false, alerts: true }); const [doc, setDoc] = useState<'terms' | 'privacy' | null>(null);
   const run = async (fn: () => Promise<void>) => { setErr(null); setBusy(true); try { await fn(); } catch (e) { setErr(e instanceof ApiError ? ERR[String(e.body.error)] ?? 'Something went wrong. Try again.' : 'Can’t reach Pawsure. Check your connection.'); } finally { setBusy(false); } };
   const e164 = '+91' + phone.replace(/\D/g, '');
+
+  if (step === 'intro') return <Intro onDone={m => { setMode(m); setStep('phone'); }} />;
 
   if (step === 'phone') return <div className="login">
     <div className="login-lang"><LangSwitch compact /></div>

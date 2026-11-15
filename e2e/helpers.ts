@@ -7,7 +7,9 @@ export const PHONE = { neha: '9800000021', rohan: '9800000022', priya: '99000000
 export const SUNITA = '+919000000035';
 
 /** Opens the demo. Tests switch the demo tools on (clock, simulated phones); real users see them only on request. */
-export async function boot(page: Page, hash = '', opts: { tools?: boolean } = {}) {
+export async function boot(page: Page, hash = '', opts: { tools?: boolean; intro?: boolean } = {}) {
+  // The welcome screens show once per browser; tests start at Log in unless they are about the welcome screens.
+  if (!opts.intro) await page.addInitScript(() => { try { localStorage.setItem('pawsure.introSeen', '1'); } catch { /* ignore */ } });
   if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools', '1'); } catch { /* ignore */ } });
   // The demo keeps its data in the browser; a test that boots again in the same page starts from a fresh demo.
   if (page.url().startsWith('http')) await page.evaluate(async () => {

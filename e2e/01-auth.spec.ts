@@ -103,3 +103,25 @@ test.describe('A+. Separate Log in and Sign up (15 Nov)', () => {
     await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
   });
 });
+
+test.describe('A++. Welcome screens before Log in (15 Nov)', () => {
+  test('A14 First visit: three welcome screens; Next moves on; Get started opens Sign up; they are not shown again', async ({ page }) => {
+    await boot(page, '', { intro: true });
+    await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible();
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Know who’s caring, every day.' })).toBeVisible();
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Your helper checks in on WhatsApp.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Get started' }).click();
+    await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+    await page.reload(); await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+  });
+
+  test('A15 Welcome screens: “Already have an account? Log in” opens Log in', async ({ page }) => {
+    await boot(page, '', { intro: true });
+    await page.getByRole('button', { name: 'Log in', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+  });
+});
