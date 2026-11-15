@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, tab, noHorizontalScroll, dialog } from './helpers';
+import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake } from './helpers';
 
 test.describe('L. Cross-cutting', () => {
   test('L1 Phone width (390 px): no sideways scrolling on any main tab', async ({ page }) => {
@@ -15,16 +15,34 @@ test.describe('L. Cross-cutting', () => {
     await expect(page.getByText(/You’re offline/)).toHaveCount(0);
   });
 
-  test('L3 Reloading the demo starts fresh (each visitor gets their own copy)', async ({ page }) => {
+  test('L3 Reloading the demo keeps you signed in with your changes; Reset demo starts fresh', async ({ page }) => {
     await boot(page); await signInOwner(page);
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
+    await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Reset demo' }).click();
+    await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await signInOwner(page);
     await expect(page.getByRole('heading', { name: 'Sunita (tracked helper)' })).toBeVisible();
+  });
+
+  test('L3b A new owner who reloads after signing up is still signed in and lands on their home', async ({ page }) => {
+    await boot(page); await signUp(page, '9811777001');
+    await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+    await page.reload();
+    await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+    await expect(page.locator('.petchip', { hasText: 'Coco' })).toBeVisible();
   });
 
   test('L4 Old “coming in phase 3” placeholders are gone everywhere', async ({ page }) => {

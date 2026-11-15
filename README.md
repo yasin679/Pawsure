@@ -76,7 +76,7 @@ tools/            gen-docs (permission matrix, traceability), gen-api-docs, test
 
 ## Shareable demo (no server)
 
-`npm run build:demo -w @pawsure/web` builds a version where the real API and database (PGlite) run inside the visitor's browser, with the demo household and mock vendors. It is static files (`apps/web/dist-demo`), published as a private Claude artifact for sharing. Each visitor gets their own copy that resets when the page reloads; nothing is sent anywhere, no real SMS or WhatsApp. The ops console is at `#admin` (or the **Ops console** button in the demo bar). This is for showing the product, not for the pilot (decision D-36).
+`npm run build:demo -w @pawsure/web` builds a version where the real API and database (PGlite) run inside the visitor's browser, with the demo household and mock vendors. It is static files (`apps/web/dist-demo`), published as a private Claude artifact for sharing. Each visitor gets their own copy, kept in their browser (IndexedDB) across reloads until **Reset demo** in the demo tools; nothing is sent anywhere, no real SMS or WhatsApp. The ops console is at `#admin` (or the **Ops console** button in the demo bar). This is for showing the product, not for the pilot (decision D-36).
 
 ## Configuration
 

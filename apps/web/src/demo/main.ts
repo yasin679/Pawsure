@@ -6,6 +6,8 @@ import './shims/crypto';
 
 const API = import.meta.env.VITE_API_URL as string;
 const backend = import('./backend').then(m => m.start());
+// "Reset demo" in the demo tools: forget this browser's copy of the demo and start fresh.
+(window as unknown as { pawsureResetDemo?: () => Promise<void> }).pawsureResetDemo = () => import('./backend').then(m => m.resetDemo()).then(() => location.reload());
 backend.then(() => document.documentElement.setAttribute('data-demo-ready', '1')).catch(e => {
   console.error(e);
   document.getElementById('splash')?.remove(); // show the error, not a spinner

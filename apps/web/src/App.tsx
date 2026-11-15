@@ -139,6 +139,7 @@ export function App() {
 
 /** Demo-only controls: simulated clock + Sunita's simulated phone. Hidden when the API is not in DEMO_MODE. */
 function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView | null; onChange: () => void; friendOnly?: boolean }) {
+  const resetDemo = (window as unknown as { pawsureResetDemo?: () => Promise<void> }).pawsureResetDemo;
   const [busy, setBusy] = useState(false); const [phone, setPhone] = useState(false); const [friends, setFriends] = useState(false); const [cover, setCover] = useState(false); const [hint, setHint] = useState<string | null>(null);
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await api('/jobs/tick', { body: {}, auth: false }); await onChange(); } finally { setBusy(false); } };
   useEffect(() => {
@@ -153,6 +154,7 @@ function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView |
       {!friendOnly && <button aria-pressed={friends} onClick={() => { setFriends(!friends); setPhone(false); setCover(false); }}>{friends ? 'Hide' : 'Show'} friends’ phones</button>}
       {!friendOnly && <button aria-pressed={cover} onClick={() => { setCover(!cover); setPhone(false); setFriends(false); }}>{cover ? 'Hide' : 'Show'} backups’ phones</button>}
       <button onClick={() => { location.hash = 'admin'; }}>Ops console</button>
+      {resetDemo && <button onClick={() => { if (confirm('Reset the demo? Accounts and homes you created in this browser are deleted.')) resetDemo(); }}>Reset demo</button>}
     </div>
     {hint && <div className="banner sim" role="status"><span className="bi">▶</span><div className="grow">{hint} <button className="btn ghost sm" onClick={() => setHint(null)}>Hide</button></div></div>}
     {(phone || friends || cover) && <div className="simdock" aria-label="Simulated phones">{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}

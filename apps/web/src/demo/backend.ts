@@ -1,7 +1,7 @@
 /**
  * In-browser demo backend: the real Pawsure API (Hono) and database (PGlite, PostgreSQL in WebAssembly) running in the
  * visitor's own browser, seeded with the demo household. Nothing leaves the browser; every visitor gets their own copy,
- * and it starts fresh on each page load. Vendors are the same mock adapters the server uses in demo mode.
+ * kept between visits in this browser until "Reset demo". Vendors are the same mock adapters the server uses in demo mode.
  */
 import { openDb, migrate, seedDemo, DEMO, type MigrationSource } from '@pawsure/db';
 import { createApp } from '../../../api/src/app';
@@ -14,9 +14,20 @@ const fsBundleUrl = new URL('pglite-fs.wasm', document.baseURI).href;
 const files = import.meta.glob('../../../../packages/db/migrations/*.sql', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const MIGRATIONS: MigrationSource[] = Object.entries(files).map(([path, sql]) => ({ name: path.split('/').pop()!, sql }));
 
+export const DEMO_DB = 'pawsure-demo';
+/** Deletes this browser's copy of the demo (database and sign-ins) so the next load starts fresh. */
+export async function resetDemo() {
+  try { localStorage.removeItem('pawsure.session'); localStorage.removeItem('pawsure.staff.session'); } catch { /* storage blocked */ }
+  const names = (await indexedDB.databases?.().catch(() => [])) ?? [];
+  await Promise.all(names.filter(d => d.name?.includes(DEMO_DB)).map(d => new Promise(res => { const r = indexedDB.deleteDatabase(d.name!); r.onsuccess = r.onerror = r.onblocked = () => res(null); })));
+}
+
 export async function start() {
   const fsBundle = await fetch(fsBundleUrl).then(r => { if (!r.ok) throw new Error('database files did not load'); return r.blob(); });
-  const db = await openDb({ dataDir: 'memory', pglite: { fsBundle } });
+  // Kept in this browser (IndexedDB), so a reload, full screen or a new version of the page keeps your account and home.
+  // Falls back to memory only where the browser blocks storage. "Reset demo" in the demo tools starts over.
+  let db = await openDb({ dataDir: 'memory', pglite: { fsBundle, dataDir: 'idb://' + DEMO_DB } });
+  try { await db.query('select 1'); } catch { db = await openDb({ dataDir: 'memory', pglite: { fsBundle } }); }
   await migrate(db, MIGRATIONS);
   await seedDemo(db);
   // The product owner's own number logs straight into the demo home as a co-owner (no onboarding).
