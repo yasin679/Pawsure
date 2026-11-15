@@ -26,7 +26,7 @@ export async function start() {
   const fsBundle = await fetch(fsBundleUrl).then(r => { if (!r.ok) throw new Error('database files did not load'); return r.blob(); });
   // Kept in this browser (IndexedDB), so a reload, full screen or a new version of the page keeps your account and home.
   // Falls back to memory only where the browser blocks storage. "Reset demo" in the demo tools starts over.
-  let db = await openDb({ dataDir: 'memory', pglite: { fsBundle, dataDir: 'idb://' + DEMO_DB } });
+  let db = await openDb({ dataDir: 'memory', pglite: { fsBundle, dataDir: 'idb://' + DEMO_DB, relaxedDurability: true } });
   try { await db.query('select 1'); } catch { db = await openDb({ dataDir: 'memory', pglite: { fsBundle } }); }
   await migrate(db, MIGRATIONS);
   await seedDemo(db);

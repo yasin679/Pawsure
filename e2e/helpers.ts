@@ -9,6 +9,12 @@ export const SUNITA = '+919000000035';
 /** Opens the demo. Tests switch the demo tools on (clock, simulated phones); real users see them only on request. */
 export async function boot(page: Page, hash = '', opts: { tools?: boolean } = {}) {
   if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools', '1'); } catch { /* ignore */ } });
+  // The demo keeps its data in the browser; a test that boots again in the same page starts from a fresh demo.
+  if (page.url().startsWith('http')) await page.evaluate(async () => {
+    try { localStorage.removeItem('pawsure.session'); localStorage.removeItem('pawsure.staff.session'); } catch { /* ignore */ }
+    const dbs = (await indexedDB.databases?.()) ?? [];
+    for (const d of dbs) if (d.name?.includes('pawsure-demo')) indexedDB.deleteDatabase(d.name);
+  });
   await page.goto('/demo.html' + hash);
   await page.waitForSelector('html[data-demo-ready]', { state: 'attached', timeout: 90_000 });
 }
@@ -63,6 +69,17 @@ export async function petAndCare(page: Page, pet = 'Coco') {
   await page.getByRole('button', { name: 'No walks' }).click();
   await page.getByRole('button', { name: 'Me or my family' }).click();
 }
+/** Closes the Plan for today sheet if it is open (it covers Home and the demo bar). */
+export async function closePlan(page: Page) {
+  const plan = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Plan for today' }) });
+  if (await plan.isVisible()) await plan.getByRole('button', { name: 'Close' }).click();
+}
+/** Opens Home → Plan for today (who's caring, leaving / back, timeline, day report, edit routine, tomorrow). */
+export async function openPlan(page: Page) {
+  if (await page.getByRole('heading', { name: 'Plan for today' }).isVisible()) return;
+  await page.getByRole('button', { name: 'Plan for today' }).click();
+  await expect(page.getByRole('heading', { name: 'Plan for today' })).toBeVisible();
+}
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});
 export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 'POST', '/webhooks/whatsapp', { messageId: 'e2e-' + Math.random().toString(36).slice(2), ...body });
 
@@ -101,6 +118,7 @@ export async function fillPetEssentials(page: Page) {
 
 /** Sets the demo clock so that one +5m tap from the demo bar lands on HH:MM; the tap also runs the job and refreshes. */
 export async function clockTo(page: Page, hhmm: string, day = DAY) {
+  await closePlan(page);
   const [h, m] = hhmm.split(':').map(Number) as [number, number];
   const t = h * 60 + m - 5;
   await api(page, 'POST', '/demo/clock', { set: `${day}T${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}:00+05:30` });

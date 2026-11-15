@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, clockTo, taskCard, meItem, tab, api } from './helpers';
+import { boot, signInOwner, clockTo, taskCard, meItem, tab, api, openPlan } from './helpers';
 
 /** Sunita’s simulated phone (demo bar) posts to the same WhatsApp and IVR webhooks a real phone would. */
 const phone = (page: Page) => page.locator('.sheet', { hasText: 'Sunita’s phone (simulated)' });
@@ -35,6 +35,7 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await phone(page).getByRole('button', { name: '📷 Re-send old photo' }).click();
     await expect(phone(page)).toContainText('हा फोटो आधी आला होता'); // Sunita’s messages are in Marathi
     await page.getByRole('button', { name: 'Hide Sunita’s phone' }).click();
+    await openPlan(page);
     await page.getByRole('button', { name: 'Timeline' }).click();
     await expect(page.getByRole('dialog')).toContainText('not counted (reused image)');
   });
@@ -46,6 +47,7 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Likely');
     await phone(page).locator('#simt').selectOption({ label: 'Wet food + litter tray' });
     await phone(page).getByRole('button', { name: '☎ IVR code' }).click();
+    await page.getByRole('tab', { name: /Misty/ }).click(); // Home shows one pet's tasks at a time
     await expect(taskCard(page, 'Wet food + litter tray')).toContainText('Likely');
   });
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake } from './helpers';
+import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake, openPlan, closePlan } from './helpers';
 
 test.describe('L. Cross-cutting', () => {
   test('L1 Phone width (390 px): no sideways scrolling on any main tab', async ({ page }) => {
@@ -17,18 +17,24 @@ test.describe('L. Cross-cutting', () => {
 
   test('L3 Reloading the demo keeps you signed in with your changes; Reset demo starts fresh', async ({ page }) => {
     await boot(page); await signInOwner(page);
+    await openPlan(page);
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await openPlan(page);
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
+    await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
+    await openPlan(page);
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
+    await closePlan(page);
     page.once('dialog', d => d.accept());
     await page.getByRole('button', { name: 'Reset demo' }).click();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await signInOwner(page);
+    await openPlan(page);
     await expect(page.getByRole('heading', { name: 'Sunita (tracked helper)' })).toBeVisible();
   });
 
@@ -39,6 +45,7 @@ test.describe('L. Cross-cutting', () => {
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+    await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
@@ -47,6 +54,7 @@ test.describe('L. Cross-cutting', () => {
 
   test('L4 Old “coming in phase 3” placeholders are gone everywhere', async ({ page }) => {
     await boot(page); await signInOwner(page);
+    await openPlan(page);
     await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
     await expect(dialog(page)).toContainText('Ask your own friends. Nothing is sent until you approve');
     await expect(page.getByText(/arrives in phase|phase [0-9]/i)).toHaveCount(0);
@@ -56,6 +64,7 @@ test.describe('L. Cross-cutting', () => {
 
   test('L5 Choosing “A friend” under Who’s caring opens Find cover', async ({ page }) => {
     await boot(page); await signInOwner(page);
+    await openPlan(page);
     await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
     await dialog(page).getByRole('button', { name: /A friend/ }).click();
     await expect(page.getByRole('heading', { name: 'Find cover' })).toBeVisible();

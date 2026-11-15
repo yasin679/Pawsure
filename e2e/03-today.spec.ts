@@ -1,23 +1,30 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY } from './helpers';
+import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY, openPlan } from './helpers';
 
 test.describe('D. Today: daily care', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); });
 
   test('D1 Who’s caring → Trusted Helper mode; tapping Covered makes the day covered', async ({ page }) => {
+    await openPlan(page);
     await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
     await dialog(page).getByRole('button', { name: /Trusted Helper mode/ }).click();
+    await openPlan(page);
     await expect(page.getByRole('heading', { name: 'Sunita, Trusted Helper mode' })).toBeVisible();
+    await openPlan(page);
     await page.getByRole('button', { name: 'Covered', exact: true }).click();
+    await openPlan(page);
     await expect(page.locator('.conf', { hasText: 'Covered day' }).first()).toBeVisible();
   });
 
   test('D2 Leaving checklist → I’m back → quick return check is saved', async ({ page }) => {
+    await openPlan(page);
     await page.locator('.card', { hasText: 'Heading out?' }).getByRole('button', { name: 'I’m leaving' }).click();
     await dialog(page).getByText('Water bowl is full').click();
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
+    await openPlan(page);
     await expect(page.getByText(/Out since 9:00 AM/)).toBeVisible();
     await clockTo(page, '18:00');
+    await openPlan(page);
     await page.getByRole('button', { name: 'I’m back' }).click();
     for (const q of ['Food bowl', 'Water bowl', 'Toilet pad', 'Your pets', 'Anything damaged or wrong?']) await dialog(page).getByRole('radiogroup', { name: q }).getByRole('button').first().click();
     await dialog(page).getByRole('button', { name: 'Save' }).click();
@@ -52,9 +59,11 @@ test.describe('D. Today: daily care', () => {
   });
 
   test('D6 Timeline and day report open with today’s plan', async ({ page }) => {
+    await openPlan(page);
     await page.getByRole('button', { name: 'Timeline' }).click();
     await expect(dialog(page).locator('.tl')).toContainText('Planned: Lunch + fresh water');
     await dialog(page).getByRole('button', { name: 'Close' }).click();
+    await openPlan(page);
     await page.getByRole('button', { name: 'Day report' }).click();
     await expect(dialog(page)).toContainText('Joint supplement');
     await expect(dialog(page).getByRole('link', { name: 'Thank Sunita on WhatsApp' })).toBeVisible();
@@ -77,11 +86,15 @@ test.describe('D. Today: daily care', () => {
 
   test('D8 Can’t come today → plan kept, alone-window warning, “Ask a friend” pre-fills Find cover', async ({ page }) => {
     await clockTo(page, '11:00');
+    await openPlan(page);
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await openPlan(page);
     await expect(page.getByText('Sunita can’t come today. Your original plan is kept.')).toBeVisible();
+    await openPlan(page);
     await expect(page.getByText(/Alone-window warning/)).toBeVisible();
     await expect(page.getByText(/phase 3/i)).toHaveCount(0);
+    await openPlan(page);
     await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
     await expect(page.locator('#ask')).toHaveValue('Sunita can’t come today. Can someone feed Bruno at 1:00 pm?');
   });

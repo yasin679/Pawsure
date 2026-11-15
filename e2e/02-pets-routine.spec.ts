@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, tab, fillPetEssentials } from './helpers';
+import { boot, signInOwner, tab, fillPetEssentials, openPlan } from './helpers';
 
 test.describe('B. Pets and C. routine and health', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); await tab(page, 'Pet'); });
@@ -61,6 +61,7 @@ test.describe('B. Pets and C. routine and health', () => {
 
   test('C4 From Today, Edit routine → Add “Just for today”: it joins today’s plan and doesn’t repeat', async ({ page }) => {
     await tab(page, 'Today');
+    await openPlan(page);
     await page.getByRole('button', { name: 'Edit routine' }).click();
     await expect(page.getByRole('heading', { name: 'Routine' })).toBeVisible();
     await page.getByRole('button', { name: 'Add' }).click();

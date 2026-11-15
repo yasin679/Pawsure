@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY } from './helpers';
+import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY, openPlan } from './helpers';
 
 /** v1.4 cover continuity (PRD 17.1 new rows) through the real screens of the demo build. */
 const HH = '/v1/households/hh_demo';
@@ -128,14 +128,17 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await sheet.getByRole('button', { name: 'Move it' }).click();
     await dialog(page).getByRole('button', { name: 'Move it' }).click();
     await expect(page.locator('.coverline').filter({ hasText: 'You’re handling it' })).toBeVisible();
+    await openPlan(page);
     await page.getByRole('button', { name: 'Day report' }).click();
     await expect(dialog(page)).toContainText('Cover history'); await expect(dialog(page)).toContainText('Mrs Desai (no reply)');
   });
 
   test('O9 “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned', async ({ page }) => {
     await boot(page); await signInOwner(page);
+    await openPlan(page);
     await page.getByRole('button', { name: 'My help can’t come today' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await openPlan(page);
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await expect(dialog(page)).toContainText('Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet.');
     await expect(dialog(page).locator('[data-option]')).toHaveCount(6);
@@ -143,14 +146,17 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await expect(dialog(page)).toContainText('who is plan B');
     await dialog(page).locator('#pb').selectOption('I’ll come back myself');
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
+    await openPlan(page);
     await expect(page.locator('.conf').filter({ hasText: 'No cover planned' })).toBeVisible();
   });
 
   test('O10 “I’m delayed” 7 → 9 PM: Sunita only until 8 → a request for the dinner only', async ({ page }) => {
     await boot(page); await signInOwner(page);
+    await openPlan(page);
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
     await clockTo(page, '18:30');
+    await openPlan(page);
     await page.getByRole('button', { name: 'I’m delayed' }).click();
     await dialog(page).locator('#dlt').selectOption(String(21 * 60));
     await dialog(page).getByRole('button', { name: 'See what changes' }).click();
@@ -280,7 +286,7 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     const expectations: Record<string, (p: Page) => Promise<void>> = {
       O5: async p => { await expect(p.locator('.card.atrisk').first()).toContainText('Asking: Mrs Desai and Ankita'); },
       O7: async p => { await expect(dialog(p)).toContainText('Cover not found'); },
-      O9: async p => { await expect(p.getByText(/Sunita can’t come today/)).toBeVisible(); },
+      O9: async p => { await openPlan(p); await expect(p.getByText(/Sunita can’t come today/)).toBeVisible(); },
       O11: async p => { await expect(p.locator('.gatekey').first()).toContainText('Mrs Desai'); }
     };
     for (let i = 1; i <= 14; i++) {
