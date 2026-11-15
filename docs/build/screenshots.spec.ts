@@ -41,8 +41,12 @@ test('sign-in and onboarding', async ({ page }) => {
   await mark(page, [[page.getByText('I accept the Terms of Use'), 1], [page.getByText('I have read the Privacy Notice'), 2], [page.locator('.card', { hasText: 'Optional' }), 3]]); await shot(page, '04-consent');
   await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.locator('#nm').fill('Asha Rao'); await fillSociety(page, 'Raheja Vihar, Powai'); await page.locator('#tw').fill('C'); await page.locator('#fl').fill('C-702');
-  await mark(page, [[page.locator('#nm'), 1], [page.locator('#lg'), 2], [page.locator('#cty'), 3], [page.locator('#fl'), 4]]); await shot(page, '05-profile');
+  const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.locator('#nm').fill('Asha Rao'); await send(); await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.locator('#stt').selectOption('Maharashtra'); await page.locator('#cty').selectOption('Mumbai');
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click(); await page.locator('#sct').fill('Raheja Vihar, Powai'); await send();
+  await page.locator('#tw').fill('C'); await send(); await page.locator('#fl').fill('C-702'); await send();
+  await mark(page, [[page.locator('.cb-sum'), 1], [page.getByRole('button', { name: 'Create my home' }), 2]]); await shot(page, '05-profile');
 });
 
 test('today', async ({ page }) => {

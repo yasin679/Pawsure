@@ -44,14 +44,16 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
-    await page.locator('#nm').fill('Isha');
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: 'English', exact: true }).click();
     await page.locator('#stt').selectOption('Maharashtra');
     await page.locator('#cty').selectOption('Pune');
     await expect(page.locator('#soc option', { hasText: 'Lake Vista CHS · Baner' })).toHaveCount(1);
     await expect(page.locator('#soc option', { hasText: 'Powai' })).toHaveCount(0);
     await page.locator('#soc').selectOption({ label: 'Lake Vista CHS · Baner' });
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Change: Lake Vista CHS, Baner' })).toBeVisible();
+    await expect(page.locator('#tw')).toBeVisible();
   });
 
   test('R3 PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause', async ({ page }) => {
@@ -146,7 +148,9 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.locator('#nm').fill('12345');
     await expect(page.getByText('Enter a real name using letters, not numbers.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: 'Another language' }).click();
     await expect(page.locator('#lg option')).toHaveCount(23);
   });
 

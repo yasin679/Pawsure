@@ -19,6 +19,7 @@ const PATHS: Record<string, string> = {
   alert: '<path d="M12 4 21 19.5H3Z"/><path d="M12 10v4.5M12 17h.01"/>',
   phone: '<path d="M6.5 4h3l1.5 4-2 1.5a10 10 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15 15 0 0 1 4.5 6a2 2 0 0 1 2-2Z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  send: '<path d="M4.5 12 19.5 5l-4 14-4.2-5.8Z"/><path d="m11.3 13.2 8.2-8.2"/>',
   star: '<path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4-3.9-3.8 5.4-.8Z"/>'
 };
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {

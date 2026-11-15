@@ -562,3 +562,46 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .card.warn,.today .card.danger,.today .card.info{border-radius:24px}
 .today .task{border-color:transparent;border-radius:22px;box-shadow:0 8px 22px -16px rgba(38,48,39,.45)}
 .today .task .time{background:var(--accent-soft);color:var(--sage-dark);border-radius:12px;padding:4px 8px}
+
+/* ---------- Onboarding conversation with Pawly (Intake.tsx) ---------- */
+.intake-progress{height:4px;margin:0 16px 4px;border-radius:99px;background:var(--surface-2);overflow:hidden;flex:none}
+.intake-progress span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--sage),var(--gold));transition:width .4s ease}
+.body.intake{padding-bottom:28px}
+.chat{display:flex;flex-direction:column;gap:10px}
+.cb-pair{display:flex;flex-direction:column;gap:10px}
+.cb-row{display:flex;align-items:flex-end;gap:8px;animation:cb-in .28s ease-out both}
+.cb-row.me{justify-content:flex-end}
+.cb-av{width:34px;height:34px;flex:none;border-radius:50%;background:var(--mint,#E5ECD9);display:grid;place-items:center;overflow:hidden;box-shadow:0 0 0 2px var(--surface)}
+.cb{max-width:82%;padding:10px 14px;border-radius:20px;font-size:.95rem;line-height:1.45;overflow-wrap:anywhere}
+.cb.bot{background:var(--surface);border-bottom-left-radius:6px;box-shadow:0 6px 18px -14px rgba(38,48,39,.5);color:var(--ink)}
+.cb.me{background:linear-gradient(160deg,#6F8F4E,#587539);color:#FBF8EF;border-bottom-right-radius:6px;font-weight:700;border:0;text-align:right}
+.cb.me.edit{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.cb.me.edit:hover{filter:brightness(1.07)}
+.cb-edit{font-size:.8rem;opacity:.7}
+.cb-note{display:block;margin-top:4px;font-size:var(--fs-xs);color:var(--ink-3)}
+.cb-h{font-size:1.1rem;margin:4px 0 0}
+.cb-sum{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--surface-2);font-size:var(--fs-s)}
+.cb-sum dt{color:var(--ink-3);font-weight:700}
+.cb-sum dd{margin:0;font-weight:700}
+.cb.typing{display:inline-flex;gap:4px;padding:14px 16px}
+.cb.typing i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);opacity:.5;animation:cb-dot 1s infinite}
+.cb.typing i:nth-child(2){animation-delay:.15s}.cb.typing i:nth-child(3){animation-delay:.3s}
+.cb-builder{display:flex;flex-direction:column;gap:10px;padding-left:42px}
+.cb-builder .card{border-radius:20px}
+.cb-builder .card > .btn,.cb-builder .card > .tag{align-self:flex-start}
+.composer{flex:none;display:flex;flex-direction:column;gap:8px;padding:10px 16px 14px;background:var(--bg);border-top:1px solid var(--line)}
+.cb-input{display:flex;gap:8px;align-items:center}
+.cb-input .input{flex:1;min-width:0;border-radius:var(--r-pill);padding-left:16px}
+.cb-send{flex:none;width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);box-shadow:0 6px 14px -8px color-mix(in srgb,var(--accent) 80%,transparent)}
+.cb-send:disabled{opacity:.4;box-shadow:none;cursor:default}
+.cb-chips{display:flex;flex-wrap:wrap;gap:8px}
+.cb-chips.big .chip{flex:1;justify-content:center;min-height:46px}
+.chip{display:inline-flex;align-items:center;border:1.5px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:var(--r-pill);padding:8px 14px;font-weight:800;font-size:var(--fs-s)}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--sage-dark)}
+.chip.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cb-err{font-size:var(--fs-s);font-weight:700;color:var(--alert)}
+.cb-foot{text-align:center}
+@keyframes cb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes cb-dot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:.9;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.cb-row,.cb.typing i{animation:none}}

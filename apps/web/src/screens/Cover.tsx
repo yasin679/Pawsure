@@ -244,13 +244,13 @@ export function BackupsScreen({ hh, onBack, onBuild }: { hh: string; onBack: () 
 }
 
 /* ===================== PS-140 newcomer circle builder ===================== */
-export function CircleBuilder({ hh, onDone, onBack }: { hh: string; onDone?: () => void; onBack?: () => void }) {
+/** `embedded` renders just the four ways (no header or banner), for the onboarding conversation. */
+export function CircleBuilder({ hh, onDone, onBack, embedded }: { hh: string; onDone?: () => void; onBack?: () => void; embedded?: boolean }) {
   const [done, setDone] = useState<Record<string, string>>({});
   const go = (kind: string, extra: Record<string, unknown> = {}) => api<{ note: string }>(`/v1/households/${hh}/circle-builder`, { body: { kind, ...extra } }).then(r => setDone(d => ({ ...d, [kind]: r.note })));
   const [prov, setProv] = useState({ name: '', phone: '' });
   const row = (k: string, ic: string, t: string, s: string, action: () => void, extra?: React.ReactNode) => <div className="card" data-builder={k}><div className="row top"><span className="avatar icon"><Icon name={ic} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div></div>{extra}{done[k] ? <span className="tag flag-on">{done[k]}</span> : <button className="btn sm primary" onClick={action}>Start</button>}</div>;
-  return <><AppBar title="Build your circle" onBack={onBack} /><main className="body">
-    <Banner kind="info" icon="ℹ"><b>Cover is limited until you have a circle.</b> Four easy ways to find someone who can step in.</Banner>
+  const ways = <>
     {row('society_link', 'friends', 'Share an invite link in your society WhatsApp group', 'Neighbours who join choose what they can help with. Nobody sees your flat number.', () => go('society_link'))}
     {row('pet_swap', 'paw', 'Start a pet-parent swap', 'Pair up with another owner in your society: you cover for each other. Both of you must opt in.', () => go('pet_swap'))}
     {row('building_helper', 'user', 'Invite a helper who already works in your building', 'Only with her consent first. One helper can work for several homes without mixing them up.', () => go('building_helper'))}
@@ -258,5 +258,10 @@ export function CircleBuilder({ hh, onDone, onBack }: { hh: string; onDone?: () 
       !done.paid_provider && <div className="grid2"><input className="input" aria-label="Provider name" placeholder="Name" value={prov.name} onChange={e => setProv({ ...prov, name: e.target.value })} /><input className="input mono" aria-label="Provider mobile" placeholder="Mobile (10 digits)" inputMode="numeric" maxLength={10} value={prov.phone} onChange={e => setProv({ ...prov, phone: e.target.value.replace(/\D/g, '') })} /></div>)}
     <div className="card flat small muted">Day cares aren’t listed here.</div>
     {onDone && <button className="btn primary block" onClick={onDone}>Continue</button>}
+  </>;
+  if (embedded) return ways;
+  return <><AppBar title="Build your circle" onBack={onBack} /><main className="body">
+    <Banner kind="info" icon="ℹ"><b>Cover is limited until you have a circle.</b> Four easy ways to find someone who can step in.</Banner>
+    {ways}
   </main></>;
 }

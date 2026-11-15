@@ -28,6 +28,19 @@ export async function fillSociety(page: Page, name: string, city = 'Mumbai', sta
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(name);
 }
+/** Onboarding is a conversation with Pawly: name → language → state → city → society → tower → flat → create my home. */
+export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string } = {}) {
+  const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.locator('#nm').fill(name); await send();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.locator('#stt').selectOption(o.state ?? 'Maharashtra');
+  await page.locator('#cty').selectOption(o.city ?? 'Mumbai');
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+  await page.locator('#sct').fill(society); await send();
+  if (o.tower) { await page.locator('#tw').fill(o.tower); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  if (o.flat) { await page.locator('#fl').fill(o.flat); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByRole('button', { name: 'Create my home' }).click();
+}
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});
 export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 'POST', '/webhooks/whatsapp', { messageId: 'e2e-' + Math.random().toString(36).slice(2), ...body });
 

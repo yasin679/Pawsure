@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, fillSociety } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, intake } from './helpers';
 
 test.describe('M. Login separation and security (on screen)', () => {
   test('M1 Helper login → helper home only (WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
@@ -70,8 +70,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     await boot(page); await signIn(page, '9811666777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Eve'); await fillSociety(page, 'Hiranandani, Powai');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Eve', 'Hiranandani, Powai');
     await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Eve/ })).toBeVisible();
     await expect(page.getByText('Bruno')).toHaveCount(0);

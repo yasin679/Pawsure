@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, fillSociety, PHONE, SUNITA, DAY } from './helpers';
+import { boot, signIn, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY } from './helpers';
 
 /** v1.4 cover continuity (PRD 17.1 new rows) through the real screens of the demo build. */
 const HH = '/v1/households/hh_demo';
@@ -193,8 +193,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await boot(page); await signIn(page, '9811222777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Rohan & Ankita Verma'); await fillSociety(page, 'Raheja Vihar, Powai');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Rohan & Ankita Verma', 'Raheja Vihar, Powai');
     await expect(page.getByRole('heading', { name: 'Do you have anyone who can look in on your pet?' })).toBeVisible();
     await page.getByRole('button', { name: 'No one yet' }).click();
     await expect(page.getByText('Cover is limited until you have a circle.')).toBeVisible();

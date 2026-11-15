@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, fillSociety, PHONE } from './helpers';
+import { boot, signIn, signInOwner, signOut, intake, PHONE } from './helpers';
 
 test.describe('A. Sign-in and onboarding', () => {
   test('A1 New owner signs up: phone, code, consents, profile, then lands on Today', async ({ page }) => {
@@ -9,10 +9,7 @@ test.describe('A. Sign-in and onboarding', () => {
     await page.getByText('I accept the Terms of Use').click();
     await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Asha Rao');
-    await fillSociety(page, 'Raheja Vihar, Powai');
-    await page.locator('#tw').fill('C');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Asha Rao', 'Raheja Vihar, Powai', { tower: 'C' });
     await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Asha/ })).toBeVisible();
   });
