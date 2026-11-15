@@ -630,4 +630,3 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .authtabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:var(--r-pill);background:var(--surface-2);margin-bottom:6px}
 .authtabs button{border:0;background:transparent;border-radius:var(--r-pill);padding:9px 0;font-weight:800;color:var(--ink-3)}
 .authtabs button[aria-pressed="true"]{background:var(--surface);color:var(--sage-dark);box-shadow:0 2px 6px rgba(38,48,39,.14)}
-.auth-switch{align-self:center;padding:8px 0 0;text-align:center}

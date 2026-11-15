@@ -74,7 +74,6 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       <div className="field"><label htmlFor="ph">{tr('Mobile number')}</label><div className="phone-in"><span className="cc">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>{tr('Send code')}</button>
-      <button type="button" className="linkbtn auth-switch" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setErr(null); }}>{mode === 'login' ? tr('New to Pawsure? Create an account') : tr('Already have an account? Log in instead')}</button>
     </div>
   </div>;
 
