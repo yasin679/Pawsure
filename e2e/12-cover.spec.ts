@@ -9,6 +9,13 @@ const reminderButton = async (page: Page, kind: 'yes' | 'cant' | 'sub') => (awai
 const cover = async (page: Page) => (await api(page, 'GET', `${HH}/cover`)).body;
 const refresh = async (page: Page) => { await tab(page, 'Me'); await tab(page, 'Today'); };
 const atRiskCard = (page: Page) => page.locator('.card.atrisk').first();
+/** The cover line is shown in the task's sheet (Home task cards show only icon, title, time and status). */
+const coverLine = async (page: Page, title: string) => {
+  await page.locator('button.task', { hasText: title }).first().click();
+  const text = await page.getByRole('dialog').locator('.coverline').first().innerText();
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).last().click();
+  return text;
+};
 
 test.describe('O. Cover continuity (v1.4)', () => {
   test('O1 Helper taps Can’t make it at 2:30 → At risk → backups in order → Mrs Desai reads the note and accepts → owner confirms → gate and key', async ({ page }) => {
@@ -20,7 +27,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await refresh(page);
     await expect(atRiskCard(page)).toContainText('At risk · Bruno · Toilet pad change + water top-up');
     await expect(atRiskCard(page)).toContainText('Asking: Mrs Desai and Ankita');
-    await expect(page.locator('.coverline.risk').first()).toContainText('At risk');
+    expect(await coverLine(page, 'Toilet pad change')).toContain('At risk');
     const job = (await cover(page)).jobs[0];
     await webhook(page, { from: DESAI, type: 'button', payload: `cb_yes:${job.id}` }); // first-time carer: blocked until the note is read
     expect((await cover(page)).jobs[0].hold).toBeNull();
@@ -30,7 +37,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await page.getByRole('button', { name: 'Confirm Mrs Desai' }).click();
     const gk = page.locator('.gatekey').first();
     await expect(gk).toContainText('Gate and key · Mrs Desai'); await expect(gk).toContainText('To do');
-    await expect(page.locator('.coverline.ok').filter({ hasText: 'Mrs Desai · replacement confirmed' })).toBeVisible();
+    expect(await coverLine(page, 'Toilet pad change')).toContain('Mrs Desai · replacement confirmed');
     await gk.getByRole('checkbox').click(); await expect(gk.getByRole('checkbox')).toBeChecked();
     await gk.locator('select').selectOption({ index: 3 });
     await expect(gk).toContainText('Ready');
@@ -127,7 +134,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     const sheet = dialog(page); await expect(sheet).toContainText('Cover not found');
     await sheet.getByRole('button', { name: 'Move it' }).click();
     await dialog(page).getByRole('button', { name: 'Move it' }).click();
-    await expect(page.locator('.coverline').filter({ hasText: 'You’re handling it' })).toBeVisible();
+    expect(await coverLine(page, 'Evening play walk')).toContain('You’re handling it');
     await openPlan(page);
     await page.getByRole('button', { name: 'Day report' }).click();
     await expect(dialog(page)).toContainText('Cover history'); await expect(dialog(page)).toContainText('Mrs Desai (no reply)');
@@ -256,7 +263,8 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     const card = page.locator('button.task', { hasText: 'Lunch + fresh water' }).first();
     await expect(card).toBeVisible();
     expect(((await card.innerText()).match(/Planned/g) ?? []).length).toBeLessThanOrEqual(1);
-    await expect(card.locator('.coverline')).toContainText('Sunita · assigned');
+    await expect(card.locator('.coverline')).toHaveCount(0); // cover is shown in the task sheet, not on the card
+    expect(await coverLine(page, 'Lunch + fresh water')).toContain('Sunita · assigned');
   });
   test('P4 The request label says rules (no AI connected); the demo bar has no parser or scenario menus', async ({ page }) => {
     await boot(page); await signInOwner(page);

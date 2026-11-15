@@ -15,6 +15,8 @@ const SEV: Record<string, [string, string][]> = {
 const RQ = [['food', 'Food bowl', 'Empty / eaten', 'Untouched'], ['water', 'Water bowl', 'Lower / refilled', 'Same or dry'], ['pad', 'Toilet pad', 'Changed', 'Old'], ['pet', 'Your pets', 'Normal', 'Very hungry or thirsty'], ['damage', 'Anything damaged or wrong?', 'No', 'Yes']] as const;
 type SheetKind = null | 'plan' | 'caring' | 'cantcome' | 'leaving' | 'return' | 'timeline' | 'report' | 'sos' | 'resolve' | 'task' | 'incident' | 'change' | 'predeparture' | 'delay';
 
+/** Task type icons and colours follow the prototype (feeding orange, water sky, walk green, toilet teal, medicine lilac). */
+const TASK_ICON: Record<string, string> = { feeding: 'food', water: 'water', walk: 'walk', toilet: 'pad', litter: 'litter', medicine: 'pill', other: 'paw' };
 const VERB: Record<string, string> = { feeding: 'feed', walk: 'walk', medicine: 'give medicine to', litter: 'clean the litter tray for', toilet: 'change the toilet pad for', water: 'top up water for' };
 
 export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void }) {
@@ -60,10 +62,12 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const mine = day.tasks.filter(t => t.petId === petId).sort((a, b) => a.due - b.due);
   const isDone = (t: DayTask) => ['Confirmed', 'Likely', 'Cancelled'].includes(t.ev.state);
   const pending = mine.filter(t => !isDone(t)), completed = mine.filter(isDone);
-  const taskCard = (t: DayTask) => <button key={t.id} className={`task${isDone(t) ? ' done' : ''}`} onClick={() => { setTask(t); setSheet('task'); }}>
-    <div className="t1"><span className="time">{hm(t.due)}</span><div className="grow"><div style={{ fontWeight: 700 }}>{t.title}</div><div className="small muted">{petName(t.petId)}</div></div><Conf state={t.ev.state} label={t.ev.label} /></div>
-    <CoverLineView line={ov?.lines[t.id]} />
-    {(t.lifecycle.at(-1)?.state !== 'Planned' || t.signals.length > 0 || t.ev.late) && <div className="row wrap"><span className="life">{t.lifecycle.at(-1)?.state !== 'Planned' ? t.lifecycle.at(-1)?.state : ''}{t.signals.length ? (t.lifecycle.at(-1)?.state !== 'Planned' ? ' · ' : '') + t.signals.map(s => s.kind === 'photo' ? `📷 ${s.code === 'today' ? 'photo + code' : 'photo'}` : s.kind === 'friend_photo' ? '📷 photo' : s.kind).join(' · ') : ''}</span>{t.ev.late && <span className="tag sim">{tr('Late')}</span>}</div>}
+  /** A task as in the prototype: type icon, title, time as sub text, status pill (cover details are in the task sheet). */
+  const taskCard = (t: DayTask) => <button key={t.id} className={`task tl-row${isDone(t) ? ' done' : ''}`} onClick={() => { setTask(t); setSheet('task'); }}>
+    <span className={`task-ic t-${t.type}`} aria-hidden="true"><Icon name={TASK_ICON[t.type] ?? 'paw'} size={22} /></span>
+    <span className="grow task-txt"><b className="task-title">{t.title}</b>
+      <span className="task-sub">{fmt(t.due)}{t.lifecycle.at(-1)?.state && t.lifecycle.at(-1)?.state !== 'Planned' ? ` · ${t.lifecycle.at(-1)?.state}` : ''}{t.signals.length ? ' · ' + t.signals.map(s => s.kind === 'photo' ? `📷 ${s.code === 'today' ? 'photo + code' : 'photo'}` : s.kind === 'friend_photo' ? '📷 photo' : s.kind).join(' · ') : ''}{t.ev.late ? ` · ${tr('Late')}` : ''}</span></span>
+    <Conf state={t.ev.state} label={t.ev.label} /><span className="chev" aria-hidden="true">›</span>
   </button>;
   // Who's caring: the carer's avatar and how far today's help has got (Accepted → Checked in → Completed).
   const inVisit = Object.values(day.visits).some(v => v.arrive != null && v.exit == null);
@@ -106,7 +110,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </div>)}
 
       <section role="tabpanel" aria-label={`${petName(petId ?? '')}’s tasks today`} className="task-panel">
-        <div className="sec-head"><h2>{tr('Pending')} <span className="sec-n">{pending.length}</span></h2></div>
+        <div className="sec-head"><h2>{tr('Tasks')} <span className="sec-n">{pending.length}</span></h2></div>
         {pending.length ? pending.map(taskCard) : <div className="task-empty">{mine.length ? `${tr('Nothing pending for')} ${petName(petId ?? '')} 🎉` : tr('No tasks today.')}</div>}
         <div className="sec-head"><h2>{tr('Completed')} <span className="sec-n">{completed.length}</span></h2></div>
         {completed.length ? completed.map(taskCard) : <div className="task-empty">{tr('Nothing done yet today.')}</div>}
@@ -140,6 +144,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
     {sheet === 'task' && task && <Sheet onClose={close}>
       <div className="row"><h2 className="grow">{task.title}</h2><Conf state={task.ev.state} label={task.ev.label} /></div>
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
+      {!task.cover && <CoverLineView line={ov?.lines[task.id]} />}
       {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">{tr('A Yes is a plan, not proof the task was done.')}</div></div>}
       {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span>{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
       <div className="card flat"><span className="eyebrow">Why this label</span>{task.ev.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>
