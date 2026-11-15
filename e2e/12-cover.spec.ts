@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY } from './helpers';
+import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY } from './helpers';
 
 /** v1.4 cover continuity (PRD 17.1 new rows) through the real screens of the demo build. */
 const HH = '/v1/households/hh_demo';
@@ -190,7 +190,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
   });
 
   test('O13 Newcomer with nobody → honest message and the circle builder; no day-care list', async ({ page }) => {
-    await boot(page); await signIn(page, '9811222777');
+    await boot(page); await signUp(page, '9811222777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await intake(page, 'Rohan & Ankita Verma', 'Raheja Vihar, Powai');

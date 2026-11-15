@@ -15,7 +15,7 @@ export const t = (s: string) => (lang === 'hi' ? HI[s] ?? s : s);
 const HI: Record<string, string> = {
   // tabs and titles
   'Today': 'आज', 'Find cover': 'मदद ढूँढें', 'Friends': 'दोस्त', 'Pet': 'पालतू', 'Me': 'मैं',
-  'Before you start': 'शुरू करने से पहले', 'Enter the code': 'कोड डालें', 'About you': 'आपके बारे में', 'Your circle': 'आपका सर्कल',
+  'Before you start': 'शुरू करने से पहले', 'Log in': 'लॉग इन', 'Sign up': 'साइन अप', 'Welcome back': 'फिर से स्वागत है', 'Create your account': 'अपना खाता बनाएँ', 'No account yet': 'अभी कोई खाता नहीं', 'Enter the code': 'कोड डालें', 'About you': 'आपके बारे में', 'Your circle': 'आपका सर्कल',
   'Check the details': 'विवरण जाँचें', 'Simple request form': 'आसान अनुरोध फ़ॉर्म', 'No friend free': 'कोई दोस्त खाली नहीं', 'Suggestions': 'सुझाव', 'Request': 'अनुरोध',
   'Pawly': 'Pawly', 'Profile and privacy': 'प्रोफ़ाइल और गोपनीयता',
   // sign-in

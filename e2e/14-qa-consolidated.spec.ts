@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, meItem, api, pick, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, PHONE } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -40,7 +40,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
   });
 
   test('R2 PAW-018/036 sign-up asks for the state and city first; Pune and Mumbai list their own Lake Vista CHS', async ({ page }) => {
-    await signIn(page, '9822200077');
+    await signUp(page, '9822200077');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
@@ -138,7 +138,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
   });
 
   test('R9 consent explains the Terms and Privacy Notice in plain words; no research toggle; a name of numbers is refused', async ({ page }) => {
-    await signIn(page, '9822200078');
+    await signUp(page, '9822200078');
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     await expect(page.getByText('Pilot research interviews')).toHaveCount(0);
     await page.getByRole('button', { name: /Read the Privacy Notice/ }).click();
@@ -166,7 +166,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
 
 test.describe('S. Onboarding conversation (15 Nov)', () => {
   test('S1 A typed city in another state is caught at the city question, and the home is created after fixing the state', async ({ page }) => {
-    await boot(page); await signIn(page, '9822200099');
+    await boot(page); await signUp(page, '9822200099');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();

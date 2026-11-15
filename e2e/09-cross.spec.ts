@@ -22,7 +22,7 @@ test.describe('L. Cross-cutting', () => {
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
-    await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await signInOwner(page);
     await expect(page.getByRole('heading', { name: 'Sunita (tracked helper)' })).toBeVisible();
   });

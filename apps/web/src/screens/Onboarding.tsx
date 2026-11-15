@@ -2,10 +2,12 @@
 import { t as tr } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api, ApiError, session, setSessionMode } from '../api';
-import { LangSwitch, AppBar, Banner } from '../ui';
+import { LangSwitch, AppBar, Art, Banner } from '../ui';
 import { Intake } from './Intake';
 
-type Step = 'phone' | 'otp' | 'consent' | 'profile';
+type Step = 'phone' | 'otp' | 'noaccount' | 'consent' | 'profile';
+/** Log in: number + code, then straight home. Sign up: number + code, then consent and the Pawly conversation. */
+type Mode = 'login' | 'signup';
 const ERR: Record<string, string> = {
   invalid_code: 'That code doesn’t match. Check the SMS and try again.', expired_code: 'This code has expired. Request a new one.',
   too_many_attempts: 'Too many wrong attempts. Request a new code.', rate_limited: 'Too many codes requested. Try again in 15 minutes.',
@@ -40,6 +42,7 @@ function LegalSheet({ kind, onClose }: { kind: 'terms' | 'privacy'; onClose: () 
 
 export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; start?: Step }) {
   const [step, setStep] = useState<Step>(start);
+  const [mode, setMode] = useState<Mode>('login');
   // Already signed in but setup not finished (for example after leaving and coming back): continue setup.
   useEffect(() => {
     if (start !== 'phone' || !session.get()) return;
@@ -62,13 +65,27 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       <div className="brandmark"><div><div className="login-word">Pawsure</div><p className="login-tag">{tr('Be sure, whoever’s caring.')}</p></div></div>
     </div>
     <div className="login-sheet">
-      <h1>{tr('Log in or create an account')}</h1>
-      <p className="muted small">{tr('We’ll text you a 6-digit code.')}</p>
+      <div className="authtabs" role="group" aria-label="Log in or sign up">
+        <button type="button" aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setErr(null); }}>{tr('Log in')}</button>
+        <button type="button" aria-pressed={mode === 'signup'} onClick={() => { setMode('signup'); setErr(null); }}>{tr('Sign up')}</button>
+      </div>
+      <h1>{mode === 'login' ? tr('Welcome back') : tr('Create your account')}</h1>
+      <p className="muted small">{mode === 'login' ? tr('Enter your number and we’ll text you a 6-digit code. You’ll go straight to your home.') : tr('Set up your pet’s home in about two minutes. First, we’ll text you a 6-digit code.')}</p>
       <div className="field"><label htmlFor="ph">{tr('Mobile number')}</label><div className="phone-in"><span className="cc">+91</span><input id="ph" className="input mono" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={phone} onChange={e => setPhone(e.target.value)} placeholder="98765 43210" /></div></div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block lg" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); setStep('otp'); })}>{tr('Send code')}</button>
+      <button type="button" className="linkbtn auth-switch" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setErr(null); }}>{mode === 'login' ? tr('New to Pawsure? Create an account') : tr('Already have an account? Log in instead')}</button>
     </div>
   </div>;
+
+  // Log in with a number that has no account yet: offer to create one with the number just verified.
+  if (step === 'noaccount') return <><AppBar title={tr('No account yet')} /><div className="body">
+    <div className="art-stage"><Art name="box" width={120} /></div>
+    <h2>{tr('There’s no Pawsure account for this number yet')}</h2>
+    <p className="muted">+91 {phone.replace(/\D/g, '').replace(/^(\d{5})(\d{5})$/, '$1 $2')} {tr('is verified. Would you like to create an account with it? It takes about two minutes.')}</p>
+    <button className="btn primary block" onClick={() => { setMode('signup'); setStep('consent'); }}>{tr('Create my account')}</button>
+    <button className="btn ghost block" onClick={() => { session.set(null); setCode(''); setDemoCode(null); setStep('phone'); }}>{tr('Use a different number')}</button>
+  </div></>;
 
   if (step === 'otp') return <><AppBar title={tr('Enter the code')} onBack={() => setStep('phone')} /><div className="body">
     <p className="muted">Sent to {e164}.</p>
@@ -81,7 +98,7 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
       if (me.memberships.length) { onDone(); return; }
       if (await api('/admin/me').then(() => true, () => false)) { const s = session.get(); session.set(null); setSessionMode('staff'); session.set(s); location.hash = 'admin'; return; }
       const fr = await api<{ links: unknown[]; profile: unknown }>('/v1/me/friend');
-      if (fr.links.length || fr.profile) onDone(); else setStep('consent');
+      if (fr.links.length || fr.profile) onDone(); else setStep(mode === 'login' ? 'noaccount' : 'consent');
     })}>{tr('Verify')}</button>
     <button className="btn ghost block" disabled={busy} onClick={() => run(async () => { const r = await api<{ demoCode?: string }>('/auth/otp/request', { body: { phone: e164 }, auth: false }); setDemoCode(r.demoCode ?? null); })}>{tr('Resend code')}</button>
     {demoCode && <Banner kind="sim" icon="⚙">Demo mode: no SMS is sent. Your code is <b className="mono">{demoCode}</b>.</Banner>}

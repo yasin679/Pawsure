@@ -57,6 +57,11 @@ export async function signIn(page: Page, phone10: string) {
   await page.locator('#otp').fill(code);
   await page.getByRole('button', { name: 'Verify' }).click();
 }
+/** New account: the Sign up tab, then the same number + code steps (consent and the Pawly conversation follow). */
+export async function signUp(page: Page, phone10: string) {
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click();
+  await signIn(page, phone10);
+}
 export async function signInOwner(page: Page) {
   await signIn(page, PHONE.neha);
   await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
@@ -65,7 +70,7 @@ export async function signInOwner(page: Page) {
 export async function signOut(page: Page) {
   if (await page.locator('nav.tabbar').isVisible()) await tab(page, 'Me');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 }
 
 /** The essential care and medical details every new pet needs. */
