@@ -133,7 +133,7 @@ export function App() {
         <button className="btn ghost block" onClick={() => signOut()}>{tr('Sign out')}</button>
       <button className="btn ghost block" onClick={signOutAll}>{tr('Sign out of all devices')}</button>
     </main></>}
-    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} />{tr(l)}</button>)}</nav>
+    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} /><span className="tl">{tr(l)}</span></button>)}</nav>
   </div>;
 }
 
