@@ -380,11 +380,6 @@ body{background:var(--stage)}
 /* fix #6: the simulated phones sit beside the owner app on wide screens, and below it on a phone */
 .simdock{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
 .simdock > .sheet{flex:1 1 340px;max-width:440px}
-@media (min-width:960px){
-  .pwa:has(.simdock){margin-left:calc(50% - 470px)}
-  .pwa:has(.simdock) > .simdock{position:fixed;top:12px;left:calc(50% + 30px);width:440px;max-height:calc(100vh - 24px);overflow:auto;flex-direction:column;flex-wrap:nowrap;z-index:5}
-  .simdock > .sheet{max-height:none;max-width:none;flex:0 0 auto}
-}
 .hero-ill img.mascot{display:block;margin:0 auto;background:transparent;max-width:100%;height:auto}
 
 /* ---------- Sign-in: one calm screen (mascot, mark, one line, number, button) ---------- */
@@ -420,27 +415,44 @@ body{background:var(--stage)}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){.login-mascot{animation:none}}
 
-/* ---------- Phone frame: on a laptop or tablet the app is shown as a phone; real phones get the full screen ---------- */
+/* ---------- Phone frame: on a laptop or tablet the app is shown inside an iPhone 18 Pro; real phones get the full screen ----------
+   The device is drawn at its real size in points (402 x 874 screen, thin bezel, aluminium rim, Dynamic Island, side buttons)
+   and scaled as one piece (--dev-z / --dev-zd, set by StatusBar.tsx from the window size) so the whole frame is always visible,
+   in a small preview pane and in full screen alike. --dev-zd is the scale with the demo phones docked beside the device. */
 .sbar{display:none}
-@media (min-width:600px) and (min-height:640px){
-  body:has(#root > .pwa){background:radial-gradient(ellipse 55% 50% at 15% 10%,color-mix(in srgb,var(--sage) 22%,transparent) 0,transparent 70%),radial-gradient(ellipse 50% 45% at 88% 90%,color-mix(in srgb,var(--gold) 25%,transparent) 0,transparent 70%),var(--stage)}
-  #root:has(> .pwa){display:flex;flex-direction:column;justify-content:center;padding:18px 0;box-sizing:border-box}
-  #root > .pwa{width:390px;max-width:390px;height:min(844px,100%);flex:none;margin:0 auto;border-radius:50px;border:11px solid #263027;overflow:hidden;padding-top:0;box-shadow:0 0 0 2px #45443d,0 34px 70px -18px rgba(32,32,29,.55),0 14px 30px -14px rgba(0,0,0,.35)}
-  #root > .pwa::before{content:'';position:absolute;top:11px;left:50%;transform:translateX(-50%);width:104px;height:30px;border-radius:20px;background:#0b0b0a;z-index:60;pointer-events:none}
-  #root > .pwa::after{content:'';position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:126px;height:5px;border-radius:5px;background:var(--ink);opacity:.8;z-index:60;pointer-events:none}
-  #root > .pwa .sbar{display:flex;order:-1;flex:none;height:50px;align-items:center;justify-content:space-between;padding:4px 30px 0 34px;font:800 15px/1 var(--f-body);color:var(--ink);background:var(--bg)}
-  #root > .pwa:has(> .demobar) .sbar{background:var(--charcoal);color:var(--cream)}
-  #root > .pwa:has(.login) .sbar{background:transparent;position:relative;z-index:2}
+.device{display:contents}
+@media (min-width:600px) and (min-height:480px){
+  body:has(.device > .pwa){background:radial-gradient(ellipse 55% 50% at 15% 10%,color-mix(in srgb,var(--sage) 22%,transparent) 0,transparent 70%),radial-gradient(ellipse 50% 45% at 88% 90%,color-mix(in srgb,var(--gold) 25%,transparent) 0,transparent 70%),var(--stage)}
+  #root:has(> .device > .pwa){position:relative;overflow:hidden}
+  .device:has(> .pwa){--dev-w:428px;--dev-h:900px;--dock-gap:30px;--dock-w:440px;--z:var(--dev-z,1);
+    display:block;position:absolute;width:var(--dev-w);height:var(--dev-h);padding:3px;border-radius:65px;
+    left:calc(50% - var(--dev-w) * var(--z) / 2);top:calc(50% - var(--dev-h) * var(--z) / 2);transform:scale(var(--z));transform-origin:0 0;
+    background:linear-gradient(135deg,#9aa0a6 0%,#d9dde0 18%,#6c7177 45%,#c3c7cb 70%,#80868c 100%);
+    box-shadow:0 0 0 1px #4a4e52,0 40px 80px -24px rgba(32,32,29,.6),0 18px 36px -18px rgba(0,0,0,.45)}
+  /* left: Action button, volume up, volume down; right: side button and Camera Control */
+  .device:has(> .pwa)::before,.device:has(> .pwa)::after{content:'';position:absolute;width:4px;pointer-events:none;
+    --btn:linear-gradient(90deg,#5d6267,#b9bdc1 50%,#5d6267)}
+  .device:has(> .pwa)::before{left:-4px;top:176px;height:204px;border-radius:2px 0 0 2px;
+    background:var(--btn) 0 0/100% 34px no-repeat,var(--btn) 0 66px/100% 62px no-repeat,var(--btn) 0 142px/100% 62px no-repeat}
+  .device:has(> .pwa)::after{right:-4px;top:262px;height:350px;border-radius:0 2px 2px 0;
+    background:var(--btn) 0 0/100% 100px no-repeat,linear-gradient(90deg,#3e4246,#80858a 50%,#3e4246) 0 290px/100% 60px no-repeat}
+  .device:has(> .pwa .simdock){--z:var(--dev-zd,1);left:calc(50% - (var(--dev-w) + var(--dock-gap) + var(--dock-w)) * var(--z) / 2)}
+  .device > .pwa{width:100%;max-width:none;height:100%;margin:0;border-radius:62px;border:10px solid #050505;overflow:hidden;padding-top:0;box-shadow:inset 0 0 0 1px #000}
+  /* Dynamic Island and home indicator */
+  .device > .pwa::before{content:'';position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:18px;background:#000;z-index:60;pointer-events:none}
+  .device > .pwa::after{content:'';position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:140px;height:5px;border-radius:5px;background:var(--ink);opacity:.8;z-index:60;pointer-events:none}
+  .device > .pwa .sbar{display:flex;order:-1;flex:none;height:58px;align-items:center;justify-content:space-between;padding:0 34px 0 42px;font:700 17px/1 var(--f-body);color:var(--ink);background:var(--bg)}
+  .device > .pwa:has(> .demobar) .sbar{background:var(--charcoal);color:var(--cream)}
+  .device > .pwa:has(.login) .sbar{background:transparent;position:relative;z-index:2}
   .sbar-i{display:flex;gap:6px;align-items:center}
   .sbar-i svg{fill:currentColor}
-  #root > .pwa .tabbar{padding-bottom:22px}
-  #root > .pwa *::-webkit-scrollbar{width:0;height:0}
-  #root > .pwa *{scrollbar-width:none}
-}
-/* With the demo phones open, the framed app moves left so they sit beside it (fix #6). */
-@media (min-width:960px) and (min-height:640px){
-  #root > .pwa:has(.simdock){margin-left:calc(50% - 470px)}
-  #root > .pwa:has(.simdock) > .simdock{top:18px;max-height:calc(100vh - 36px)}
+  .device > .pwa .tabbar{padding-bottom:24px}
+  .device > .pwa .sheet-wrap{position:absolute}
+  .device > .pwa *::-webkit-scrollbar{width:0;height:0}
+  .device > .pwa *{scrollbar-width:none}
+  /* Demo phones sit beside the device and scale with it (fixed inside the scaled device = placed relative to it). */
+  .device > .pwa > .simdock{position:fixed;top:0;left:calc(100% + var(--dock-gap));width:var(--dock-w);max-height:100%;overflow:auto;flex-direction:column;flex-wrap:nowrap;z-index:5}
+  .device > .pwa > .simdock > .sheet{max-height:none;max-width:none;flex:0 0 auto}
 }
 
 /* ---------- Pawly: the friend search, shown with its steps ---------- */
@@ -470,7 +482,7 @@ body{background:var(--stage)}
 /* ---------- Demo tools: hidden unless switched on ---------- */
 .demo-toggle{position:fixed;left:16px;bottom:16px;z-index:40;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-3);border-radius:99px;padding:6px 12px;font:700 12px/1 var(--f-body);opacity:.75}
 .demo-toggle:hover{opacity:1}
-@media (max-width:599px),(max-height:639px){.demo-toggle{display:none}}
+@media (max-width:599px),(max-height:479px){.demo-toggle{display:none}}
 
 a.li{color:inherit;text-decoration:none}
 fieldset.field{border:0;padding:0;margin:0;min-width:0}
