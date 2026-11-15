@@ -10,9 +10,11 @@ const HELPER = { mid: 'm_sunita', phone: '+919000000035' };
 
 export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | null; onChange: () => void }) {
   const [thread, setThread] = useState<Msg[]>([]); const [code, setCode] = useState<string>(''); const [lookin, setLookin] = useState<string | null>(null);
+  /** Today's code from the owner's card (the simulated helper reads it off the card on the food box). */
+  const todayCode = async () => { try { const c = await api<{ codes: Record<string, string>; today: number }>(`/v1/households/${hh}/code-cards/current`); return c.codes[c.today] ?? ''; } catch { return ''; } };
   const load = async () => {
     setThread(await api<Msg[]>(`/demo/helper-thread/${HELPER.mid}`, { auth: false }));
-    try { const c = await api<{ codes: Record<string, string>; today: number }>(`/v1/households/${hh}/code-cards/current`); setCode(c.codes[c.today] ?? ''); } catch { /* not owner */ }
+    setCode(await todayCode());
     const out = await fetch(API + '/demo/outbox').then(r => r.json()) as { template: string; body: string }[];
     const l = out.find(o => o.template.startsWith('LOOKIN-15')); setLookin(l ? (JSON.parse(l.body) as { link: string }).link : null);
   };
@@ -31,7 +33,7 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
     </div>
     {prompted.length > 0 && <div className="field"><label htmlFor="simt" className="xs">Replying to</label><select id="simt" className="input" value={t?.id} onChange={e => setTaskId(e.target.value)}>{prompted.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div>}
     <div className="chips">
-      {t && <><button className="btn sm" onClick={() => send({ type: 'photo', taskId: t.id, mediaRef: 'sim-' + Date.now(), caption: code })}>📷 Photo + today’s code</button>
+      {t && <><button className="btn sm" onClick={async () => send({ type: 'photo', taskId: t.id, mediaRef: 'sim-' + Date.now(), caption: code || await todayCode() })}>📷 Photo + today’s code</button>
         <button className="btn sm" onClick={() => send({ type: 'photo', taskId: t.id, mediaRef: 'sim-' + Date.now() })}>📷 Photo, no code</button>
         <button className="btn sm" onClick={() => send({ type: 'photo', taskId: t.id, mediaRef: 'sim-' + Date.now(), caption: '0000' })}>📷 Wrong code</button>
         <button className="btn sm" onClick={() => send({ type: 'photo', taskId: t.id, mediaRef: 'sim-reused', caption: code })}>📷 Re-send old photo</button>
