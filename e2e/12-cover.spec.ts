@@ -142,7 +142,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
 
   test('O9 “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned', async ({ page }) => {
     await boot(page); await signInOwner(page, { home: true });
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await expect(dialog(page)).toContainText('Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet.');

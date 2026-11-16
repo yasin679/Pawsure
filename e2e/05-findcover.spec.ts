@@ -30,7 +30,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G1 Helper can’t come → ask Meera → she says Yes (Marathi) → owner confirms → only Bruno’s lunch moves to her', async ({ page }) => {
     await clockTo(page, '11:00');
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
     await page.getByRole('button', { name: 'Understand my request' }).click();

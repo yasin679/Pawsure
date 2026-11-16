@@ -11,6 +11,7 @@ import { LANGUAGES, hasLetter, stateOfCity } from '@pawsure/domain';
 import { api, API, ApiError, nameError, type Society } from '../api';
 import { AppBar, Art, Icon } from '../ui';
 import { CircleBuilder } from './Cover';
+import { useVoice } from '../voice';
 
 type Circle = null | 'ask' | 'yes' | 'no';
 interface Near { city: string | null; state: string | null; society: { id: string; name: string; area: string | null; city: string; state: string } | null }
@@ -79,10 +80,13 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const [p, setP] = useState({ displayName: '', language: 'en', state: '', city: '', societyId: '', society: '', tower: '', flat: '' });
   const [pets, setPets] = useState<PetDraft[]>([blankPet()]);
   const [more, setMore] = useState<Record<number, boolean>>({});
+  const [helper, setHelper] = useState({ name: '', phone: '', language: 'mr' });
   const [care, setCare] = useState({ feeds: [] as number[], walks: [] as number[], walksDone: false, litter: null as number | null | 'none', who: '' });
   const [pos, setPos] = useState(0);
   const [lock, setLock] = useState(0);
-  const [ready, setReady] = useState(false);
+  // Which step Pawly has finished "typing" for. Derived per step, so a new question's answer box never shows
+  // for a frame before the typing pause (text typed into that frame would be lost when the box is replaced).
+  const [readyFor, setReadyFor] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [picks, setPicks] = useState<number[]>([]);
   const [otherLang, setOtherLang] = useState(false);
@@ -99,6 +103,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const [routineCount, setRoutineCount] = useState<number | null>(null);
   const [circle, setCircle] = useState<Circle>(null);
   const end = useRef<HTMLDivElement>(null);
+  const mic = useVoice();
 
   useEffect(() => { api<{ states: string[] }>('/v1/societies').then(r => setStates(r.states)).catch(() => setStates([])); }, []);
   useEffect(() => { if (p.state) api<{ cities: { city: string }[] }>(`/v1/societies?state=${encodeURIComponent(p.state)}`).then(r => setCities(r.cities.map(x => x.city))).catch(() => setCities([])); else setCities([]); }, [p.state]);
@@ -112,14 +117,18 @@ export function Intake({ onDone }: { onDone: () => void }) {
 
   /* ---------- the conversation, as a list of steps built from the answers so far ---------- */
   const all: Step[] = [];
-  const text = (id: string, label: string, placeholder: string, onSend: (v: string) => void, opts: { optional?: boolean; validate?: (v: string) => string | null; mono?: boolean; max?: number; chips?: string[]; numeric?: boolean } = {}) => {
+  const text = (id: string, label: string, placeholder: string, onSend: (v: string) => void, opts: { optional?: boolean; validate?: (v: string) => string | null; mono?: boolean; max?: number; chips?: string[]; numeric?: boolean; voice?: boolean; prefix?: string } = {}) => {
     const problem = draft.trim() && opts.validate ? opts.validate(draft) : null;
     const ok = !!draft.trim() && !problem;
     return <>{problem && <div className="cb-err" role="alert">{problem}</div>}
+      {opts.voice && mic.listening && <div className="cb-live" role="status"><span className="geo-dot" aria-hidden="true" />{mic.partial || tr('Listening… speak now')}</div>}
+      {opts.voice && mic.error && <div className="cb-err" role="alert">{mic.error}</div>}
       {opts.chips && <div className="cb-chips">{opts.chips.map(c => <button key={c} type="button" className="chip" onClick={() => onSend(c)}>{c}</button>)}</div>}
       <form className="cb-input" onSubmit={e => { e.preventDefault(); if (ok) onSend(draft.trim()); }}>
         <label htmlFor={id} className="sr-only">{label}</label>
-        <input id={id} className={`input${opts.mono ? ' mono' : ''}`} autoFocus maxLength={opts.max} value={draft} placeholder={placeholder} inputMode={opts.numeric ? 'tel' : undefined} onChange={e => setDraft(e.target.value)} autoComplete="off" />
+        {opts.prefix && <span className="cb-prefix">{opts.prefix}</span>}
+        <input id={id} className={`input${opts.mono ? ' mono' : ''}`} autoFocus maxLength={opts.max} value={draft} placeholder={mic.listening ? tr('Listening…') : placeholder} inputMode={opts.numeric ? 'tel' : undefined} onChange={e => setDraft(e.target.value)} autoComplete="off" />
+        {opts.voice && mic.available && <button type="button" className={`cb-mic${mic.listening ? ' on' : ''}`} aria-label={mic.listening ? 'Stop voice input' : 'Speak your answer'} aria-pressed={mic.listening} onClick={() => mic.toggle(t => setDraft(d => (d ? d + t : t.trimStart())))}><Icon name="mic" size={20} /></button>}
         {send('Send', !ok, () => ok && onSend(draft.trim()))}
       </form>
       {opts.optional && <div className="cb-chips"><button type="button" className="chip" onClick={() => onSend('')}>{tr('Skip')}</button></div>}</>;
@@ -199,12 +208,12 @@ export function Intake({ onDone }: { onDone: () => void }) {
         compose: () => text(`pa${i}`, tr('Age'), tr('Or type it, e.g. 3 years'), v => { setPet(i, { age: v }); next(); }, { optional: true, max: 30, chips: AGES }) },
       { key: `p${i}.food`, chapter: 1, pet: i, answer: x.food, draft: x.food,
         ask: <><b>{tr('What does')} {nm} {tr('eat, and how much?')}</b><span className="cb-note">{tr('Your helper and any friend who covers will see this.')}</span></>,
-        compose: () => text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => { setPet(i, { food: v }); next(); }, { max: 300 }) },
+        compose: () => text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => { setPet(i, { food: v }); next(); }, { max: 300 , voice: true }) },
       { key: `p${i}.allergies`, chapter: 1, pet: i, answer: x.allergies, draft: x.allergies === 'None known' ? '' : x.allergies, ask: <><b>{tr('Any allergies?')}</b></>,
-        compose: () => text(`pl${i}`, tr('Allergies'), tr('e.g. Chicken'), v => { setPet(i, { allergies: v }); next(); }, { max: 200, chips: ['None known'] }) },
+        compose: () => text(`pl${i}`, tr('Allergies'), tr('e.g. Chicken'), v => { setPet(i, { allergies: v }); next(); }, { max: 200, chips: ['None known'] , voice: true }) },
       { key: `p${i}.medicines`, chapter: 1, pet: i, answer: x.medicines, draft: x.medicines === 'None' ? '' : x.medicines,
         ask: <><b>{tr('Does')} {nm} {tr('take any medicines?')}</b><span className="cb-note">{tr('Write it as on the vet’s card. A medicine is never handed to a backup.')}</span></>,
-        compose: () => text(`pm${i}`, tr('Medicines'), tr('e.g. Joint supplement, 1 chewable with lunch'), v => { setPet(i, { medicines: v }); next(); }, { max: 300, chips: ['None'] }) },
+        compose: () => text(`pm${i}`, tr('Medicines'), tr('e.g. Joint supplement, 1 chewable with lunch'), v => { setPet(i, { medicines: v }); next(); }, { max: 300, chips: ['None'] , voice: true }) },
       { key: `p${i}.vet`, chapter: 1, pet: i, answer: x.sameVet ? `${tr('Same as')} ${pets[0]!.name}` : x.vet_name, draft: x.sameVet ? '' : x.vet_name,
         ask: <><b>{tr('Who is')} {nm}{tr('’s vet?')}</b> {tr('Name and clinic.')}</>,
         compose: () => <>{i > 0 && pets[0]!.vet_name && <div className="cb-chips"><button type="button" className="chip" onClick={() => finishPet(i, { sameVet: true, vet_name: pets[0]!.vet_name, vet_phone: pets[0]!.vet_phone })}>{tr('Same as')} {pets[0]!.name}</button></div>}
@@ -227,9 +236,18 @@ export function Intake({ onDone }: { onDone: () => void }) {
   if (cats.length) all.push({ key: 'litter', chapter: 2, answer: care.litter === 'none' ? tr('No reminder') : LITTER.find(l => l[0] === care.litter)?.[1].split(' · ')[1] ?? '',
     ask: <><b>{tr('When should')} {names(cats)}{tr('’s litter tray be cleaned?')}</b></>,
     compose: () => <div className="cb-chips">{LITTER.map(([m, l]) => <button key={m} type="button" className="chip" onClick={() => { setCare(c => ({ ...c, litter: m })); next(); }}>{l}</button>)}<button type="button" className="chip" onClick={() => { setCare(c => ({ ...c, litter: 'none' })); next(); }}>{tr('No reminder')}</button></div> });
-  all.push({ key: 'who', chapter: 2, answer: care.who,
+  all.push({ key: 'who', chapter: 2, answer: tr(care.who),
     ask: <><b>{tr('Who usually looks after')} {allNames} {tr('when you’re out?')}</b></>,
-    compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips big col">{['Me or my family', 'My house help', 'Nobody yet'].map(w => <button key={w} type="button" className="chip" disabled={busy} onClick={() => saveCare(w)}>{tr(w)}</button>)}</div></> });
+    compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips big col">{['Me or my family', 'My house help', 'Nobody yet'].map(w => <button key={w} type="button" className="chip" disabled={busy} onClick={() => { if (w === 'My house help') { setCare(c => ({ ...c, who: w })); next(); } else saveCare(w); }}>{tr(w)}</button>)}</div></> });
+  // "My house help": her details, then a WhatsApp invite to join (her tasks move to her once she accepts).
+  if (care.who === 'My house help') all.push(
+    { key: 'hname', chapter: 2, answer: helper.name, draft: helper.name, ask: <><b>{tr('What’s your helper’s name?')}</b></>,
+      compose: () => text('hn', tr('Helper’s name'), tr('e.g. Sunita Pawar'), v => { setHelper(h => ({ ...h, name: v })); next(); }, { max: 60, validate: v => nameError(v), voice: true }) },
+    { key: 'hphone', chapter: 2, answer: helper.phone ? '+91 ' + helper.phone.replace(/^(\d{5})(\d{5})$/, '$1 $2') : '', draft: helper.phone,
+      ask: <><b>{tr('And her WhatsApp number?')}</b><span className="cb-note">{tr('Pawsure sends her a WhatsApp message to join. Nothing is recorded until she says Yes.')}</span></>,
+      compose: () => text('hp', tr('WhatsApp number'), '98765 43210', v => { setHelper(h => ({ ...h, phone: v.replace(/\D/g, '') })); next(); }, { max: 11, mono: true, numeric: true, prefix: '+91', validate: v => /^[6-9]\d{9}$/.test(v.replace(/\D/g, '')) ? null : tr('Enter a 10-digit mobile number starting with 6–9.') }) },
+    { key: 'hlang', chapter: 2, answer: langLabel(helper.language), ask: <><b>{tr('Which language should her messages be in?')}</b></>,
+      compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips">{['mr', 'hi', 'en'].map(c => <button key={c} type="button" className="chip" disabled={busy} onClick={() => { setHelper(h => ({ ...h, language: c })); saveCare('My house help', { ...helper, language: c }); }}>{langLabel(c)}</button>)}</div></> });
 
   // A confirmed location answers state and city (and society when one was found nearby).
   const steps = all.filter(x => !(geoOk && (x.key === 'state' || x.key === 'city' || (x.key === 'society' && !!p.societyId))));
@@ -239,7 +257,8 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const atCircle = pos >= steps.length;
   const chapter: 0 | 1 | 2 = atCircle ? 2 : cur.chapter;
   const stage = atCircle ? 'circle:' + circle : cur.key;
-  useEffect(() => { setReady(false); setErr(null); setPicks([]); const t = setTimeout(() => setReady(true), reduced() ? 0 : 450); return () => clearTimeout(t); }, [stage]);
+  const ready = readyFor === stage;
+  useEffect(() => { setErr(null); setPicks([]); const t = setTimeout(() => setReadyFor(stage), reduced() ? 0 : 450); return () => clearTimeout(t); }, [stage]);
   useEffect(() => { if (cur.key === 'locate' && geo.status === 'idle') detect(); }, [cur.key]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' }); }, [stage, ready, err, socs, otherLang, typedCity, typedSoc, geo.status]);
 
@@ -299,7 +318,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
       failed(e, here, f => `p${i}.${f === 'vet_phone' ? 'vetPhone' : f === 'vet_name' ? 'vet' : f || 'name'}`);
     } finally { setBusy(false); }
   }
-  async function saveCare(who: string) {
+  async function saveCare(who: string, h = helper) {
     setErr(null); setBusy(true);
     const tasks: { petId: string; title: string; type: string; due: number }[] = [];
     for (const x of pets) {
@@ -309,8 +328,9 @@ export function Intake({ onDone }: { onDone: () => void }) {
       if (x.species === 'Cat' && typeof care.litter === 'number') tasks.push({ petId: x.id, title: 'Clean litter tray', type: 'litter', due: care.litter });
     }
     try {
-      // New tasks are owner tasks until a helper is invited and accepts (Me → Helper and check-ins).
-      for (const t of tasks) await api(`/v1/households/${hh}/routine`, { body: { ...t, assignee: 'owner' } });
+      // With a helper: invite her on WhatsApp first, then give her the routine (prompts start once she says Yes).
+      if (who === 'My house help') await api(`/v1/households/${hh}/helpers/invite`, { body: { name: h.name, phone: '+91' + h.phone, language: h.language } });
+      for (const t of tasks) await api(`/v1/households/${hh}/routine`, { body: { ...t, assignee: who === 'My house help' ? 'helper' : 'owner' } });
       setCare(c => ({ ...c, who })); setRoutineCount(tasks.length); setLock(steps.length); setPos(steps.length); setCircle('ask');
     } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? 'Your routine didn’t save. Try again.') : 'Can’t reach Pawsure. Check your connection and try again.'); } finally { setBusy(false); }
   }
@@ -341,7 +361,8 @@ export function Intake({ onDone }: { onDone: () => void }) {
         </>}
         {atCircle && hh && <>
           <Bot>✓ {tr('Your routine is saved')}{routineCount ? `: ${routineCount} ${routineCount === 1 ? tr('task a day') : tr('tasks a day')}` : ''}. {tr('It starts tomorrow, and you can change it any time in Pet → Routine.')}
-            {care.who === 'My house help' && <span className="cb-note">{tr('Invite your helper in Me → Helper and check-ins. Once she agrees, her tasks move to her with reminders on WhatsApp.')}</span>}</Bot>
+          </Bot>
+          {care.who === 'My house help' && <Bot><span className="wa-sent"><Icon name="send" size={16} /> {tr('Invite sent on WhatsApp')}</span>{tr('I’ve sent')} {helper.name.split(' ')[0]} {tr('a WhatsApp message to join Pawsure.')} <b>{tr('Her tasks move to her once she accepts.')}</b> {tr('Until then you get the reminders. You’ll see her status on Home.')}</Bot>}
           {circle === 'ask' && !ready ? <Typing /> : <Bot><h2 className="cb-h">{tr('Do you have anyone who can look in on your pet?')}</h2><span className="cb-note">{tr('A family member, neighbour or friend who could step in if your helper can’t come.')}</span></Bot>}
           {circle === 'yes' && <><Me text={tr('Yes, I have someone')} /><Bot>{tr('Great. You can add them any time in Me → Backups. All three playbooks are done')} 🎉 {tr('Taking you to your home…')}</Bot></>}
           {circle === 'no' && <><Me text={tr('No one yet')} />{!ready ? <Typing /> : <><Bot><b>{tr('Cover is limited until you have a circle.')}</b> {tr('No problem, most people start here. Here are four easy ways to find someone who can step in:')}</Bot>

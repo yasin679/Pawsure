@@ -81,7 +81,7 @@ test.describe('D. Today: daily care', () => {
 
   test('D8 Can’t come today → plan kept, alone-window warning, “Ask a friend” pre-fills Find cover', async ({ page }) => {
     await clockTo(page, '11:00');
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await expect(page.getByText('Sunita can’t come today. Your original plan is kept.')).toBeVisible();
     await openPlan(page);

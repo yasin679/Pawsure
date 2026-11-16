@@ -17,7 +17,7 @@ test.describe('L. Cross-cutting', () => {
 
   test('L3 Reloading the demo keeps you signed in with your changes; Reset demo starts fresh', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
     await page.waitForTimeout(1500); // the demo saves to browser storage just after each change

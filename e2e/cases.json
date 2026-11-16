@@ -149,7 +149,7 @@
     "D8": {
       "role": "Owner",
       "pre": "11:00 AM",
-      "steps": "1. My help can’t come today → Mark unavailable\n2. Ask a friend to cover",
+      "steps": "1. My help can’t come → Mark unavailable\n2. Ask a friend to cover",
       "expected": "Plan kept, alone-window warning, no phase-3 placeholder; Find cover pre-filled for Bruno 1:00 pm"
     },
     "D9": {

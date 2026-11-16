@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, intake, intakeInfo, webhook, PHONE } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -221,5 +221,47 @@ test.describe('T. Home location from the phone (16 Nov)', () => {
     await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
     await page.locator('#soc').click(); await page.getByRole('option', { name: 'Hiranandani Gardens · Powai' }).click();
     await expect(page.getByRole('button', { name: 'Change: Hiranandani Gardens, Powai' })).toBeVisible();
+  });
+});
+
+test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () => {
+  const toCare = async (page: import('@playwright/test').Page, phone: string, opts: { fakeVoice?: boolean } = {}) => {
+    if (opts.fakeVoice) await page.addInitScript(() => {
+      // A stand-in for the browser's speech recognition: "hears" one sentence when started.
+      class FakeRec { lang = ''; interimResults = false; continuous = false; onresult: ((e: unknown) => void) | null = null; onend: (() => void) | null = null; onerror: ((e: unknown) => void) | null = null;
+        start() { setTimeout(() => { this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: 'Two cups of rice and curd at lunch' }], { isFinal: true })] }); this.onend?.(); }, 200); }
+        stop() { this.onend?.(); } }
+      for (const k of ['SpeechRecognition', 'webkitSpeechRecognition']) Object.defineProperty(window, k, { value: FakeRec, configurable: true, writable: true });
+    });
+    await boot(page); await signUp(page, phone);
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+  };
+  test('U1 Food can be answered by voice: what is said is written into the message', async ({ page }) => {
+    await toCare(page, '9822200201', { fakeVoice: true });
+    await intakeInfo(page, 'Isha');
+    await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: /Dog/ }).click(); await page.getByRole('button', { name: '1–3 years' }).click();
+    await page.getByRole('button', { name: 'Speak your answer' }).click();
+    await expect(page.locator('#pf0')).toHaveValue('Two cups of rice and curd at lunch');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Change: Two cups of rice and curd at lunch' })).toBeVisible();
+  });
+  test('U2 “My house help” asks her name and WhatsApp number, sends the invite, and Home shows it pending until she accepts', async ({ page }) => {
+    await toCare(page, '9822200202');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500011' } });
+    await expect(page.getByText('Invite sent on WhatsApp')).toBeVisible();
+    await expect(page.getByText(/I’ve sent Lata a WhatsApp message to join Pawsure/)).toBeVisible();
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    const card = page.locator('.help-card');
+    await expect(card).toContainText('Lata Pawar');
+    await expect(card).toContainText('Invite pending');
+    await expect(card.locator('.help-track')).toHaveCount(0);
+    const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+    await webhook(page, { from: '+919876500011', type: 'button', payload: `consent_yes:${hh}` });
+    await tab(page, 'Me'); await tab(page, 'Today');
+    await expect(card).not.toContainText('Invite pending');
+    await expect(card.locator('.help-track')).toContainText('Accepted');
+    await expect(card.getByRole('button', { name: 'My help can’t come' })).toBeVisible();
   });
 });

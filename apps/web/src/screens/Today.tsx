@@ -1,7 +1,7 @@
 /** Today (PS-007, PS-012–016, PS-030–036, PS-103, PS-111, PS-121, PS-122). */
 import { t as tr } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, fmt, hm, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem } from '../api';
+import { api, ApiError, fmt, hm, type Helper, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem } from '../api';
 import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
 
@@ -19,9 +19,9 @@ type SheetKind = null | 'plan' | 'caring' | 'cantcome' | 'leaving' | 'return' | 
 /** Task type icons and colours follow the prototype (feeding orange, water sky, walk green, toilet teal, medicine lilac). */
 const TASK_ICON: Record<string, string> = { feeding: 'food', water: 'water', walk: 'walk', toilet: 'pad', litter: 'litter', medicine: 'pill', other: 'paw' };
 /** The carer's avatar: an illustrated portrait (no photos are stored in the demo). */
-function HelperAvatar({ who }: { who: 'sunita' | 'friend' | 'none' }) {
+function HelperAvatar({ who }: { who: 'sunita' | 'helper' | 'friend' | 'none' }) {
   if (who === 'none') return <span className="helper-av none" aria-hidden="true">?</span>;
-  const [skin, hair, top, accent] = who === 'sunita' ? ['#B97A56', '#2B1B14', '#1F8A7A', '#F2C14E'] : ['#D9A47E', '#3A2A20', '#CC7655', '#FBF8EF'];
+  const [skin, hair, top, accent] = who === 'sunita' ? ['#B97A56', '#2B1B14', '#1F8A7A', '#F2C14E'] : who === 'helper' ? ['#A86F4C', '#231610', '#6B4A9C', '#F2C14E'] : ['#D9A47E', '#3A2A20', '#CC7655', '#FBF8EF'];
   return <span className="helper-av" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56">
     <circle cx="32" cy="32" r="32" fill="#E5ECD9" />
     <path d="M10 64c2-12 11-18 22-18s20 6 22 18Z" fill={top} />
@@ -29,7 +29,7 @@ function HelperAvatar({ who }: { who: 'sunita' | 'friend' | 'none' }) {
     <rect x="27" y="38" width="10" height="10" rx="4" fill={skin} />
     <ellipse cx="32" cy="29" rx="11.5" ry="13" fill={skin} />
     <path d="M20.5 28c0-9 5-14.5 11.5-14.5S43.5 19 43.5 28c-2-5-6-8-11.5-8.5-5.5.5-9.5 3.5-11.5 8.5Z" fill={hair} />
-    {who === 'sunita' && <circle cx="32" cy="12.5" r="5.2" fill={hair} />}
+    {who !== 'friend' && <circle cx="32" cy="12.5" r="5.2" fill={hair} />}
     <circle cx="27.6" cy="30" r="1.4" fill="#2B1B14" /><circle cx="36.4" cy="30" r="1.4" fill="#2B1B14" />
     <path d="M28.5 35.5c2 1.6 5 1.6 7 0" stroke="#7A3B2A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
     {who === 'sunita' && <circle cx="32" cy="24.5" r="1.1" fill="#C0392B" />}
@@ -49,6 +49,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const [change, setChange] = useState<'Cancelled by owner' | 'Partly done' | 'Skipped with reason'>('Cancelled by owner');
   const [planB, setPlanB] = useState('');
   const [petTab, setPetTab] = useState<string | null>(null);
+  // The household's helper (name and whether she has accepted the WhatsApp invite) for "Your help today".
+  const [helpers, setHelpers] = useState<Helper[] | null>(null);
+  useEffect(() => { api<Helper[]>(`/v1/households/${hh}/helpers`).then(setHelpers).catch(() => setHelpers([])); }, [hh, day?.now]);
   // The green header turns into a compact bar as Home scrolls: --hp goes 0 → 1 over the first 110 px (styles.css).
   const mainRef = useRef<HTMLElement>(null);
   const onScroll = () => { const m = mainRef.current; if (!m) return; (m.closest('.pwa') as HTMLElement | null)?.style.setProperty('--hp', Math.min(1, m.scrollTop / Math.max(1, Math.min(110, m.scrollHeight - m.clientHeight))).toFixed(3)); };
@@ -67,6 +70,10 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const run = async (fn: () => Promise<unknown>, after?: () => void) => { setErr(null); try { await fn(); reloadAll(); after ? after() : close(); } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? e.body.issues ?? e.body.error) : 'Can’t reach Pawsure. Try again.'); } };
   if (!day) return <><AppBar title={tr('Today')} hideTitle /><div className="body"><div className="empty">{tr('Loading today…')}</div></div></>;
 
+  const helperRow = helpers?.find(h => h.status === 'active') ?? helpers?.[0];
+  const helperName = helperRow?.name ?? (helpers ? '' : 'Sunita');
+  const helperFirst = helperName.split(' ')[0] || tr('Your help');
+  const invite = helperRow?.consent;
   const [cs, cl] = COVER_LABEL[day.covered.household] ?? ['Pending', day.covered.household];
   const greet = day.now < 720 ? 'Good morning' : day.now < 1020 ? 'Good afternoon' : 'Good evening';
   const alerts = day.tasks.filter(t => t.esc?.open && !t.esc.resolved);
@@ -74,7 +81,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const d = day.day;
   // Pre-fill Find cover with the next task the helper would have done (owner edits it before anything is sent).
   const nextTask = day.tasks.find(t => t.due >= day.now - 30 && !['Confirmed', 'Likely', 'Cancelled'].includes(t.ev.state));
-  const coverDraft = nextTask ? `Sunita can’t come today. Can someone ${VERB[nextTask.type] ?? 'look after'} ${petName(nextTask.petId)} at ${fmt(nextTask.due).toLowerCase()}?` : undefined;
+  const coverDraft = nextTask ? `${helperFirst} can’t come today. Can someone ${VERB[nextTask.type] ?? 'look after'} ${petName(nextTask.petId)} at ${fmt(nextTask.due).toLowerCase()}?` : undefined;
   const first = ownerName.split(' ')[0];
   // Pet tabs: whose schedule is shown. Pending first (by time), then completed.
   const petId = pets.some(p => p.id === petTab) ? petTab : pets[0]?.id;
@@ -110,14 +117,16 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </header>
 
       <section className="card caring help-card" aria-label="Your help today">
-        <div className="row"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable ? 'none' : d.mode === 'friend' ? 'friend' : 'sunita'} />
-          <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><h2>{d.mode === 'uncovered' ? tr('Nobody yet') : d.mode === 'friend' ? tr('A friend (Find cover)') : 'Sunita'}</h2><div className="small muted">{tr(HELP_SUB[d.mode] ?? MODE[d.mode] ?? d.mode)}</div></div></div>
-        {carer.steps && <ol className="help-track" aria-label="Help status">{(['Accepted', 'Checked in', 'Completed'] as const).map((st, i) => <li key={st} className={i < carer.at ? 'done' : i === carer.at ? 'now' : ''} aria-current={i === carer.at ? 'step' : undefined}><span className="ht-dot">{i < carer.at || (i === carer.at && st === 'Completed') ? '✓' : ''}</span>{tr(st)}</li>)}</ol>}
+        <div className="row"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} />
+          <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><h2>{d.mode === 'uncovered' ? tr('Nobody yet') : d.mode === 'friend' ? tr('A friend (Find cover)') : helperName || tr('No helper added yet')}</h2><div className="small muted">{tr(HELP_SUB[d.mode] ?? MODE[d.mode] ?? d.mode)}</div></div></div>
+        {d.mode === 'tracked' && helperRow && invite !== 'yes' && <div className={`invite-pill ${invite}`} role="status">{invite === 'pending' ? <span className="ip-text"><b>⏳ {tr('Invite pending')}</b><span>{tr('WhatsApp message sent. Waiting for her to accept.')}</span></span> : invite === 'notnow' ? <>✋ {tr('She said “not now” to the invite')}</> : <>⏸ {tr('She stopped check-ins')}</>}
+          {invite === 'pending' && <button className="btn ghost sm" onClick={() => run(() => api(`${H}/helpers/${helperRow.id}/resend`, { body: {} }), () => setMsg(`Invite sent again to ${helperFirst} on WhatsApp.`))}>{tr('Resend')}</button>}</div>}
+        {carer.steps && (d.mode !== 'tracked' || invite === 'yes') && <ol className="help-track" aria-label="Help status">{(['Accepted', 'Checked in', 'Completed'] as const).map((st, i) => <li key={st} className={i < carer.at ? 'done' : i === carer.at ? 'now' : ''} aria-current={i === carer.at ? 'step' : undefined}><span className="ht-dot">{i < carer.at || (i === carer.at && st === 'Completed') ? '✓' : ''}</span>{tr(st)}</li>)}</ol>}
         {d.mode === 'trusted' && <><div className="small muted">No check-ins or alerts today. Tap Covered when it’s done.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>{tr('Covered')}</button>}</>}
-        {d.helperUnavailable && <Banner kind="warn" icon="!">Sunita can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
+        {d.helperUnavailable && <Banner kind="warn" icon="!">{helperFirst} can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
         {needsCover && <div className="btnrow">{d.helperUnavailable && ov?.preDeparture.warn && !ov.jobs.some(j => j.active) && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/pre-departure`, { body: { option: 'ask_circle_now' } }))}><Icon name="friends" size={18} />{tr('Ask my backups')}</button>}<button className="btn sm" onClick={() => onFindCover(d.helperUnavailable ? coverDraft : undefined)}><Icon name="search" size={18} />{tr('Ask a friend to cover')}</button></div>}
         <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
-          {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come today')}</button>}</div>
+          {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>
       </section>
       {d.leftAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div>
         : d.backAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
@@ -131,7 +140,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <div className="row"><b className="grow">{petName(t.petId)} · {t.title}</b><Conf state={t.ev.state} label={t.ev.label} /></div>
         <div className="small">{t.ev.visitOnly ? 'The visit is recorded, but there’s no evidence for this task.' : `No evidence yet. Due ${fmt(t.due)}.`} {escText(t, day.now)}</div>
         <div className="btnrow">{t.esc!.acknowledged ? <button className="btn primary" onClick={() => { setTask(t); setSheet('resolve'); }}>{tr('Mark resolved')}</button> : <button className="btn warn" onClick={() => run(() => api(`${H}/tasks/${t.id}/ack`, { body: {} }))}>{tr('I’m on it')}</button>}
-          <button className="btn" onClick={() => run(() => api(`${H}/day/call-helper`, { body: {} }), () => setMsg('Logged that you called Sunita. Use your phone to place the call.'))}><Icon name="phone" size={18} />Call Sunita</button></div>
+          <button className="btn" onClick={() => run(() => api(`${H}/day/call-helper`, { body: {} }), () => setMsg(`Logged that you called ${helperFirst}. Use your phone to place the call.`))}><Icon name="phone" size={18} />Call {helperFirst}</button></div>
       </div>)}
 
       {/* The day's tasks appear once the owner has headed out and set the options (Heading out → I'm leaving). */}
@@ -193,11 +202,11 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <p className="xs muted">Resolve a missed task by midnight to keep the day covered.</p></Sheet>}
 
     {sheet === 'caring' && <Sheet onClose={close}><h2>{tr('Who’s caring today?')}</h2>
-      <div className="list">{[['tracked', 'user', 'Own helper: Sunita (tracked)', 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Ask your own friends. Nothing is sent until you approve']].map(([k, i, t, s]) =>
+      <div className="list">{[['tracked', 'user', `Own helper: ${helperFirst} (tracked)`, 'Check-ins on WhatsApp or missed call; alerts if something is missed'], ['trusted', 'heart', 'Trusted Helper mode', 'No check-ins, alerts or points. You tap Covered later; no tap = Unknown'], ['uncovered', 'alert', 'Nobody yet', 'Shows “cover needed”; your plan is kept'], ['friend', 'search', 'A friend', 'Ask your own friends. Nothing is sent until you approve']].map(([k, i, t, s]) =>
         <button key={k} className="li" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { mode: k } }), k === 'friend' ? () => { close(); onFindCover(coverDraft); } : undefined)}><span className="avatar icon"><Icon name={i!} size={20} /></span><div className="grow"><b>{t}</b><div className="small muted">{s}</div></div>{d.mode === k && <span className="tag flag-on">Selected</span>}</button>)}</div>
       <div className="list"><div className="li"><span className="avatar icon"><Icon name="home" size={20} /></span><div className="grow"><b>Graded day care · Verified carer</b><div className="small muted">Later releases (P1 / P2), not available</div></div></div></div></Sheet>}
 
-    {sheet === 'cantcome' && <Sheet onClose={close}><h2>{tr('Help can’t come today')}</h2><p>Sunita is marked unavailable for today.</p>
+    {sheet === 'cantcome' && <Sheet onClose={close}><h2>{tr('Help can’t come today')}</h2><p>{helperFirst} is marked unavailable for today.</p>
       <div className="field"><label htmlFor="cr">{tr('Reason (optional, private)')}</label><select id="cr" className="input" value={note} onChange={e => setNote(e.target.value)}><option value="">{tr('Not given')}</option><option>{tr('Unwell')}</option><option>{tr('Family emergency')}</option><option>{tr('Holiday')}</option></select></div>
       <button className="btn primary block" onClick={() => run(() => api(`${H}/day`, { method: 'PUT', body: { helperUnavailable: true, reason: note || undefined } }))}>{tr('Mark unavailable')}</button></Sheet>}
 

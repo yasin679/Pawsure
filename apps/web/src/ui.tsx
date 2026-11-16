@@ -25,6 +25,7 @@ const PATHS: Record<string, string> = {
   pill: '<rect x="3.6" y="8.6" width="16.8" height="6.8" rx="3.4" transform="rotate(-35 12 12)"/><path d="m9.9 9 4.2 6"/>',
   litter: '<path d="M3.5 10h17l-1.6 8.3a2 2 0 0 1-2 1.7H7.1a2 2 0 0 1-2-1.7Z"/><path d="M7 10c.6-2.3 2.6-3.8 5-3.8s4.4 1.5 5 3.8"/><path d="M9 14h.01M12 15h.01M15 14h.01"/>',
   pad: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M8 9h8M8 12h8M8 15h5"/>',
+  mic: '<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v2.5"/>',
   send: '<path d="M4.5 12 19.5 5l-4 14-4.2-5.8Z"/><path d="m11.3 13.2 8.2-8.2"/>',
   star: '<path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4-3.9-3.8 5.4-.8Z"/>'
 };
