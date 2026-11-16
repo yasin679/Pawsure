@@ -9,6 +9,7 @@ import type { Deps } from './app.js';
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit, loadDay, ingestSignal, runEscalations, hashImage } from './care.js';
 import { seal, open } from './secrets.js';
+import { ProofIn, recordProof, proofMessage } from './proof.js';
 import { render, BUTTONS, type Lang } from './templates.js';
 import { runRetention, serviceChecks, raiseAlerts, runBackup } from './ops.js';
 
@@ -225,6 +226,52 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     await helperSay(hh, c.req.param('mid'), 'W_PRACTICE'); await audit(db, c.get('userId'), hh, 'helper.practice', {}); return c.json({ ok: true, note: 'Practice prompt sent; nothing is recorded as evidence.' });
   });
   /** Helper's WhatsApp thread, for the owner-side simulator in demo mode only (owners never see the helper's chat in production). */
+  /* ---------- Proof from the helper's own login (16 Nov): today's tasks and Send proof ---------- */
+  app.get('/v1/me/helper/tasks', async (c) => {
+    const mems = await db.query<{ id: string; household_id: string; paused: boolean }>(`select id, household_id, paused from memberships where user_id=$1 and role='helper' and status='active'`, [c.get('userId')]);
+    const out = [];
+    for (const m of mems) {
+      const date = istDate(now());
+      const tasks = await db.query<{ id: string; title: string; due_minute: number; pet: string }>(`select t.id, t.title, t.due_minute, p.name as pet from care_tasks t join pets p on p.id=t.pet_id where t.household_id=$1 and t.care_date=$2 and t.assignee_membership_id=$3 order by t.due_minute, t.title`, [m.household_id, date, m.id]);
+      for (const t of tasks) {
+        const ph = await db.query<{ code_result: string }>(`select code_result from evidence_photos where task_id=$1 order by created_at desc limit 1`, [t.id]);
+        const sig = (await db.query<{ n: number }>(`select count(*)::int as n from checkin_signals where task_id=$1 and kind in ('photo','voice','ivr')`, [t.id]))[0]!.n;
+        out.push({ id: t.id, title: t.title, pet: t.pet, due: t.due_minute, householdId: m.household_id, proofSent: sig > 0, codeResult: ph[0]?.code_result ?? null });
+      }
+    }
+    const cst = mems[0] ? await consentOf(mems[0].id) : null;
+    return c.json({ tasks: out, canSend: !!cst?.granted && cst.kind !== 'helper_withdrawal' && !mems[0]?.paused });
+  });
+  app.post('/v1/me/helper/tasks/:id/proof', async (c) => {
+    const proof = ProofIn.parse(await c.req.json().catch(() => ({})));
+    const t = (await db.query<{ household_id: string; assignee_membership_id: string | null }>(`select household_id, assignee_membership_id from care_tasks where id=$1`, [c.req.param('id')]))[0];
+    const mem = t ? (await db.query<{ id: string; paused: boolean }>(`select id, paused from memberships where id=$1 and user_id=$2 and role='helper' and status='active'`, [t.assignee_membership_id, c.get('userId')]))[0] : undefined;
+    if (!t || !mem) return c.json({ error: 'not_found', message: 'This task isn’t yours.' }, 404);
+    const cst = await consentOf(mem.id);
+    if (!cst?.granted || cst.kind === 'helper_withdrawal' || mem.paused) return c.json({ error: 'no_helper_consent', message: 'Check-ins are stopped. Reply “start” on WhatsApp to begin again.' }, 409);
+    if (!proof.photo && !proof.code) return c.json({ error: 'no_proof', message: 'Add a photo or today’s code.' }, 400);
+    const r = await recordProof(db, { householdId: t.household_id, taskId: c.req.param('id'), actor: 'helper:' + mem.id, channel: 'app', proof, now: now(), key: `app-proof:${c.req.param('id')}:${mem.id}:${Math.floor(now().getTime() / 60000)}` });
+    return c.json({ ok: true, proof: r, message: proofMessage(r) });
+  });
+  /** The owner and co-owner see the proof photos for a task, with whether the code matched. */
+  app.get('/v1/households/:hh/tasks/:id/proof', async (c) => {
+    const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'evidence', 'read'))) return x.deny(c);
+    const rows = await db.query<{ data_url: string | null; code_result: string; actor: string; channel: string; created_at: string }>(`select data_url, code_result, actor, channel, created_at from evidence_photos where household_id=$1 and task_id=$2 order by created_at`, [hh, c.req.param('id')]);
+    const names = async (a: string) => {
+      const [kind, id] = a.split(':');
+      if (kind === 'helper') return (await db.query<{ n: string }>(`select coalesce(m.display_label, u.display_name, 'Helper') as n from memberships m join users u on u.id=m.user_id where m.id=$1`, [id]))[0]?.n ?? 'Helper';
+      if (kind === 'friend') return (await db.query<{ n: string }>(`select coalesce(display_name,'Friend') as n from users where id=$1`, [id]))[0]?.n ?? 'Friend';
+      return (await db.query<{ n: string }>(`select name as n from backup_contact where id=$1 union all select name from task_links where id=$1`, [id]))[0]?.n ?? 'Cover';
+    };
+    return c.json(await Promise.all(rows.map(async r => ({ photo: r.data_url, code: r.code_result, by: await names(r.actor), channel: r.channel, at: r.created_at }))));
+  });
+  /** Demo only: today's food-box code, so the demo can be tried without the printed card. */
+  app.get('/demo/code-today/:hh', async (c) => {
+    if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
+    const card = (await cards(c.req.param('hh'))).find(k => k.active);
+    return c.json({ code: card?.codes[Number(istDate(now()).slice(8, 10))] ?? null });
+  });
+
   app.get('/demo/helper-thread/:mid', async (c) => {
     if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
     return c.json(await db.query(`select direction, template, body, gloss, task_id, buttons, at from helper_messages where membership_id=$1 order by at, id`, [c.req.param('mid')]));

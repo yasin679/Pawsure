@@ -471,6 +471,53 @@ describe('15 Nov: names must be names, every state and city, every scheduled lan
   });
 });
 
+/* ================================================================ Proof: photo and today's code (16 Nov) ===== */
+describe('16 Nov: helpers, friends and backups send a photo and today’s code; no proof is never evidence', () => {
+  const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD';
+  const todayCode = async () => { const c = (await call<{ codes: Record<number, string>; today: number }>('GET', `${HH}/code-cards/current`, undefined, owner)).body; return c.codes[c.today]!; };
+  const evOf = async (taskId: string) => (await call<{ tasks: { id: string; ev: { state: string } }[] }>('GET', `${HH}/today`, undefined, owner)).body.tasks.find(t => t.id === taskId)?.ev.state;
+
+  it('friend Done with photo + today’s code is strong; the owner sees the photo and the code result', async () => {
+    const v = await confirmed(['bruno'], 1080);
+    clock.set(at('18:02:00')); await call('POST', `/v1/me/requests/${v.id}/arrived`, {}, priya);
+    const r = await call<{ proof: { grade: string; code: string }; message: string }>('POST', `/v1/me/requests/${v.id}/done`, { photo: PHOTO + 'aa', code: await todayCode() }, priya);
+    expect(r.body.proof).toMatchObject({ grade: 'strong', code: 'today' }); expect(r.body.message).toMatch(/Photo and today’s code received/);
+    expect(await evOf('cover_' + v.id)).toBe('Likely');
+    const proof = (await call<{ photo: string; code: string; by: string }[]>('GET', `${HH}/tasks/cover_${v.id}/proof`, undefined, owner)).body;
+    expect(proof).toHaveLength(1); expect(proof[0]).toMatchObject({ code: 'today', by: 'Priya Shah' }); expect(proof[0]!.photo).toMatch(/^data:image\/jpeg/);
+    expect((await call('GET', `${HH}/tasks/cover_${v.id}/proof`, undefined, priya)).status).toBe(403); // only the home sees it
+  });
+  it('friend Done with no photo or code is recorded as said-done, not evidence; a wrong code is flagged', async () => {
+    const v = await confirmed(['bruno'], 1110);
+    const r = await call<{ proof: { grade: string }; message: string }>('POST', `/v1/me/requests/${v.id}/done`, {}, priya);
+    expect(r.body.proof.grade).toBe('none'); expect(r.body.message).toMatch(/without proof/);
+    expect(await evOf('cover_' + v.id)).not.toMatch(/Likely|Confirmed/);
+    expect(push(/says they finished, but sent no photo or code/).length).toBeGreaterThan(0);
+    const w = await confirmed(['bruno'], 1140);
+    const bad = await call<{ proof: { grade: string; code: string } }>('POST', `/v1/me/requests/${w.id}/done`, { photo: PHOTO + 'bb', code: '0000' }, priya);
+    expect(bad.body.proof.grade).toBe('flagged');
+  });
+  it('the helper sends proof from her own login; only for her own tasks, and not after she says stop', async () => {
+    clock.set(at('13:02:00')); await tick();
+    const list = (await call<{ tasks: { id: string; title: string }[]; canSend: boolean }>('GET', '/v1/me/helper/tasks', undefined, sunita)).body;
+    expect(list.canSend).toBe(true); expect(list.tasks.map(t => t.title)).toContain('Joint supplement');
+    const med = list.tasks.find(t => t.title === 'Joint supplement')!;
+    const r = await call<{ proof: { grade: string } }>('POST', `/v1/me/helper/tasks/${med.id}/proof`, { photo: PHOTO + 'cc', code: await todayCode() }, sunita);
+    expect(r.body.proof.grade).toBe('strong');
+    expect((await call('POST', `/v1/me/helper/tasks/${med.id}/proof`, { code: '1234' }, priya)).status).toBe(404); // not hers
+    expect((await call<{ message: string }>('POST', `/v1/me/helper/tasks/${med.id}/proof`, {}, sunita)).body.message).toBe('Add a photo or today’s code.');
+    expect((await call('POST', `/v1/me/helper/tasks/${med.id}/proof`, { photo: 'data:image/jpeg;base64,' + 'A'.repeat(70000) }, sunita)).status).toBeGreaterThanOrEqual(400); // too large: refused (body limit 413 or schema 400)
+    expect((await call('POST', `/v1/me/helper/tasks/${med.id}/proof`, { photo: 'not a photo' }, sunita)).status).toBe(400);
+  });
+  it('photos are cleared after 90 days; the record and hash stay', async () => {
+    await db.query(`update evidence_photos set created_at = now() - interval '91 days' where actor like 'helper:%'`);
+    const { runRetention } = await import('../src/ops.js');
+    await db.query(`delete from retention_runs`); await runRetention(db, new Date());
+    const left = await db.query<{ data_url: string | null; image_hash: string }>(`select data_url, image_hash from evidence_photos where actor like 'helper:%'`);
+    expect(left.length).toBeGreaterThan(0); expect(left.every(r => r.data_url === null && r.image_hash)).toBe(true);
+  });
+});
+
 /* ================================================================ Seven days on the demo clock ============== */
 describe('R-05 / R-08 / PAW-009 / PAW-010 / PAW-029 seven days on the clock (6-day pause, routine, alerts, points)', () => {
   let d2: Db, a2: ReturnType<typeof createApp>, ad2: ReturnType<typeof mockAdapters>, ck: ReturnType<typeof demoClock>;

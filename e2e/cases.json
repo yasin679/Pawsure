@@ -775,6 +775,12 @@
       "pre": "Sign-up",
       "steps": "1. Read the Privacy Notice\n2. Accept both, Continue\n3. Type 12345 as the name",
       "expected": "Plain summary with its version; no research toggle; the name is refused with a clear message; 23 languages offered"
+    },
+    "R10": {
+      "role": "Helper + owner",
+      "pre": "Sunita signs in",
+      "steps": "1. Today’s tasks → Send proof\n2. Choose from gallery, enter today’s code → Send\n3. Owner opens the task",
+      "expected": "Photo and today’s code received; task shows proof sent; the owner sees the photo with ✓ today’s code"
     }
   },
   "defects": [

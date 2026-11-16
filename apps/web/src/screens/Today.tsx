@@ -1,6 +1,6 @@
 /** Today (PS-007, PS-012–016, PS-030–036, PS-103, PS-111, PS-121, PS-122). */
 import { t as tr } from '../i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, ApiError, fmt, hm, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem } from '../api';
 import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
@@ -96,6 +96,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="row"><h2 className="grow">{task.title}</h2><Conf state={task.ev.state} label={task.ev.label} /></div>
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
       {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">{tr('A Yes is a plan, not proof the task was done.')}</div></div>}
+      <TaskProof hh={hh} taskId={task.id} />
       {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span>{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
       <div className="card flat"><span className="eyebrow">Why this label</span>{task.ev.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>
       {task.esc && <div className="card"><span className="eyebrow">Escalation ladder</span>{task.esc.steps.map(s => <div key={s.n} className="row small"><span className="mono" style={{ minWidth: 60 }}>{fmt(s.at)}</span><span className="grow">{s.kind.replace(/_/g, ' ')}</span><span className={`tag ${s.fired ? 'flag-on' : s.stoppedByAck || s.notRepeated ? 'owner' : ''}`}>{s.fired ? 'Sent' : s.stoppedByAck ? 'Stopped' : s.notRepeated ? 'Not repeated (asked before the task)' : 'Pending'}</span></div>)}</div>}
@@ -185,4 +186,17 @@ function escText(t: DayTask, now: number) {
 
 export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return <div className="sheet-backdrop" onClick={onClose}><div className="sheet" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>{children}<button className="btn block" onClick={onClose}>{tr('Close')}</button></div></div>;
+}
+
+interface ProofRow { photo: string | null; code: string; by: string; channel: string; at: string }
+const CODE_TEXT: Record<string, string> = { today: '✓ today’s code', old: '✕ an old code', wrong: '✕ wrong code', none: 'no code' };
+/** The owner sees every proof photo for the task: who sent it, when, and whether today's code matched. */
+function TaskProof({ hh, taskId }: { hh: string; taskId: string }) {
+  const [rows, setRows] = useState<ProofRow[] | null>(null);
+  useEffect(() => { api<ProofRow[]>(`/v1/households/${hh}/tasks/${taskId}/proof`).then(setRows).catch(() => setRows([])); }, [hh, taskId]);
+  if (!rows?.length) return null;
+  return <div className="card flat"><span className="eyebrow">Proof photos</span><div className="proofs">
+    {rows.map((r, i) => <figure key={i}>{r.photo ? <img src={r.photo} alt={`Proof from ${r.by}`} /> : <div className="proof-photo" style={{ height: 100 }}>Deleted after 90 days</div>}
+      <figcaption><b>{r.by.split(' ')[0]}</b> · {new Date(r.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}<br /><span className={r.code === 'today' ? 'ok' : r.code === 'none' ? 'muted' : 'errtext'}>{CODE_TEXT[r.code] ?? r.code}</span></figcaption></figure>)}
+  </div></div>;
 }

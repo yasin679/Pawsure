@@ -5,6 +5,7 @@ import { uid } from '@pawsure/db';
 import { COVER_V1, isPersonName, NAME_MESSAGE, LANG_CODES } from '@pawsure/domain';
 import type { Ctx } from './daily.js';
 import type { CoverService } from './cover.js';
+import { ProofIn } from './proof.js';
 import { audit } from './care.js';
 import { istDate } from './clock.js';
 
@@ -166,8 +167,8 @@ export function registerCover(app: Hono<Env>, x: Ctx, cover: CoverService) {
   /* ---------- one-time task links: no account, task-scoped, expiring ---------- */
   app.get('/t/:token', async (c) => send(c, await cover.linkView(c.req.param('token'))));
   app.post('/t/:token/:action{accept|decline|done|cant}', async (c) => {
-    const b = z.object({ noteRead: z.boolean().optional() }).parse(await c.req.json().catch(() => ({})));
-    return send(c, await cover.linkAction(c.req.param('token'), c.req.param('action') as 'accept', b.noteRead));
+    const b = z.object({ noteRead: z.boolean().optional() }).merge(ProofIn).parse(await c.req.json().catch(() => ({})));
+    return send(c, await cover.linkAction(c.req.param('token'), c.req.param('action') as 'accept', b.noteRead, { photo: b.photo, code: b.code }));
   });
 
   /* ---------- demo: cover-phone threads for the simulators ---------- */

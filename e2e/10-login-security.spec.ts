@@ -2,11 +2,13 @@ import { test, expect } from '@playwright/test';
 import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, fillSociety } from './helpers';
 
 test.describe('M. Login separation and security (on screen)', () => {
-  test('M1 Helper login → helper home only (WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
+  test('M1 Helper login → helper home only (her own tasks to send proof, WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
     await boot(page); await signIn(page, '9000000035');
     await expect(page.getByRole('heading', { name: 'Pawsure for helpers' })).toBeVisible();
     await expect(page.locator('nav.tabbar')).toHaveCount(0);
-    await expect(page.getByText('Bruno')).toHaveCount(0);
+    // She sees her own tasks (as in her WhatsApp prompts) but never the flat, access notes, medicines text or owner data.
+    await expect(page.getByText('Today’s tasks')).toBeVisible();
+    for (const hidden of ['B-1104', 'Spare key with Ankita', 'Neha', 'Dr. Aarti']) await expect(page.getByText(hidden)).toHaveCount(0);
     await page.getByRole('button', { name: 'Your data rights' }).click();
     await expect(page.getByRole('heading', { name: 'Your data rights' })).toBeVisible();
   });

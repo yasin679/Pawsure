@@ -583,6 +583,9 @@ A helper can also sign in to the app with their own number and a one-time code. 
 
 ### 12.2 Day to day
 
+**Sending proof in the app:** sign in with your number. **Today's tasks** lists your tasks; tap **Send proof**, then **Take photo** or **Choose from gallery**, type today's code from the card in the food box and tap **Send proof**. You can also send the same proof on WhatsApp or by missed call.
+
+
 Helpers don’t need the app. Everything works on WhatsApp or a basic phone:
 
 - **Invitation:** a WhatsApp message in your language asks whether you want to join. Only the bowl or the pet is ever photographed, never your face. Reply **Yes** or **Not now**.
@@ -625,6 +628,8 @@ Friends receive requests on WhatsApp in their language and can reply **Yes**, **
 ![Figure 48: A friend’s WhatsApp (demo phone)](images/34-friend-phone.jpg)
 
 After the owner confirms you, **Show address, key and emergency card** reveals the details for that visit only. Tap **I’ve arrived** when you get there and **Done** when finished; tap **Can’t make it** if plans change (the owner is told and the details are removed).
+
+**Proof when you finish:** tap **Done: send proof**, add a photo of the bowl or pet (camera or gallery) and today's code from the card in the food box. If you really can't, **I can't send proof: mark done anyway** tells the owner there was no proof.
 
 **Running late?** Choose how late and tap **I’m running late** (or write “late 20” on WhatsApp or SMS). The owner gets your new arrival time.
 
