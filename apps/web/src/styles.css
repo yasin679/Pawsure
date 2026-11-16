@@ -794,3 +794,18 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .plan-help b{display:block;font-size:1.02rem}
 .intro-title{min-height:2.24em;display:flex;align-items:center;justify-content:center}
 .intro-text{min-height:4.5em}
+
+/* In-conversation progressive form (Intake.tsx StepForm) */
+.stepform{display:flex;flex-direction:column;gap:8px;padding:12px 14px 10px;border:1.5px solid var(--line-2);border-radius:20px;background:var(--surface);box-shadow:0 10px 24px -18px rgba(38,48,39,.55);animation:cb-in .25s ease-out both}
+.sf-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sf-title{font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.sf-count{font-size:var(--fs-xs);font-weight:800;color:var(--sage-dark);background:var(--accent-soft);border-radius:99px;padding:2px 9px}
+.sf-bar{display:flex;gap:4px}
+.sf-bar span{flex:1;height:4px;border-radius:99px;background:var(--surface-2);transition:background .25s}
+.sf-bar span.done{background:var(--accent)}
+.sf-bar span.now{background:color-mix(in srgb,var(--accent) 55%,var(--surface-2))}
+.sf-label{font-weight:800;font-size:1rem;color:var(--ink)}
+.sf-opt{font-weight:600;color:var(--ink-3);font-size:var(--fs-s)}
+.sf-hint{font-size:var(--fs-xs);color:var(--ink-3);margin-top:-4px}
+.sf-foot{display:flex;align-items:center;gap:8px;padding-top:2px}
+.stepform .cb-input .input{min-height:44px}

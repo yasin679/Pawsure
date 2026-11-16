@@ -232,16 +232,18 @@ export function createApp(input: Deps) {
   /* ---------- Pets (PS-003, PS-004) ---------- */
   // Essential care and medical details are required ("None" is a valid answer); the rest is optional.
   const need = (max: number, what: string) => z.string().trim().min(1, `${what} is required`).max(max);
-  const PetIn = z.object({ name: need(40, 'Name').refine(hasLetter, 'Give your pet a name with letters.'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), handling_note: z.string().trim().max(400).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet').refine(hasLetter, 'Enter your vet’s name.'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().trim().max(80).refine(v => !v || isPersonName(v), NAME_MESSAGE).optional(), backup_phone: z.string().max(30).optional() });
+  const PetIn = z.object({ name: need(40, 'Name').refine(hasLetter, 'Give your pet a name with letters.'), species: z.enum(['Dog', 'Cat', 'Other']).default('Dog'), breed: z.string().max(60).optional(), sex: z.enum(['Male', 'Female']).optional(), age: z.string().max(30).optional(), food: need(300, 'Food and feeding'), allergies: need(200, 'Allergies'), medicines: need(300, 'Medicine instructions'), handling_note: z.string().trim().max(400).optional(), fears: z.string().max(300).optional(), notes: z.string().max(500).optional(), vet_name: need(120, 'Your vet').refine(hasLetter, 'Enter your vet’s name.'), vet_phone: need(30, 'Vet phone'), clinic24_name: z.string().max(120).optional(), clinic24_phone: z.string().max(30).optional(), backup_name: z.string().trim().max(80).refine(v => !v || isPersonName(v), NAME_MESSAGE).optional(), backup_phone: z.string().max(30).optional() });
   app.get('/v1/households/:hh/pets', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'pet', 'read'))) return deny(c);
     return c.json(await db.query('select * from pets where household_id=$1 order by name', [hh]));
   });
   app.post('/v1/households/:hh/pets', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'pet', 'create'))) return deny(c);
-    const p = PetIn.parse(await c.req.json()); const id = uid('pet');
+    const parsed = PetIn.parse(await c.req.json()); const id = uid('pet');
+    // The sex gives the him/her used in English messages to friends ("take him for a short walk").
+    const p: Record<string, unknown> = { ...parsed, ...(parsed.sex ? { pronoun: parsed.sex === 'Male' ? 'him' : 'her' } : {}) };
     const cols = Object.keys(p);
-    await db.query(`insert into pets(id, household_id, ${cols.join(',')}) values ($1,$2,${cols.map((_, i) => '$' + (i + 3)).join(',')})`, [id, hh, ...cols.map(k => (p as Record<string, unknown>)[k])]);
+    await db.query(`insert into pets(id, household_id, ${cols.join(',')}) values ($1,$2,${cols.map((_, i) => '$' + (i + 3)).join(',')})`, [id, hh, ...cols.map(k => p[k])]);
     await audit(db, c.get('userId'), hh, 'pet.created', { id });
     return c.json({ id }, 201);
   });

@@ -18,8 +18,8 @@ interface Near { city: string | null; state: string | null; society: { id: strin
 /** Lake Vista CHS, Powai: the demo's "use a demo location", for browsers (or the shared demo) where location is blocked. */
 const DEMO_SPOT = { lat: 19.1178, lng: 72.9058 };
 type Species = 'Dog' | 'Cat' | 'Other';
-interface PetDraft { name: string; species: Species | ''; age: string; food: string; allergies: string; medicines: string; vet_name: string; vet_phone: string; sameVet: boolean; id?: string }
-const blankPet = (): PetDraft => ({ name: '', species: '', age: '', food: '', allergies: '', medicines: '', vet_name: '', vet_phone: '', sameVet: false });
+interface PetDraft { name: string; species: Species | ''; breed: string; sex: string; age: string; food: string; allergies: string; medicines: string; vet_name: string; vet_phone: string; sameVet: boolean; id?: string }
+const blankPet = (): PetDraft => ({ name: '', species: '', breed: '', sex: '', age: '', food: '', allergies: '', medicines: '', vet_name: '', vet_phone: '', sameVet: false });
 /** One question in the conversation. `chapter` is the playbook it belongs to (0 info, 1 pet, 2 care). */
 interface Step { key: string; chapter: 0 | 1 | 2; ask: ReactNode; answer: string; compose: () => ReactNode; draft?: string; pet?: number }
 const CHAPTERS = ['Your information', 'Your pet', 'Care details'] as const;
@@ -74,6 +74,51 @@ function Picker({ id, label, placeholder, options, value, onPick, loading }: { i
       </div>
     </div>}
   </>;
+}
+
+/** One field of an in-conversation form. A `choice` field answers with a tap; `quick` chips fill a text field and move on. */
+interface FField { id: string; label: string; kind?: 'text' | 'choice'; placeholder?: string; hint?: string; options?: string[]; quick?: string[]; optional?: boolean; validate?: (v: string) => string | null; mono?: boolean; numeric?: boolean; prefix?: string; max?: number; voice?: boolean; initial?: string }
+type Mic = ReturnType<typeof useVoice>;
+/**
+ * A small progressive form that opens in the conversation: one field at a time ("1 of 3"), Back / Skip / Next,
+ * Done on the last. Its answers come back together, and the conversation shows them as one reply.
+ */
+function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, top }: { title: string; fields: FField[]; submit?: string; onSubmit: (v: Record<string, string>) => void; busy?: boolean; err?: string | null; mic: Mic; top?: ReactNode }) {
+  const [i, setI] = useState(0);
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.id, f.initial ?? ''])));
+  const f = fields[i]!; const last = i === fields.length - 1; const v = vals[f.id] ?? '';
+  const problem = v.trim() && f.validate ? f.validate(v) : null;
+  const ok = !problem && (f.optional || !!v.trim());
+  const go = (nv: Record<string, string>) => { if (last) onSubmit(Object.fromEntries(Object.entries(nv).map(([k, x]) => [k, x.trim()]))); else setI(i + 1); };
+  const set = (x: string) => setVals(o => ({ ...o, [f.id]: x }));
+  const pick = (x: string) => { const nv = { ...vals, [f.id]: x }; setVals(nv); go(nv); };
+  return <div className="stepform" role="group" aria-label={title}>
+    {top}
+    <div className="sf-head"><span className="sf-title">{title}</span><span className="sf-count">{i + 1} {tr('of')} {fields.length}</span></div>
+    <div className="sf-bar" aria-hidden="true">{fields.map((x, n) => <span key={x.id} className={n < i ? 'done' : n === i ? 'now' : ''} />)}</div>
+    <label className="sf-label" htmlFor={f.kind === 'choice' ? undefined : f.id}>{f.label}{f.optional && <span className="sf-opt"> · {tr('optional')}</span>}</label>
+    {f.hint && <div className="sf-hint">{f.hint}</div>}
+    {f.kind === 'choice'
+      ? <div className="cb-chips">{f.options!.map(o => <button key={o} type="button" className="chip" aria-pressed={v === o} disabled={busy} onClick={() => pick(o)}>{tr(o)}</button>)}</div>
+      : <>
+        {f.quick && <div className="cb-chips">{f.quick.map(q => <button key={q} type="button" className="chip" disabled={busy} onClick={() => pick(q)}>{tr(q)}</button>)}</div>}
+        <div className="cb-input">
+          {f.prefix && <span className="cb-prefix">{f.prefix}</span>}
+          <input id={f.id} className={`input${f.mono ? ' mono' : ''}`} autoFocus maxLength={f.max} value={v} placeholder={mic.listening && f.voice ? tr('Listening…') : f.placeholder} inputMode={f.numeric ? 'tel' : undefined} autoComplete="off"
+            onChange={e => set(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && ok && !busy) { e.preventDefault(); go(vals); } }} />
+          {f.voice && mic.available && <button type="button" className={`cb-mic${mic.listening ? ' on' : ''}`} aria-label={mic.listening ? 'Stop voice input' : 'Speak your answer'} aria-pressed={mic.listening} onClick={() => mic.toggle(t => setVals(o => ({ ...o, [f.id]: o[f.id] ? o[f.id] + t : t.trimStart() })))}><Icon name="mic" size={20} /></button>}
+        </div>
+        {f.voice && mic.listening && <div className="cb-live" role="status"><span className="geo-dot" aria-hidden="true" />{mic.partial || tr('Listening… speak now')}</div>}
+      </>}
+    {problem && <div className="cb-err" role="alert">{problem}</div>}
+    {err && <div className="cb-err" role="alert">{err}</div>}
+    <div className="sf-foot">
+      {i > 0 && <button type="button" className="btn ghost sm" onClick={() => setI(i - 1)}>{tr('Back')}</button>}
+      <span className="grow" />
+      {f.optional && <button type="button" className="btn sm" disabled={busy} onClick={() => pick('')}>{tr('Skip')}</button>}
+      {f.kind !== 'choice' && <button type="button" className="btn primary sm" disabled={!ok || busy} onClick={() => go(vals)}>{last ? tr(submit) : tr('Next')}</button>}
+    </div>
+  </div>;
 }
 
 export function Intake({ onDone }: { onDone: () => void }) {
@@ -182,11 +227,12 @@ export function Intake({ onDone }: { onDone: () => void }) {
         : <><Picker id="soc" label={tr('Society')} placeholder={tr('Choose your society')} value={p.societyId} loading={!socs} options={(socs ?? []).map(x => ({ value: x.id, label: `${x.name}${x.area ? ' · ' + x.area : ''}` }))}
           onPick={v => { const x = socs?.find(y => y.id === v); if (!x) return; setP({ ...p, societyId: x.id, society: `${x.name}${x.area ? ', ' + x.area : ''}` }); next(); }} />
           <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedSoc(true); setDraft(''); }}>{tr('My society isn’t listed')}</button></div></> },
-    { key: 'tower', chapter: 0, answer: p.tower || tr('Skip'), draft: p.tower, ask: <><b>{tr('Which tower or wing?')}</b> {tr('Friends can see this, so they can find you.')}</>,
-      compose: () => text('tw', tr('Tower / wing'), tr('e.g. C or Wing 2'), v => { setP({ ...p, tower: v }); next(); }, { optional: true, max: 40 }) },
-    { key: 'flat', chapter: 0, answer: p.flat ? '•••• ' + tr('(private)') : tr('Skip'), draft: p.flat,
-      ask: <><b>{tr('And your flat number?')}</b><span className="cb-note">🔒 {tr('Private. Only shown to a friend you confirm for a visit.')}</span></>,
-      compose: () => text('fl', tr('Flat (private)'), tr('e.g. C-702'), v => { setP({ ...p, flat: v }); next(); }, { optional: true, mono: true, max: 20 }) },
+    { key: 'unit', chapter: 0, answer: [p.tower && `${tr('Tower')} ${p.tower}`, p.flat && '•••• ' + tr('(private)')].filter(Boolean).join(' · ') || tr('Skip'),
+      ask: <><b>{tr('Which tower and flat?')}</b><span className="cb-note">{tr('Friends see your tower so they can find you.')} 🔒 {tr('The flat stays private until you confirm a friend for a visit.')}</span></>,
+      compose: () => <StepForm key="unit" title={tr('Your home')} mic={mic} fields={[
+        { id: 'tw', label: tr('Tower / wing'), placeholder: tr('e.g. C or Wing 2'), optional: true, max: 40, initial: p.tower },
+        { id: 'fl', label: tr('Flat (private)'), placeholder: tr('e.g. C-702'), optional: true, mono: true, max: 20, initial: p.flat }]}
+        onSubmit={v => { setP(x => ({ ...x, tower: v.tw ?? '', flat: v.fl ?? '' })); next(); }} /> },
     { key: 'home', chapter: 0, answer: tr('Create my home'),
       ask: <>{tr('Here’s your home. Tap any answer above to change it.')}
         <dl className="cb-sum"><dt>{tr('Name')}</dt><dd>{p.displayName}</dd><dt>{tr('Language')}</dt><dd>{langLabel(p.language)}</dd>
@@ -204,23 +250,32 @@ export function Intake({ onDone }: { onDone: () => void }) {
         compose: () => text(`pn${i}`, tr('Pet’s name'), tr('e.g. Bruno'), v => { setPet(i, { name: v }); next(); }, { max: 40, validate: v => hasLetter(v) ? null : tr('Give your pet a name with letters.') }) },
       { key: `p${i}.species`, chapter: 1, pet: i, answer: x.species, ask: <><b>{tr('Is')} {nm} {tr('a dog, a cat or something else?')}</b></>,
         compose: () => <div className="cb-chips big">{(['Dog', 'Cat', 'Other'] as Species[]).map(sp => <button key={sp} type="button" className="chip" aria-pressed={x.species === sp} onClick={() => { setPet(i, { species: sp }); next(); }}>{sp === 'Dog' ? '🐶 ' : sp === 'Cat' ? '🐱 ' : '🐾 '}{tr(sp)}</button>)}</div> },
+      { key: `p${i}.breed`, chapter: 1, pet: i, answer: [x.breed, x.sex].filter(Boolean).join(' · ') || tr('Not sure'),
+        ask: <><b>{tr('What breed is')} {nm}? {tr('And male or female?')}</b></>,
+        compose: () => <StepForm key={`b${i}`} title={tr('Breed and sex')} mic={mic} fields={[
+          { id: `pb${i}`, label: tr('Breed'), placeholder: tr('Type the breed or pick one'), optional: true, max: 60, initial: x.breed, voice: true, quick: x.species === 'Dog' ? ['Indie', 'Labrador', 'Golden Retriever', 'Beagle'] : x.species === 'Cat' ? ['Indian shorthair', 'Persian', 'Siamese'] : undefined },
+          { id: `ps${i}`, label: tr('Sex'), kind: 'choice', options: ['Male', 'Female', 'Not sure'] }]}
+          onSubmit={v => { setPet(i, { breed: v[`pb${i}`] ?? '', sex: v[`ps${i}`] === 'Not sure' ? '' : (v[`ps${i}`] ?? '') }); next(); }} /> },
       { key: `p${i}.age`, chapter: 1, pet: i, answer: x.age || tr('Skip'), draft: x.age, ask: <><b>{tr('How old is')} {nm}?</b></>,
         compose: () => text(`pa${i}`, tr('Age'), tr('Or type it, e.g. 3 years'), v => { setPet(i, { age: v }); next(); }, { optional: true, max: 30, chips: AGES }) },
       { key: `p${i}.food`, chapter: 1, pet: i, answer: x.food, draft: x.food,
         ask: <><b>{tr('What does')} {nm} {tr('eat, and how much?')}</b><span className="cb-note">{tr('Your helper and any friend who covers will see this.')}</span></>,
         compose: () => text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => { setPet(i, { food: v }); next(); }, { max: 300 , voice: true }) },
-      { key: `p${i}.allergies`, chapter: 1, pet: i, answer: x.allergies, draft: x.allergies === 'None known' ? '' : x.allergies, ask: <><b>{tr('Any allergies?')}</b></>,
-        compose: () => text(`pl${i}`, tr('Allergies'), tr('e.g. Chicken'), v => { setPet(i, { allergies: v }); next(); }, { max: 200, chips: ['None known'] , voice: true }) },
-      { key: `p${i}.medicines`, chapter: 1, pet: i, answer: x.medicines, draft: x.medicines === 'None' ? '' : x.medicines,
-        ask: <><b>{tr('Does')} {nm} {tr('take any medicines?')}</b><span className="cb-note">{tr('Write it as on the vet’s card. A medicine is never handed to a backup.')}</span></>,
-        compose: () => text(`pm${i}`, tr('Medicines'), tr('e.g. Joint supplement, 1 chewable with lunch'), v => { setPet(i, { medicines: v }); next(); }, { max: 300, chips: ['None'] , voice: true }) },
-      { key: `p${i}.vet`, chapter: 1, pet: i, answer: x.sameVet ? `${tr('Same as')} ${pets[0]!.name}` : x.vet_name, draft: x.sameVet ? '' : x.vet_name,
-        ask: <><b>{tr('Who is')} {nm}{tr('’s vet?')}</b> {tr('Name and clinic.')}</>,
-        compose: () => <>{i > 0 && pets[0]!.vet_name && <div className="cb-chips"><button type="button" className="chip" onClick={() => finishPet(i, { sameVet: true, vet_name: pets[0]!.vet_name, vet_phone: pets[0]!.vet_phone })}>{tr('Same as')} {pets[0]!.name}</button></div>}
-          {text(`pv${i}`, tr('Vet'), tr('e.g. Dr. Rao, Powai Pet Clinic'), v => { setPet(i, { vet_name: v, sameVet: false }); next(); }, { max: 120, validate: v => hasLetter(v) ? null : tr('Enter your vet’s name.') })}</> }
+      { key: `p${i}.health`, chapter: 1, pet: i, answer: `${tr('Allergies')}: ${x.allergies} · ${tr('Medicines')}: ${x.medicines}`,
+        ask: <><b>{tr('A couple of health questions about')} {nm}.</b><span className="cb-note">{tr('Write medicines as on the vet’s card. A medicine is never handed to a backup.')}</span></>,
+        compose: () => <StepForm key={`h${i}`} title={tr('Health')} mic={mic} fields={[
+          { id: `pl${i}`, label: `${tr('Any allergies?')}`, placeholder: tr('e.g. Chicken'), max: 200, quick: ['None known'], voice: true, initial: x.allergies === 'None known' ? '' : x.allergies },
+          { id: `pm${i}`, label: `${tr('Does')} ${nm} ${tr('take any medicines?')}`, placeholder: tr('e.g. Joint supplement, 1 chewable with lunch'), max: 300, quick: ['None'], voice: true, initial: x.medicines === 'None' ? '' : x.medicines }]}
+          onSubmit={v => { setPet(i, { allergies: v[`pl${i}`]!, medicines: v[`pm${i}`]! }); next(); }} /> },
+      { key: `p${i}.vet`, chapter: 1, pet: i, answer: x.sameVet ? `${tr('Same as')} ${pets[0]!.name}` : `${x.vet_name} · ${x.vet_phone}`,
+        ask: <><b>{tr('Who is')} {nm}{tr('’s vet?')}</b> {tr('Shown on the emergency card.')}</>,
+        compose: () => <StepForm key={`v${i}`} title={tr('Vet')} mic={mic} busy={busy} err={err} submit="Save"
+          top={i > 0 && pets[0]!.vet_name ? <div className="cb-chips"><button type="button" className="chip" disabled={busy} onClick={() => finishPet(i, { sameVet: true, vet_name: pets[0]!.vet_name, vet_phone: pets[0]!.vet_phone })}>{tr('Same as')} {pets[0]!.name}</button></div> : undefined}
+          fields={[
+            { id: `pv${i}`, label: tr('Vet’s name and clinic'), placeholder: tr('e.g. Dr. Rao, Powai Pet Clinic'), max: 120, validate: q => hasLetter(q) ? null : tr('Enter your vet’s name.'), initial: x.sameVet ? '' : x.vet_name },
+            { id: `pp${i}`, label: tr('Vet’s phone'), placeholder: '+91 22 5555 0101', max: 30, mono: true, numeric: true, validate: q => q.replace(/\D/g, '').length < 8 ? tr('Enter the full phone number.') : null, initial: x.vet_phone }]}
+          onSubmit={v => finishPet(i, { sameVet: false, vet_name: v[`pv${i}`]!, vet_phone: v[`pp${i}`]! })} /> }
     );
-    if (!x.sameVet) all.push({ key: `p${i}.vetPhone`, chapter: 1, pet: i, answer: x.vet_phone, draft: x.vet_phone, ask: <><b>{tr('And the vet’s phone number?')}</b></>,
-      compose: () => text(`pp${i}`, tr('Vet phone'), '+91 22 5555 0101', v => finishPet(i, { vet_phone: v }), { max: 30, mono: true, numeric: true, validate: v => v.replace(/\D/g, '').length < 8 ? tr('Enter the full phone number.') : null }) });
     all.push({ key: `p${i}.more`, chapter: 1, pet: i, answer: more[i] ? tr('Add another pet') : tr('No, that’s all'),
       ask: <>✓ {x.name}{tr('’s profile is saved.')} <b>{tr('Do you have another pet?')}</b></>,
       compose: () => <div className="cb-chips big"><button type="button" className="chip" onClick={() => { setMore(m => ({ ...m, [i]: true })); setPets(ps => [...ps, blankPet()]); next(); }}>{tr('Add another pet')}</button><button type="button" className="chip primary" onClick={() => { setMore(m => ({ ...m, [i]: false })); next(); }}>{tr('No, that’s all')}</button></div> });
@@ -241,13 +296,13 @@ export function Intake({ onDone }: { onDone: () => void }) {
     compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips big col">{['Me or my family', 'My house help', 'Nobody yet'].map(w => <button key={w} type="button" className="chip" disabled={busy} onClick={() => { if (w === 'My house help') { setCare(c => ({ ...c, who: w })); next(); } else saveCare(w); }}>{tr(w)}</button>)}</div></> });
   // "My house help": her details, then a WhatsApp invite to join (her tasks move to her once she accepts).
   if (care.who === 'My house help') all.push(
-    { key: 'hname', chapter: 2, answer: helper.name, draft: helper.name, ask: <><b>{tr('What’s your helper’s name?')}</b></>,
-      compose: () => text('hn', tr('Helper’s name'), tr('e.g. Sunita Pawar'), v => { setHelper(h => ({ ...h, name: v })); next(); }, { max: 60, validate: v => nameError(v), voice: true }) },
-    { key: 'hphone', chapter: 2, answer: helper.phone ? '+91 ' + helper.phone.replace(/^(\d{5})(\d{5})$/, '$1 $2') : '', draft: helper.phone,
-      ask: <><b>{tr('And her WhatsApp number?')}</b><span className="cb-note">{tr('Pawsure sends her a WhatsApp message to join. Nothing is recorded until she says Yes.')}</span></>,
-      compose: () => text('hp', tr('WhatsApp number'), '98765 43210', v => { setHelper(h => ({ ...h, phone: v.replace(/\D/g, '') })); next(); }, { max: 11, mono: true, numeric: true, prefix: '+91', validate: v => /^[6-9]\d{9}$/.test(v.replace(/\D/g, '')) ? null : tr('Enter a 10-digit mobile number starting with 6–9.') }) },
-    { key: 'hlang', chapter: 2, answer: langLabel(helper.language), ask: <><b>{tr('Which language should her messages be in?')}</b></>,
-      compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips">{['mr', 'hi', 'en'].map(c => <button key={c} type="button" className="chip" disabled={busy} onClick={() => { setHelper(h => ({ ...h, language: c })); saveCare('My house help', { ...helper, language: c }); }}>{langLabel(c)}</button>)}</div></> });
+    { key: 'helper', chapter: 2, answer: `${helper.name} · +91 ${helper.phone.replace(/^(\d{5})(\d{5})$/, '$1 $2')} · ${langLabel(helper.language)}`,
+      ask: <><b>{tr('Tell me about your helper.')}</b><span className="cb-note">{tr('Pawsure sends her a WhatsApp message to join. Nothing is recorded until she says Yes.')}</span></>,
+      compose: () => <StepForm key="helper" title={tr('Your helper')} mic={mic} busy={busy} err={err} fields={[
+        { id: 'hn', label: tr('Her name'), placeholder: tr('e.g. Sunita Pawar'), max: 60, validate: q => nameError(q), voice: true, initial: helper.name },
+        { id: 'hp', label: tr('Her WhatsApp number'), placeholder: '98765 43210', max: 11, mono: true, numeric: true, prefix: '+91', validate: q => /^[6-9]\d{9}$/.test(q.replace(/\D/g, '')) ? null : tr('Enter a 10-digit mobile number starting with 6–9.'), initial: helper.phone },
+        { id: 'hl', label: tr('Language for her messages'), kind: 'choice', options: ['मराठी · Marathi', 'हिन्दी · Hindi', 'English'] }]}
+        onSubmit={v => { const h = { name: v.hn!, phone: v.hp!.replace(/\D/g, ''), language: v.hl!.includes('Marathi') ? 'mr' : v.hl!.includes('Hindi') ? 'hi' : 'en' }; setHelper(h); saveCare('My house help', h); }} /> });
 
   // A confirmed location answers state and city (and society when one was found nearby).
   const steps = all.filter(x => !(geoOk && (x.key === 'state' || x.key === 'city' || (x.key === 'society' && !!p.societyId))));
@@ -302,7 +357,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
       const r = await api<{ id: string }>('/v1/households', { body: { displayName: p.displayName.trim(), language: p.language, state: p.state, city: p.city, ...(p.societyId ? { societyId: p.societyId } : { society: p.society.trim() }), tower: p.tower.trim() || undefined, flat: p.flat.trim() || undefined } });
       setHh(r.id); setLock(here + 1); setPos(here + 1);
     } catch (e) {
-      failed(e, here, (f, msg) => f === 'displayName' ? 'name' : f === 'language' ? 'lang' : f === 'tower' ? 'tower' : f === 'flat' ? 'flat' : f === 'city' ? 'city'
+      failed(e, here, (f, msg) => f === 'displayName' ? 'name' : f === 'language' ? 'lang' : f === 'tower' || f === 'flat' ? 'unit' : f === 'city' ? 'city'
         : /Check the state|state from the list/.test(msg) ? 'city' : /Check the city/.test(msg) ? 'society' : 'society');
     } finally { setBusy(false); }
   }
@@ -310,12 +365,12 @@ export function Intake({ onDone }: { onDone: () => void }) {
     const x = { ...pet(i), ...last }; setPet(i, last); setErr(null); setBusy(true); setDraft('');
     const here = pos;
     try {
-      const body = { name: x.name, species: x.species || 'Other', age: x.age || undefined, food: x.food, allergies: x.allergies, medicines: x.medicines, vet_name: x.vet_name, vet_phone: x.vet_phone };
+      const body = { name: x.name, species: x.species || 'Other', breed: x.breed || undefined, sex: x.sex || undefined, age: x.age || undefined, food: x.food, allergies: x.allergies, medicines: x.medicines, vet_name: x.vet_name, vet_phone: x.vet_phone };
       if (x.id) await api(`/v1/households/${hh}/pets/${x.id}`, { method: 'PATCH', body });
       else { const r = await api<{ id: string }>(`/v1/households/${hh}/pets`, { body }); setPet(i, { id: r.id }); }
       setFix(null); setLock(here + 1); setPos(here + 1);
     } catch (e) {
-      failed(e, here, f => `p${i}.${f === 'vet_phone' ? 'vetPhone' : f === 'vet_name' ? 'vet' : f || 'name'}`);
+      failed(e, here, f => `p${i}.${f === 'vet_phone' || f === 'vet_name' ? 'vet' : f === 'allergies' || f === 'medicines' ? 'health' : f === 'breed' || f === 'sex' ? 'breed' : f || 'name'}`);
     } finally { setBusy(false); }
   }
   async function saveCare(who: string, h = helper) {

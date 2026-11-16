@@ -63,8 +63,9 @@ export async function intake(page: Page, name: string, society: string, o: { tow
   await pick(page, 'cty', o.city ?? 'Mumbai');
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(society); await send();
-  if (o.tower) { await page.locator('#tw').fill(o.tower); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
-  if (o.flat) { await page.locator('#fl').fill(o.flat); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  // Tower and flat: one small form (Next / Skip, then Done / Skip).
+  if (o.tower) { await page.locator('#tw').fill(o.tower); await page.getByRole('button', { name: 'Next', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  if (o.flat) { await page.locator('#fl').fill(o.flat); await page.getByRole('button', { name: 'Done', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Create my home' }).click();
   await petAndCare(page, o.pet ?? 'Coco', o.helper, o.nobody);
 }
@@ -72,12 +73,13 @@ export async function intake(page: Page, name: string, society: string, o: { tow
 export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: string; phone: string }, nobody = false) {
   await page.locator('#pn0').fill(pet); await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.getByRole('button', { name: /Dog/ }).click();
+  await page.getByRole('button', { name: 'Indie', exact: true }).click(); await page.getByRole('button', { name: 'Male', exact: true }).click(); // breed and sex
   await page.getByRole('button', { name: '1–3 years' }).click();
   await page.locator('#pf0').fill('1 cup kibble at 8 AM and 7 PM'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.getByRole('button', { name: 'None known', exact: true }).click();
+  await page.getByRole('button', { name: 'None known', exact: true }).click(); // health form: allergies, then medicines
   await page.getByRole('button', { name: 'None', exact: true }).click();
-  await page.locator('#pv0').fill('Dr. Rao, Powai Pet Clinic'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.locator('#pv0').fill('Dr. Rao, Powai Pet Clinic'); await page.getByRole('button', { name: 'Next', exact: true }).click(); // vet form
+  await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'No, that’s all' }).click();
   // Playbook 3: Care details
   await page.getByRole('button', { name: 'Morning · 8 AM' }).click(); await page.getByRole('button', { name: /^Done/ }).click();
@@ -85,8 +87,8 @@ export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: stri
   if (nobody) { await page.getByRole('button', { name: 'Nobody yet' }).click(); return; }
   if (!helper) { await page.getByRole('button', { name: 'Me or my family' }).click(); return; }
   await page.getByRole('button', { name: 'My house help' }).click();
-  await page.locator('#hn').fill(helper.name); await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.locator('#hp').fill(helper.phone); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.locator('#hn').fill(helper.name); await page.getByRole('button', { name: 'Next', exact: true }).click(); // helper form
+  await page.locator('#hp').fill(helper.phone); await page.getByRole('button', { name: 'Next', exact: true }).click();
   await page.getByRole('button', { name: /Marathi/ }).click();
 }
 /** Closes the Plan for today sheet if it is open (it covers Home and the demo bar). */

@@ -240,7 +240,9 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await toCare(page, '9822200201', { fakeVoice: true });
     await intakeInfo(page, 'Isha');
     await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: /Dog/ }).click(); await page.getByRole('button', { name: '1–3 years' }).click();
+    await page.getByRole('button', { name: /Dog/ }).click();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Female', exact: true }).click();
+    await page.getByRole('button', { name: '1–3 years' }).click();
     await page.getByRole('button', { name: 'Speak your answer' }).click();
     await expect(page.locator('#pf0')).toHaveValue('Two cups of rice and curd at lunch');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
@@ -265,3 +267,32 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(card.getByRole('button', { name: 'My help can’t come' })).toBeVisible();
   });
 });
+
+test.describe('V. Breed and sex, and small forms in the conversation (16 Nov)', () => {
+  test('V1 Breed and sex are one question; the answers show as one reply and are saved on the pet', async ({ page }) => {
+    await boot(page); await signUp(page, '9822200301');
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await intakeInfo(page, 'Isha');
+    await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: /Dog/ }).click();
+    const form = page.getByRole('group', { name: 'Breed and sex' });
+    await expect(form).toContainText('1 of 2');
+    await form.locator('#pb0').fill('Golden Retriever'); await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(form).toContainText('2 of 2');
+    await form.getByRole('button', { name: 'Back' }).click();
+    await expect(form.locator('#pb0')).toHaveValue('Golden Retriever');
+    await form.getByRole('button', { name: 'Next', exact: true }).click(); await form.getByRole('button', { name: 'Female', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Change: Golden Retriever · Female' })).toBeVisible();
+    await page.getByRole('button', { name: '1–3 years' }).click();
+    await page.locator('#pf0').fill('Kibble twice a day'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: 'None known', exact: true }).click(); await page.getByRole('button', { name: 'None', exact: true }).click();
+    await page.locator('#pv0').fill('Dr. Rao'); await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByText('Coco’s profile is saved.')).toBeVisible();
+    const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+    const pets = (await api(page, 'GET', `/v1/households/${hh}/pets`)).body as { name: string; breed: string; sex: string }[];
+    expect(pets.find(p => p.name === 'Coco')).toMatchObject({ breed: 'Golden Retriever', sex: 'Female' });
+  });
+});
+

@@ -49,3 +49,13 @@ describe('Owner task actions', () => {
     expect((await call('POST', `${HH}/tasks/${t.id}/owner-done`, {}, other)).status).toBe(403);
   });
 });
+
+describe('Pet breed and sex (asked together at sign-up)', () => {
+  it('stores the breed and sex and sets him/her for friend messages', async () => {
+    const r = await call<{ id: string }>('POST', `${HH}/pets`, { name: 'Coco', species: 'Dog', breed: 'Indie', sex: 'Female', food: 'Kibble', allergies: 'None known', medicines: 'None', vet_name: 'Dr. Rao', vet_phone: '+91 22 5555 0101' });
+    expect(r.status).toBe(201);
+    const row = (await db.query<{ breed: string; sex: string; pronoun: string }>(`select breed, sex, pronoun from pets where id=$1`, [r.body.id]))[0]!;
+    expect(row).toMatchObject({ breed: 'Indie', sex: 'Female', pronoun: 'her' });
+    expect((await call('POST', `${HH}/pets`, { name: 'Max', species: 'Dog', sex: 'Unknown', food: 'x', allergies: 'x', medicines: 'x', vet_name: 'Dr. Rao', vet_phone: '1' })).status).toBe(400);
+  });
+});
