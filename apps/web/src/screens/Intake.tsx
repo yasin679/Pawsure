@@ -8,11 +8,14 @@
 import { t as tr } from '../i18n';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LANGUAGES, hasLetter, stateOfCity } from '@pawsure/domain';
-import { api, ApiError, nameError, type Society } from '../api';
+import { api, API, ApiError, nameError, type Society } from '../api';
 import { AppBar, Art, Icon } from '../ui';
 import { CircleBuilder } from './Cover';
 
 type Circle = null | 'ask' | 'yes' | 'no';
+interface Near { city: string | null; state: string | null; society: { id: string; name: string; area: string | null; city: string; state: string } | null }
+/** Lake Vista CHS, Powai: the demo's "use a demo location", for browsers (or the shared demo) where location is blocked. */
+const DEMO_SPOT = { lat: 19.1178, lng: 72.9058 };
 type Species = 'Dog' | 'Cat' | 'Other';
 interface PetDraft { name: string; species: Species | ''; age: string; food: string; allergies: string; medicines: string; vet_name: string; vet_phone: string; sameVet: boolean; id?: string }
 const blankPet = (): PetDraft => ({ name: '', species: '', age: '', food: '', allergies: '', medicines: '', vet_name: '', vet_phone: '', sameVet: false });
@@ -87,6 +90,11 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const [states, setStates] = useState<string[]>([]); const [cities, setCities] = useState<string[]>([]); const [socs, setSocs] = useState<Society[] | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [fix, setFix] = useState<{ msg: string; back: number } | null>(null);
+  // Home location from the phone (a suggestion the owner confirms or changes; the position itself is not stored).
+  const [geo, setGeo] = useState<{ status: 'idle' | 'finding' | 'found' | 'failed'; found?: Near; why?: string }>({ status: 'idle' });
+  const [geoOk, setGeoOk] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  useEffect(() => { fetch(API + '/health').then(r => r.json()).then(h => setDemoMode(!!h.demoMode)).catch(() => setDemoMode(false)); }, []);
   const [hh, setHh] = useState<string | null>(null);
   const [routineCount, setRoutineCount] = useState<number | null>(null);
   const [circle, setCircle] = useState<Circle>(null);
@@ -103,7 +111,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const allNames = names(pets.map(x => x.name).filter(Boolean));
 
   /* ---------- the conversation, as a list of steps built from the answers so far ---------- */
-  const steps: Step[] = [];
+  const all: Step[] = [];
   const text = (id: string, label: string, placeholder: string, onSend: (v: string) => void, opts: { optional?: boolean; validate?: (v: string) => string | null; mono?: boolean; max?: number; chips?: string[]; numeric?: boolean } = {}) => {
     const problem = draft.trim() && opts.validate ? opts.validate(draft) : null;
     const ok = !!draft.trim() && !problem;
@@ -124,7 +132,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const timesOf = (list: [number, string, ...string[]][], v: number[]) => v.map(m => list.find(x => x[0] === m)![1].split(' · ')[1]).join(', ');
 
   // Playbook 1: Your information
-  steps.push(
+  all.push(
     { key: 'name', chapter: 0, draft: p.displayName, answer: p.displayName,
       ask: <>{tr('Hi, I’m Pawly')} 🐾 {tr('I’ll set up Pawsure with you in three short playbooks. First, a little about you.')}<br /><b>{tr('What should I call you?')}</b></>,
       compose: () => text('nm', tr('Your name'), tr('Your name'), v => { setP({ ...p, displayName: v }); next(); }, { validate: v => nameError(v), max: 60 }) },
@@ -134,6 +142,16 @@ export function Intake({ onDone }: { onDone: () => void }) {
         <div className="cb-chips">{QUICK_LANGS.map(c => <button key={c} type="button" className="chip" aria-pressed={p.language === c} onClick={() => { setP({ ...p, language: c }); next(); }}>{langLabel(c)}</button>)}
           <button type="button" className="chip" aria-pressed={otherLang} onClick={() => setOtherLang(true)}>{tr('Another language')}</button></div>
         {otherLang && <Picker id="lg" label={tr('Your language')} placeholder={tr('Choose a language')} value={QUICK_LANGS.includes(p.language) ? '' : p.language} options={LANGUAGES.map(l => ({ value: l.code, label: langLabel(l.code) + (l.messages ? '' : ' ' + tr('(messages in English for now)')) }))} onPick={v => { setP({ ...p, language: v }); next(); }} />}</> },
+    { key: 'locate', chapter: 0, answer: geoOk ? `📍 ${p.society || p.city}` : tr('Choose manually'),
+      ask: geo.status === 'found' && geo.found ? <><b>{tr('Is this home?')}</b>
+          <dl className="cb-sum">{geo.found.society && <><dt>{tr('Society')}</dt><dd>{geo.found.society.name}{geo.found.society.area ? ', ' + geo.found.society.area : ''}</dd></>}<dt>{tr('City')}</dt><dd>{geo.found.city}</dd><dt>{tr('State')}</dt><dd>{geo.found.state}</dd></dl>
+          <span className="cb-note">📍 {tr('From your phone’s location. The location itself isn’t saved.')}{!geo.found.society ? ' ' + tr('I couldn’t find your society nearby, so I’ll ask for it next.') : ''}</span></>
+        : geo.status === 'failed' ? <>{geo.why ?? tr('I couldn’t get your location.')} <b>{tr('Where’s home?')}</b> {tr('You can choose it yourself.')}</>
+        : <><span className="geo-dot" aria-hidden="true" />{tr('Let me find where home is from your phone’s location…')}</>,
+      compose: () => geo.status === 'found'
+        ? <div className="cb-chips big"><button type="button" className="chip primary" onClick={() => useFound(true)}>{tr('Yes, that’s home')}</button><button type="button" className="chip" onClick={() => useFound(false)}>{tr('Change')}</button></div>
+        : <div className="cb-chips">{geo.status === 'failed' && demoMode && <button type="button" className="chip" onClick={() => lookup(DEMO_SPOT.lat, DEMO_SPOT.lng)}>📍 {tr('Use a demo location (Powai, Mumbai)')}</button>}
+            <button type="button" className="chip" onClick={() => { setGeoOk(false); next(); }}>{tr('Choose manually')}</button></div> },
     { key: 'state', chapter: 0, answer: p.state, ask: <><b>{tr('Where’s home?')}</b> {tr('Choose your state.')}</>,
       compose: () => <Picker id="stt" label={tr('State')} placeholder={tr('Choose your state')} value={p.state} loading={!states.length} options={states.map(x => ({ value: x, label: x }))}
         onPick={v => { setTypedCity(false); setTypedSoc(false); setP({ ...p, state: v, city: '', societyId: '', society: '' }); next(); }} /> },
@@ -171,7 +189,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
   // Playbook 2: Your pet (repeats for each pet)
   pets.forEach((x, i) => {
     const nm = x.name || tr('your pet');
-    steps.push(
+    all.push(
       { key: `p${i}.name`, chapter: 1, pet: i, answer: x.name, draft: x.name,
         ask: i === 0 ? <>{tr('Your home is set up')} 🏡 {tr('Now the star of the show.')}<br /><b>{tr('What’s your pet’s name?')}</b></> : <><b>{tr('What’s your other pet’s name?')}</b></>,
         compose: () => text(`pn${i}`, tr('Pet’s name'), tr('e.g. Bruno'), v => { setPet(i, { name: v }); next(); }, { max: 40, validate: v => hasLetter(v) ? null : tr('Give your pet a name with letters.') }) },
@@ -192,26 +210,29 @@ export function Intake({ onDone }: { onDone: () => void }) {
         compose: () => <>{i > 0 && pets[0]!.vet_name && <div className="cb-chips"><button type="button" className="chip" onClick={() => finishPet(i, { sameVet: true, vet_name: pets[0]!.vet_name, vet_phone: pets[0]!.vet_phone })}>{tr('Same as')} {pets[0]!.name}</button></div>}
           {text(`pv${i}`, tr('Vet'), tr('e.g. Dr. Rao, Powai Pet Clinic'), v => { setPet(i, { vet_name: v, sameVet: false }); next(); }, { max: 120, validate: v => hasLetter(v) ? null : tr('Enter your vet’s name.') })}</> }
     );
-    if (!x.sameVet) steps.push({ key: `p${i}.vetPhone`, chapter: 1, pet: i, answer: x.vet_phone, draft: x.vet_phone, ask: <><b>{tr('And the vet’s phone number?')}</b></>,
+    if (!x.sameVet) all.push({ key: `p${i}.vetPhone`, chapter: 1, pet: i, answer: x.vet_phone, draft: x.vet_phone, ask: <><b>{tr('And the vet’s phone number?')}</b></>,
       compose: () => text(`pp${i}`, tr('Vet phone'), '+91 22 5555 0101', v => finishPet(i, { vet_phone: v }), { max: 30, mono: true, numeric: true, validate: v => v.replace(/\D/g, '').length < 8 ? tr('Enter the full phone number.') : null }) });
-    steps.push({ key: `p${i}.more`, chapter: 1, pet: i, answer: more[i] ? tr('Add another pet') : tr('No, that’s all'),
+    all.push({ key: `p${i}.more`, chapter: 1, pet: i, answer: more[i] ? tr('Add another pet') : tr('No, that’s all'),
       ask: <>✓ {x.name}{tr('’s profile is saved.')} <b>{tr('Do you have another pet?')}</b></>,
       compose: () => <div className="cb-chips big"><button type="button" className="chip" onClick={() => { setMore(m => ({ ...m, [i]: true })); setPets(ps => [...ps, blankPet()]); next(); }}>{tr('Add another pet')}</button><button type="button" className="chip primary" onClick={() => { setMore(m => ({ ...m, [i]: false })); next(); }}>{tr('No, that’s all')}</button></div> });
   });
 
   // Playbook 3: Care details
-  steps.push({ key: 'feed', chapter: 2, answer: timesOf(FEEDS, care.feeds),
+  all.push({ key: 'feed', chapter: 2, answer: timesOf(FEEDS, care.feeds),
     ask: <>{tr('Last part: the daily routine for')} {allNames}. {tr('I’ll turn it into tasks with reminders.')}<br /><b>{tr('When do your pets usually eat?')}</b> {tr('Choose all that apply.')}</>,
     compose: () => multi(FEEDS.map(f => [f[0], f[1]]), v => { setCare(c => ({ ...c, feeds: v })); next(); }) });
-  if (dogs.length) steps.push({ key: 'walk', chapter: 2, answer: care.walks.length ? timesOf(WALKS, care.walks) : tr('No walks'),
+  if (dogs.length) all.push({ key: 'walk', chapter: 2, answer: care.walks.length ? timesOf(WALKS, care.walks) : tr('No walks'),
     ask: <><b>{tr('When does')} {names(dogs)} {tr('go for walks?')}</b></>,
     compose: () => multi(WALKS.map(w => [w[0], w[1]]), v => { setCare(c => ({ ...c, walks: v, walksDone: true })); next(); }, tr('No walks')) });
-  if (cats.length) steps.push({ key: 'litter', chapter: 2, answer: care.litter === 'none' ? tr('No reminder') : LITTER.find(l => l[0] === care.litter)?.[1].split(' · ')[1] ?? '',
+  if (cats.length) all.push({ key: 'litter', chapter: 2, answer: care.litter === 'none' ? tr('No reminder') : LITTER.find(l => l[0] === care.litter)?.[1].split(' · ')[1] ?? '',
     ask: <><b>{tr('When should')} {names(cats)}{tr('’s litter tray be cleaned?')}</b></>,
     compose: () => <div className="cb-chips">{LITTER.map(([m, l]) => <button key={m} type="button" className="chip" onClick={() => { setCare(c => ({ ...c, litter: m })); next(); }}>{l}</button>)}<button type="button" className="chip" onClick={() => { setCare(c => ({ ...c, litter: 'none' })); next(); }}>{tr('No reminder')}</button></div> });
-  steps.push({ key: 'who', chapter: 2, answer: care.who,
+  all.push({ key: 'who', chapter: 2, answer: care.who,
     ask: <><b>{tr('Who usually looks after')} {allNames} {tr('when you’re out?')}</b></>,
     compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}<div className="cb-chips big col">{['Me or my family', 'My house help', 'Nobody yet'].map(w => <button key={w} type="button" className="chip" disabled={busy} onClick={() => saveCare(w)}>{tr(w)}</button>)}</div></> });
+
+  // A confirmed location answers state and city (and society when one was found nearby).
+  const steps = all.filter(x => !(geoOk && (x.key === 'state' || x.key === 'city' || (x.key === 'society' && !!p.societyId))));
 
   /* ---------- moving through the steps ---------- */
   const cur = steps[Math.min(pos, steps.length - 1)]!;
@@ -219,10 +240,33 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const chapter: 0 | 1 | 2 = atCircle ? 2 : cur.chapter;
   const stage = atCircle ? 'circle:' + circle : cur.key;
   useEffect(() => { setReady(false); setErr(null); setPicks([]); const t = setTimeout(() => setReady(true), reduced() ? 0 : 450); return () => clearTimeout(t); }, [stage]);
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' }); }, [stage, ready, err, socs, otherLang, typedCity, typedSoc]);
+  useEffect(() => { if (cur.key === 'locate' && geo.status === 'idle') detect(); }, [cur.key]);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' }); }, [stage, ready, err, socs, otherLang, typedCity, typedSoc, geo.status]);
 
   /** After a fix, jump straight back to where saving failed; otherwise ask the next question. */
   function next() { setDraft(''); setOtherLang(false); if (fix) { setPos(fix.back); setFix(null); return; } setPos(x => x + 1); }
+  async function lookup(lat: number, lng: number) {
+    setGeo({ status: 'finding' });
+    try {
+      const r = await api<Near>(`/v1/societies/near?lat=${lat}&lng=${lng}`);
+      setGeo(r.city && r.state ? { status: 'found', found: r } : { status: 'failed', why: tr('Your location is outside the cities I know so far.') });
+    } catch { setGeo({ status: 'failed', why: tr('I couldn’t look up your location.') }); }
+  }
+  function detect() {
+    if (!('geolocation' in navigator)) { setGeo({ status: 'failed', why: tr('This browser can’t share its location.') }); return; }
+    setGeo({ status: 'finding' });
+    let settled = false; const stop = setTimeout(() => { if (!settled) { settled = true; setGeo({ status: 'failed', why: tr('Finding your location took too long.') }); } }, 9000);
+    navigator.geolocation.getCurrentPosition(pos => { if (settled) return; settled = true; clearTimeout(stop); lookup(pos.coords.latitude, pos.coords.longitude); },
+      err => { if (settled) return; settled = true; clearTimeout(stop); setGeo({ status: 'failed', why: err.code === err.PERMISSION_DENIED ? tr('Location is switched off or blocked here.') : tr('I couldn’t get your location.') }); },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 });
+  }
+  /** Yes: use the suggestion and skip the questions it answers. Change: fill the pickers with it and ask them. */
+  function useFound(yes: boolean) {
+    const f = geo.found!; const so = f.society;
+    setTypedCity(false); setTypedSoc(false);
+    setP(x => ({ ...x, state: f.state ?? '', city: f.city ?? '', societyId: so?.id ?? '', society: so ? `${so.name}${so.area ? ', ' + so.area : ''}` : '' }));
+    setGeoOk(yes); next();
+  }
   function goTo(i: number) { if (i < lock) return; setDraft(steps[i]!.draft ?? ''); setPos(i); }
   const failed = (e: unknown, back: number, field: (f: string, msg: string) => string) => {
     if (!(e instanceof ApiError)) { setErr('Can’t reach Pawsure. Check your connection and try again.'); return; }

@@ -47,6 +47,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
     await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: 'English', exact: true }).click();
+    await page.getByRole('button', { name: 'Choose manually' }).click();
     await pick(page, 'stt', 'Maharashtra');
     await pick(page, 'cty', 'Pune');
     await page.locator('#soc').click();
@@ -172,6 +173,7 @@ test.describe('S. Onboarding conversation (15 Nov)', () => {
     const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.locator('#nm').fill('Isha'); await send();
     await page.getByRole('button', { name: 'English', exact: true }).click();
+    await page.getByRole('button', { name: 'Choose manually' }).click();
     await pick(page, 'stt', 'Karnataka');
     await page.getByRole('button', { name: 'My city isn’t listed' }).click();
     await page.locator('#ctt').fill('Mumbai');
@@ -189,5 +191,35 @@ test.describe('S. Onboarding conversation (15 Nov)', () => {
     await petAndCare(page);
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+  });
+});
+
+test.describe('T. Home location from the phone (16 Nov)', () => {
+  test.use({ geolocation: { latitude: 19.1178, longitude: 72.9058 }, permissions: ['geolocation'] }); // next to Lake Vista CHS, Powai
+  const start = async (page: import('@playwright/test').Page, phone: string) => {
+    await boot(page); await signUp(page, phone);
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: 'English', exact: true }).click();
+  };
+  test('T1 The society, city and state are found from the location; Yes skips those questions', async ({ page }) => {
+    await start(page, '9822200101');
+    await expect(page.getByText('Is this home?')).toBeVisible();
+    await expect(page.locator('.cb-sum').last()).toContainText('Lake Vista CHS, Powai');
+    await expect(page.locator('.cb-sum').last()).toContainText('Mumbai');
+    await expect(page.locator('.cb-sum').last()).toContainText('Maharashtra');
+    await page.getByRole('button', { name: 'Yes, that’s home' }).click();
+    await expect(page.getByRole('button', { name: /Change: 📍 Lake Vista CHS, Powai/ })).toBeVisible();
+    await expect(page.locator('#tw')).toBeVisible(); // straight to the tower question
+    await expect(page.locator('#stt')).toHaveCount(0);
+  });
+  test('T2 Change keeps the suggestion filled in and lets the owner pick another society', async ({ page }) => {
+    await start(page, '9822200102');
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
+    await expect(page.locator('#stt')).toContainText('Maharashtra'); // already filled in
+    await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
+    await page.locator('#soc').click(); await page.getByRole('option', { name: 'Hiranandani Gardens · Powai' }).click();
+    await expect(page.getByRole('button', { name: 'Change: Hiranandani Gardens, Powai' })).toBeVisible();
   });
 });

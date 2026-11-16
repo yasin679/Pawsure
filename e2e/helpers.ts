@@ -46,6 +46,7 @@ export async function intake(page: Page, name: string, society: string, o: { tow
   const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.locator('#nm').fill(name); await send();
   await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.getByRole('button', { name: 'Choose manually' }).click(); // the test browser doesn't share its location
   await pick(page, 'stt', o.state ?? 'Maharashtra');
   await pick(page, 'cty', o.city ?? 'Mumbai');
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();

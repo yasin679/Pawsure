@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { createHash, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Db } from '@pawsure/db';
 import { uid } from '@pawsure/db';
-import { LANG_CODES, can, transition, severityOf, dueSteps, INDIA, INDIA_STATES, stateOfCity, isPersonName, hasLetter, NAME_MESSAGE, type Role, type Resource, type Action, type LifecycleState } from '@pawsure/domain';
+import { LANG_CODES, can, transition, severityOf, dueSteps, INDIA, INDIA_STATES, stateOfCity, nearestCity, kmBetween, isPersonName, hasLetter, NAME_MESSAGE, type Role, type Resource, type Action, type LifecycleState } from '@pawsure/domain';
 import type { Adapters } from './adapters.js';
 import { type Clock, istDate, minutesOnDay } from './clock.js';
 import { audit, loadDay, ingestSignal } from './care.js';
@@ -142,6 +142,17 @@ export function createApp(input: Deps) {
     const cities = state ? (INDIA[state] ?? []).map(n => ({ city: n, state })) : INDIA_STATES.flatMap(s => INDIA[s]!.map(n => ({ city: n, state: s })));
     const rows = city ? await db.query<Soc>(`select id, name, area, city, state from societies where city=$1 order by name`, [city]) : [];
     return c.json({ states: INDIA_STATES, cities, societies: rows.filter(r => !q || `${r.name} ${r.area ?? ''}`.toLowerCase().includes(q)) });
+  });
+  /** From the phone's location: the nearest listed city (and its state) and, within 2 km, the nearest listed society.
+   *  Only a suggestion; the owner confirms it or chooses another. The location itself is not stored. */
+  app.get('/v1/societies/near', async (c) => {
+    const lat = Number(c.req.query('lat')), lng = Number(c.req.query('lng'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return c.json({ error: 'invalid_input' }, 400);
+    const city = nearestCity(lat, lng);
+    const socs = await db.query<Soc & { lat: number | null; lng: number | null }>(`select id, name, area, city, state, lat, lng from societies where lat is not null`);
+    const near = socs.map(s => ({ s, km: kmBetween([lat, lng], [s.lat!, s.lng!]) })).sort((a, b) => a.km - b.km)[0];
+    const society = near && near.km <= 2 ? { id: near.s.id, name: near.s.name, area: near.s.area, city: near.s.city, state: near.s.state, km: Math.round(near.km * 10) / 10 } : null;
+    return c.json({ city: society ? society.city : city?.city ?? null, state: society ? society.state : city?.state ?? null, society });
   });
   /** Resolve what the owner chose: a listed society (verified), or a typed name kept as unverified for ops to check. */
   const resolveSociety = async (b: { state?: string; city?: string; societyId?: string; society?: string }) => {

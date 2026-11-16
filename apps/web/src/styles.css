@@ -752,3 +752,6 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .device > .pwa:has(.intro) .intro-foot{padding-bottom:28px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .intro-art{mix-blend-mode:normal;border-radius:20px}}
 @media (prefers-reduced-motion:reduce){.intro-track{transition:none}}
+.geo-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px;animation:geo-pulse 1.2s ease-out infinite}
+@keyframes geo-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+@media (prefers-reduced-motion:reduce){.geo-dot{animation:none}}
