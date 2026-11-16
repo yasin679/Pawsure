@@ -57,7 +57,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   // The household's helper (name and whether she has accepted the WhatsApp invite) for "Your help today".
   const [helpers, setHelpers] = useState<Helper[] | null>(null);
   useEffect(() => { api<Helper[]>(`/v1/households/${hh}/helpers`).then(setHelpers).catch(() => setHelpers([])); }, [hh, day?.now]);
-  // The green header turns into a compact bar as Home scrolls: --hp goes 0 → 1 over the first 110 px (styles.css).
+  // The header turns into a compact bar as Home scrolls: --hp goes 0 → 1 over the first 110 px (styles.css).
   const mainRef = useRef<HTMLElement>(null);
   const onScroll = () => { const m = mainRef.current; if (!m) return; (m.closest('.pwa') as HTMLElement | null)?.style.setProperty('--hp', Math.min(1, m.scrollTop / Math.max(1, Math.min(110, m.scrollHeight - m.clientHeight))).toFixed(3)); };
   useEffect(() => () => { (document.querySelector('.pwa') as HTMLElement | null)?.style.removeProperty('--hp'); }, []);
@@ -80,7 +80,6 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const helperFirst = helperName.split(' ')[0] || tr('Your help');
   const invite = helperRow?.consent;
   const [cs, cl] = COVER_LABEL[day.covered.household] ?? ['Pending', day.covered.household];
-  const greet = day.now < 720 ? 'Good morning' : day.now < 1020 ? 'Good afternoon' : 'Good evening';
   const alerts = day.tasks.filter(t => t.esc?.open && !t.esc.resolved);
   const openInc = incidents.filter(i => !i.resolved_at);
   const d = day.day;
@@ -140,7 +139,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <h1 className="sr-only">{tr('Today')}</h1>
         <div className="th-bg" aria-hidden="true" />
         <div className="th-top">
-          <div className="grow"><h2 className="th-greet">{tr(greet)}, {first}</h2><div className="th-date">{day.careDate} · IST</div></div>
+          <div className="grow"><h2 className="th-greet">{tr('Hi')}, {first}</h2><div className="th-date">{tr('Here’s who’s helping today.')}</div></div>
           <button className="th-round" onClick={() => setSheet('plan')} aria-label="Plan for today"><Icon name="list" size={20} /></button>
           <button className="th-sos" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency">{tr('SOS')}</button>
         </div>
@@ -176,9 +175,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       {/* The day's tasks appear once the owner has headed out and set the options (Heading out → I'm leaving). */}
       {d.leftAt != null ? <>
       <div className="pet-tabs" role="tablist" aria-label="Whose schedule">
-        {pets.map(p => <button key={p.id} role="tab" aria-selected={p.id === petId} className="petchip pet-tab" onClick={() => setPetTab(p.id)}>
-          <PetAvatar species={p.species} size={44} /><b>{p.name}</b><span className="xs muted">{p.species}</span></button>)}
-        {onAddPet && <button className="pet-tab add" onClick={onAddPet}><span className="pt-plus" aria-hidden="true"><Icon name="plus" size={22} /></span><b>{tr('Add pet')}</b><span className="xs muted">&nbsp;</span></button>}
+        {pets.map((p, i) => <button key={p.id} role="tab" aria-selected={p.id === petId} className={`petchip pet-tab tone-${i % 4}`} onClick={() => setPetTab(p.id)}>
+          <PetAvatar species={p.species} size={40} /><b>{p.name}</b></button>)}
+        {onAddPet && <button className="pet-tab add" onClick={onAddPet}><span className="pt-plus" aria-hidden="true"><Icon name="plus" size={20} /></span><b>{tr('Add pet')}</b></button>}
       </div>
 
       <section role="tabpanel" aria-label={`${petName(petId ?? '')}’s tasks today`} className="task-panel">

@@ -43,26 +43,29 @@ export async function pick(page: Page, id: string, option: string) {
 }
 /** Onboarding is a conversation with Pawly in three playbooks: your information (→ create my home), your pet, care details. The circle question follows. */
 /** Playbook 1 only, choosing the location by hand: name, English, Maharashtra, Mumbai, a typed society, no tower or flat, create the home. */
+const next = (page: Page) => page.getByRole('button', { name: 'Next', exact: true }).click();
+/** The "About you" form: name, then the messaging language (a tap answers it). */
+export async function aboutYou(page: Page, name: string, lang = 'English') {
+  await page.locator('#nm').fill(name); await next(page);
+  await page.getByRole('button', { name: lang, exact: true }).click();
+}
 export async function intakeInfo(page: Page, name: string, society = 'Raheja Vihar, Powai') {
-  const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.locator('#nm').fill(name); await send();
-  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await aboutYou(page, name);
   await page.getByRole('button', { name: 'Choose manually' }).click();
   await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
-  await page.locator('#sct').fill(society); await send();
+  await page.locator('#sct').fill(society); await next(page);
   await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Create my home' }).click();
 }
 export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string; pet?: string; helper?: { name: string; phone: string }; nobody?: boolean } = {}) {
-  const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.locator('#nm').fill(name); await send();
-  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await aboutYou(page, name);
   await page.getByRole('button', { name: 'Choose manually' }).click(); // the test browser doesn't share its location
+  // "Your home" form: state, city, society, then tower and flat
   await pick(page, 'stt', o.state ?? 'Maharashtra');
   await pick(page, 'cty', o.city ?? 'Mumbai');
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
-  await page.locator('#sct').fill(society); await send();
+  await page.locator('#sct').fill(society); await next(page);
   // Tower and flat: one small form (Next / Skip, then Done / Skip).
   if (o.tower) { await page.locator('#tw').fill(o.tower); await page.getByRole('button', { name: 'Next', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   if (o.flat) { await page.locator('#fl').fill(o.flat); await page.getByRole('button', { name: 'Done', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();

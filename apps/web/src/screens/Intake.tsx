@@ -77,7 +77,11 @@ function Picker({ id, label, placeholder, options, value, onPick, loading }: { i
 }
 
 /** One field of an in-conversation form. A `choice` field answers with a tap; `quick` chips fill a text field and move on. */
-interface FField { id: string; label: string; kind?: 'text' | 'choice'; placeholder?: string; hint?: string; options?: string[]; quick?: string[]; optional?: boolean; validate?: (v: string) => string | null; mono?: boolean; numeric?: boolean; prefix?: string; max?: number; voice?: boolean; initial?: string }
+interface FField { id: string; label: string; kind?: 'text' | 'choice' | 'pick'; placeholder?: string; hint?: string; options?: string[]; quick?: string[]; optional?: boolean; validate?: (v: string, all: Record<string, string>) => string | null; mono?: boolean; numeric?: boolean; prefix?: string; max?: number; voice?: boolean; initial?: string
+  /** `pick`: choose from a list in a sheet; `other` offers typing it instead (the typed box gets `typedId`). */
+  choices?: { value: string; label: string }[]; loading?: boolean; other?: string; typedId?: string; typedPlaceholder?: string; initialTyped?: boolean; forceTyped?: boolean
+  /** Called when the form moves past this field, so later fields can load their lists; `resets` clears fields that depend on it. */
+  onValue?: (v: string, typed: boolean) => void; resets?: string[] }
 type Mic = ReturnType<typeof useVoice>;
 /**
  * A small progressive form that opens in the conversation: one field at a time ("1 of 3"), Back / Skip / Next,
@@ -86,29 +90,44 @@ type Mic = ReturnType<typeof useVoice>;
 function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, top }: { title: string; fields: FField[]; submit?: string; onSubmit: (v: Record<string, string>) => void; busy?: boolean; err?: string | null; mic: Mic; top?: ReactNode }) {
   const [i, setI] = useState(0);
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.id, f.initial ?? ''])));
+  const [typedMap, setTyped] = useState<Record<string, boolean>>(() => Object.fromEntries(fields.map(f => [f.id, !!f.initialTyped])));
+  const done = useRef<Record<string, string>>(Object.fromEntries(fields.map(f => [f.id, f.initial ?? ''])));
   const f = fields[i]!; const last = i === fields.length - 1; const v = vals[f.id] ?? '';
-  const problem = v.trim() && f.validate ? f.validate(v) : null;
+  const typed = f.kind === 'pick' && (!!typedMap[f.id] || !!f.forceTyped);
+  const problem = v.trim() && f.validate && (f.kind !== 'pick' || typed) ? f.validate(v, vals) : null;
   const ok = !problem && (f.optional || !!v.trim());
-  const go = (nv: Record<string, string>) => { if (last) onSubmit(Object.fromEntries(Object.entries(nv).map(([k, x]) => [k, x.trim()]))); else setI(i + 1); };
+  const go = (nv: Record<string, string>, tm = typedMap) => {
+    let out = nv;
+    if (done.current[f.id] !== nv[f.id] && f.resets?.length) { out = { ...nv }; for (const r of f.resets) { out[r] = ''; done.current[r] = ''; } setVals(out); setTyped(t => ({ ...t, ...Object.fromEntries(f.resets!.map(r => [r, false])) })); }
+    done.current[f.id] = nv[f.id] ?? '';
+    f.onValue?.((nv[f.id] ?? '').trim(), f.kind === 'pick' && (!!tm[f.id] || !!f.forceTyped));
+    if (last) onSubmit({ ...Object.fromEntries(Object.entries(out).map(([k, x]) => [k, x.trim()])), ...Object.fromEntries(fields.filter(x => x.kind === 'pick').map(x => [x.id + '$typed', tm[x.id] || x.forceTyped ? '1' : ''])) });
+    else setI(i + 1);
+  };
   const set = (x: string) => setVals(o => ({ ...o, [f.id]: x }));
-  const pick = (x: string) => { const nv = { ...vals, [f.id]: x }; setVals(nv); go(nv); };
+  const pick = (x: string) => { const nv = { ...vals, [f.id]: x }; const tm = { ...typedMap, [f.id]: false }; setVals(nv); setTyped(tm); go(nv, tm); };
+  const toggleTyped = (on: boolean) => { setTyped(t => ({ ...t, [f.id]: on })); set(''); };
   return <div className="stepform" role="group" aria-label={title}>
     {top}
     <div className="sf-head"><span className="sf-title">{title}</span><span className="sf-count">{i + 1} {tr('of')} {fields.length}</span></div>
     <div className="sf-bar" aria-hidden="true">{fields.map((x, n) => <span key={x.id} className={n < i ? 'done' : n === i ? 'now' : ''} />)}</div>
-    <label className="sf-label" htmlFor={f.kind === 'choice' ? undefined : f.id}>{f.label}{f.optional && <span className="sf-opt"> · {tr('optional')}</span>}</label>
+    <label className="sf-label" htmlFor={f.kind === 'choice' || (f.kind === 'pick' && !typed) ? undefined : typed ? f.typedId ?? f.id : f.id}>{f.label}{f.optional && <span className="sf-opt"> · {tr('optional')}</span>}</label>
     {f.hint && <div className="sf-hint">{f.hint}</div>}
-    {f.kind === 'choice'
+    {f.kind === 'pick' && !typed
+      ? <><Picker id={f.id} label={f.label} placeholder={f.placeholder ?? f.label} value={v} loading={f.loading} options={f.choices ?? []} onPick={pick} />
+        {f.other && <div className="cb-chips"><button type="button" className="chip" onClick={() => toggleTyped(true)}>{tr(f.other)}</button></div>}</>
+      : f.kind === 'choice'
       ? <div className="cb-chips">{f.options!.map(o => <button key={o} type="button" className="chip" aria-pressed={v === o} disabled={busy} onClick={() => pick(o)}>{tr(o)}</button>)}</div>
       : <>
         {f.quick && <div className="cb-chips">{f.quick.map(q => <button key={q} type="button" className="chip" disabled={busy} onClick={() => pick(q)}>{tr(q)}</button>)}</div>}
         <div className="cb-input">
           {f.prefix && <span className="cb-prefix">{f.prefix}</span>}
-          <input id={f.id} className={`input${f.mono ? ' mono' : ''}`} autoFocus maxLength={f.max} value={v} placeholder={mic.listening && f.voice ? tr('Listening…') : f.placeholder} inputMode={f.numeric ? 'tel' : undefined} autoComplete="off"
+          <input id={typed ? f.typedId ?? f.id : f.id} className={`input${f.mono ? ' mono' : ''}`} autoFocus maxLength={f.max} value={v} placeholder={mic.listening && f.voice ? tr('Listening…') : typed ? f.typedPlaceholder ?? f.placeholder : f.placeholder} inputMode={f.numeric ? 'tel' : undefined} autoComplete="off"
             onChange={e => set(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && ok && !busy) { e.preventDefault(); go(vals); } }} />
           {f.voice && mic.available && <button type="button" className={`cb-mic${mic.listening ? ' on' : ''}`} aria-label={mic.listening ? 'Stop voice input' : 'Speak your answer'} aria-pressed={mic.listening} onClick={() => mic.toggle(t => setVals(o => ({ ...o, [f.id]: o[f.id] ? o[f.id] + t : t.trimStart() })))}><Icon name="mic" size={20} /></button>}
         </div>
         {f.voice && mic.listening && <div className="cb-live" role="status"><span className="geo-dot" aria-hidden="true" />{mic.partial || tr('Listening… speak now')}</div>}
+        {typed && !f.forceTyped && <div className="cb-chips"><button type="button" className="chip" onClick={() => toggleTyped(false)}>{tr('Choose from the list')}</button></div>}
       </>}
     {problem && <div className="cb-err" role="alert">{problem}</div>}
     {err && <div className="cb-err" role="alert">{err}</div>}
@@ -116,7 +135,7 @@ function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, to
       {i > 0 && <button type="button" className="btn ghost sm" onClick={() => setI(i - 1)}>{tr('Back')}</button>}
       <span className="grow" />
       {f.optional && <button type="button" className="btn sm" disabled={busy} onClick={() => pick('')}>{tr('Skip')}</button>}
-      {f.kind !== 'choice' && <button type="button" className="btn primary sm" disabled={!ok || busy} onClick={() => go(vals)}>{last ? tr(submit) : tr('Next')}</button>}
+      {f.kind !== 'choice' && (f.kind !== 'pick' || typed) && <button type="button" className="btn primary sm" disabled={!ok || busy} onClick={() => go(vals)}>{last ? tr(submit) : tr('Next')}</button>}
     </div>
   </div>;
 }
@@ -134,8 +153,8 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const [readyFor, setReadyFor] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [picks, setPicks] = useState<number[]>([]);
-  const [otherLang, setOtherLang] = useState(false);
-  const [typedCity, setTypedCity] = useState(false); const [typedSoc, setTypedSoc] = useState(false);
+  const [langOther, setLangOther] = useState(false);
+  const [typedSoc, setTypedSoc] = useState(false);
   const [states, setStates] = useState<string[]>([]); const [cities, setCities] = useState<string[]>([]); const [socs, setSocs] = useState<Society[] | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [fix, setFix] = useState<{ msg: string; back: number } | null>(null);
@@ -185,39 +204,49 @@ export function Intake({ onDone }: { onDone: () => void }) {
     <button type="button" className="btn primary block" disabled={!picks.length} onClick={() => onDone(picks)}>{tr('Done')}{picks.length ? ` · ${picks.length} ${tr('chosen')}` : ''}</button></>;
   const timesOf = (list: [number, string, ...string[]][], v: number[]) => v.map(m => list.find(x => x[0] === m)![1].split(' · ')[1]).join(', ');
 
-  // Playbook 1: Your information
+  // Playbook 1: Your information. Two small forms: about you (name, language), then where home is.
+  const LANG_OTHER = 'Another language';
+  const cityProblem = (v: string, st: string) => {
+    if (v.trim().length < 2 || !hasLetter(v)) return tr('Enter your city’s name, not numbers.');
+    const inState = stateOfCity(v); return inState && st && inState !== st ? `${v.trim()} ${tr('is in')} ${inState}, ${tr('not')} ${st}. ${tr('Go back and change the state.')}` : null;
+  };
+  const socProblem = (v: string) => v.trim().length < 2 ? tr('Enter at least 2 letters.') : !hasLetter(v) ? tr('Enter your society’s name, not just numbers.') : null;
   all.push(
-    { key: 'name', chapter: 0, draft: p.displayName, answer: p.displayName,
-      ask: <>{tr('Hi, I’m Pawly')} 🐾 {tr('I’ll set up Pawsure with you in three short playbooks. First, a little about you.')}<br /><b>{tr('What should I call you?')}</b></>,
-      compose: () => text('nm', tr('Your name'), tr('Your name'), v => { setP({ ...p, displayName: v }); next(); }, { validate: v => nameError(v), max: 60 }) },
-    { key: 'lang', chapter: 0, answer: langLabel(p.language),
-      ask: <>{tr('Nice to meet you')}, {first}! <b>{tr('Which language should messages to you be in?')}</b><span className="cb-note">{tr('The app is in English for now. Messages use your language where they’re written.')}</span></>,
-      compose: () => <>
-        <div className="cb-chips">{QUICK_LANGS.map(c => <button key={c} type="button" className="chip" aria-pressed={p.language === c} onClick={() => { setP({ ...p, language: c }); next(); }}>{langLabel(c)}</button>)}
-          <button type="button" className="chip" aria-pressed={otherLang} onClick={() => setOtherLang(true)}>{tr('Another language')}</button></div>
-        {otherLang && <Picker id="lg" label={tr('Your language')} placeholder={tr('Choose a language')} value={QUICK_LANGS.includes(p.language) ? '' : p.language} options={LANGUAGES.map(l => ({ value: l.code, label: langLabel(l.code) + (l.messages ? '' : ' ' + tr('(messages in English for now)')) }))} onPick={v => { setP({ ...p, language: v }); next(); }} />}</> },
-    { key: 'locate', chapter: 0, answer: geoOk ? `📍 ${p.society || p.city}` : tr('Choose manually'),
-      ask: geo.status === 'found' && geo.found ? <><b>{tr('Is this home?')}</b>
+    { key: 'about', chapter: 0, answer: p.displayName ? `${p.displayName} · ${langLabel(p.language)}` : '',
+      ask: <>{tr('Hi, I’m Pawly')} 🐾 {tr('I’ll set up Pawsure with you in three short playbooks. First, a little about you.')}</>,
+      compose: () => <StepForm key="about" title={tr('About you')} mic={mic} fields={[
+        { id: 'nm', label: tr('What should I call you?'), placeholder: tr('Your name'), validate: v => nameError(v), max: 60, voice: true, initial: p.displayName },
+        { id: 'lg0', label: tr('Which language should messages to you be in?'), hint: tr('The app is in English for now. Messages use your language where they’re written.'), kind: 'choice', options: [...QUICK_LANGS.map(langLabel), LANG_OTHER] }]}
+        onSubmit={v => { const code = QUICK_LANGS.find(c => langLabel(c) === v.lg0); setLangOther(!code); setP(x => ({ ...x, displayName: v.nm!, language: code ?? x.language })); next(); }} /> },
+    ...(langOther ? [{ key: 'lang', chapter: 0 as const, answer: langLabel(p.language),
+      ask: <b>{tr('Which language?')}</b>,
+      compose: () => <Picker id="lg" label={tr('Your language')} placeholder={tr('Choose a language')} value={QUICK_LANGS.includes(p.language) ? '' : p.language} options={LANGUAGES.map(l => ({ value: l.code, label: langLabel(l.code) + (l.messages ? '' : ' ' + tr('(messages in English for now)')) }))} onPick={v => { setP(x => ({ ...x, language: v })); next(); }} /> }] : []),
+    { key: 'locate', chapter: 0, answer: geoOk ? `📍 ${p.society || p.city}` : geo.status === 'found' ? tr('Change') : tr('Choose manually'),
+      ask: geo.status === 'found' && geo.found ? <>{tr('Nice to meet you')}, {first}! <b>{tr('Is this home?')}</b>
           <dl className="cb-sum">{geo.found.society && <><dt>{tr('Society')}</dt><dd>{geo.found.society.name}{geo.found.society.area ? ', ' + geo.found.society.area : ''}</dd></>}<dt>{tr('City')}</dt><dd>{geo.found.city}</dd><dt>{tr('State')}</dt><dd>{geo.found.state}</dd></dl>
           <span className="cb-note">📍 {tr('From your phone’s location. The location itself isn’t saved.')}{!geo.found.society ? ' ' + tr('I couldn’t find your society nearby, so I’ll ask for it next.') : ''}</span></>
-        : geo.status === 'failed' ? <>{geo.why ?? tr('I couldn’t get your location.')} <b>{tr('Where’s home?')}</b> {tr('You can choose it yourself.')}</>
-        : <><span className="geo-dot" aria-hidden="true" />{tr('Let me find where home is from your phone’s location…')}</>,
+        : geo.status === 'failed' ? <>{tr('Nice to meet you')}, {first}! {geo.why ?? tr('I couldn’t get your location.')} {tr('You can fill in your address yourself.')}</>
+        : <>{tr('Nice to meet you')}, {first}! <span className="geo-dot" aria-hidden="true" />{tr('Let me find where home is from your phone’s location…')}</>,
       compose: () => geo.status === 'found'
         ? <div className="cb-chips big"><button type="button" className="chip primary" onClick={() => useFound(true)}>{tr('Yes, that’s home')}</button><button type="button" className="chip" onClick={() => useFound(false)}>{tr('Change')}</button></div>
         : <div className="cb-chips">{geo.status === 'failed' && demoMode && <button type="button" className="chip" onClick={() => lookup(DEMO_SPOT.lat, DEMO_SPOT.lng)}>📍 {tr('Use a demo location (Powai, Mumbai)')}</button>}
             <button type="button" className="chip" onClick={() => { setGeoOk(false); next(); }}>{tr('Choose manually')}</button></div> },
-    { key: 'state', chapter: 0, answer: p.state, ask: <><b>{tr('Where’s home?')}</b> {tr('Choose your state.')}</>,
-      compose: () => <Picker id="stt" label={tr('State')} placeholder={tr('Choose your state')} value={p.state} loading={!states.length} options={states.map(x => ({ value: x, label: x }))}
-        onPick={v => { setTypedCity(false); setTypedSoc(false); setP({ ...p, state: v, city: '', societyId: '', society: '' }); next(); }} /> },
-    { key: 'city', chapter: 0, answer: p.city, draft: typedCity ? p.city : '', ask: <><b>{tr('Which city?')}</b> {p.state ? `${tr('In')} ${p.state}.` : ''}</>,
-      compose: () => typedCity
-        ? <>{text('ctt', tr('City'), tr('Your city or town'), v => { setTypedSoc(true); setP({ ...p, city: v, societyId: '', society: '' }); next(); }, { max: 60, validate: v => {
-          if (v.trim().length < 2 || !hasLetter(v)) return tr('Enter your city’s name, not numbers.');
-          const st = stateOfCity(v); return st && st !== p.state ? `${v.trim()} ${tr('is in')} ${st}, ${tr('not')} ${p.state}. ${tr('Tap your state above to change it.')}` : null; } })}
-          <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedCity(false); setDraft(''); }}>{tr('Choose from the list')}</button></div></>
-        : <><Picker id="cty" label={tr('City')} placeholder={tr('Choose your city')} value={p.city} loading={!cities.length} options={cities.map(x => ({ value: x, label: x }))}
-          onPick={v => { setTypedSoc(false); setP({ ...p, city: v, societyId: '', society: '' }); next(); }} />
-          <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedCity(true); setDraft(''); }}>{tr('My city isn’t listed')}</button></div></> },
+    { key: 'address', chapter: 0, answer: [p.society, p.tower && `${tr('Tower')} ${p.tower}`, p.city].filter(Boolean).join(' · '),
+      ask: <><b>{tr('Where’s home?')}</b><span className="cb-note">{tr('Friends see your society and tower only.')} 🔒 {tr('The flat stays private until you confirm a friend for a visit.')}</span></>,
+      compose: () => <StepForm key="address" title={tr('Your home')} mic={mic} fields={[
+        { id: 'stt', label: tr('State'), kind: 'pick', placeholder: tr('Choose your state'), choices: states.map(x => ({ value: x, label: x })), loading: !states.length, initial: p.state,
+          resets: ['cty', 'soc'], onValue: v => setP(x => x.state === v ? x : { ...x, state: v, city: '', societyId: '', society: '' }) },
+        { id: 'cty', label: tr('City'), kind: 'pick', placeholder: tr('Choose your city'), choices: cities.map(x => ({ value: x, label: x })), loading: !cities.length, initial: p.city,
+          other: 'My city isn’t listed', typedId: 'ctt', typedPlaceholder: tr('Your city or town'), max: 60, validate: (v, all) => cityProblem(v, all.stt ?? p.state),
+          resets: ['soc'], onValue: v => setP(x => x.city === v ? x : { ...x, city: v, societyId: '', society: '' }) },
+        { id: 'soc', label: tr('Society or building'), kind: 'pick', placeholder: tr('Choose your society'), hint: tr('This is your location anchor.'),
+          choices: (socs ?? []).map(x => ({ value: x.id, label: `${x.name}${x.area ? ' · ' + x.area : ''}` })), loading: !socs, forceTyped: !!socs && !socs.length,
+          initial: p.societyId || p.society, initialTyped: !p.societyId && !!p.society,
+          other: 'My society isn’t listed', typedId: 'sct', typedPlaceholder: 'e.g. Green Acres CHS, Andheri East', max: 120, validate: v => socProblem(v) },
+        { id: 'tw', label: tr('Tower / wing'), placeholder: tr('e.g. C or Wing 2'), optional: true, max: 40, initial: p.tower },
+        { id: 'fl', label: tr('Flat (private)'), placeholder: tr('e.g. C-702'), optional: true, mono: true, max: 20, initial: p.flat }]}
+        onSubmit={v => { const so = v['soc$typed'] ? undefined : socs?.find(y => y.id === v.soc);
+          setP(x => ({ ...x, state: v.stt!, city: v.cty!, societyId: so?.id ?? '', society: so ? `${so.name}${so.area ? ', ' + so.area : ''}` : v.soc!, tower: v.tw ?? '', flat: v.fl ?? '' })); next(); }} /> },
     { key: 'society', chapter: 0, answer: p.society, draft: typedSoc ? p.society : '',
       ask: <><b>{tr('Which society or building do you live in?')}</b><span className="cb-note">{tr('This is your location anchor. Friends see your society and tower only.')}</span></>,
       compose: () => typedSoc || (socs && !socs.length)
@@ -305,7 +334,8 @@ export function Intake({ onDone }: { onDone: () => void }) {
         onSubmit={v => { const h = { name: v.hn!, phone: v.hp!.replace(/\D/g, ''), language: v.hl!.includes('Marathi') ? 'mr' : v.hl!.includes('Hindi') ? 'hi' : 'en' }; setHelper(h); saveCare('My house help', h); }} /> });
 
   // A confirmed location answers state and city (and society when one was found nearby).
-  const steps = all.filter(x => !(geoOk && (x.key === 'state' || x.key === 'city' || (x.key === 'society' && !!p.societyId))));
+  // A confirmed location answers the address form; only the society (if none was found nearby) and the tower/flat are asked then.
+  const steps = all.filter(x => geoOk ? !(x.key === 'address' || (x.key === 'society' && !!p.societyId)) : !(x.key === 'society' || x.key === 'unit'));
 
   /* ---------- moving through the steps ---------- */
   const cur = steps[Math.min(pos, steps.length - 1)]!;
@@ -315,10 +345,10 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const ready = readyFor === stage;
   useEffect(() => { setErr(null); setPicks([]); const t = setTimeout(() => setReadyFor(stage), reduced() ? 0 : 450); return () => clearTimeout(t); }, [stage]);
   useEffect(() => { if (cur.key === 'locate' && geo.status === 'idle') detect(); }, [cur.key]);
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' }); }, [stage, ready, err, socs, otherLang, typedCity, typedSoc, geo.status]);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' }); }, [stage, ready, err, socs, typedSoc, geo.status]);
 
   /** After a fix, jump straight back to where saving failed; otherwise ask the next question. */
-  function next() { setDraft(''); setOtherLang(false); if (fix) { setPos(fix.back); setFix(null); return; } setPos(x => x + 1); }
+  function next() { setDraft(''); if (fix) { setPos(fix.back); setFix(null); return; } setPos(x => x + 1); }
   async function lookup(lat: number, lng: number) {
     setGeo({ status: 'finding' });
     try {
@@ -337,7 +367,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
   /** Yes: use the suggestion and skip the questions it answers. Change: fill the pickers with it and ask them. */
   function useFound(yes: boolean) {
     const f = geo.found!; const so = f.society;
-    setTypedCity(false); setTypedSoc(false);
+    setTypedSoc(false);
     setP(x => ({ ...x, state: f.state ?? '', city: f.city ?? '', societyId: so?.id ?? '', society: so ? `${so.name}${so.area ? ', ' + so.area : ''}` : '' }));
     setGeoOk(yes); next();
   }
@@ -357,8 +387,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
       const r = await api<{ id: string }>('/v1/households', { body: { displayName: p.displayName.trim(), language: p.language, state: p.state, city: p.city, ...(p.societyId ? { societyId: p.societyId } : { society: p.society.trim() }), tower: p.tower.trim() || undefined, flat: p.flat.trim() || undefined } });
       setHh(r.id); setLock(here + 1); setPos(here + 1);
     } catch (e) {
-      failed(e, here, (f, msg) => f === 'displayName' ? 'name' : f === 'language' ? 'lang' : f === 'tower' || f === 'flat' ? 'unit' : f === 'city' ? 'city'
-        : /Check the state|state from the list/.test(msg) ? 'city' : /Check the city/.test(msg) ? 'society' : 'society');
+      failed(e, here, (f) => f === 'displayName' ? 'about' : f === 'language' ? (langOther ? 'lang' : 'about') : !geoOk ? 'address' : f === 'tower' || f === 'flat' ? 'unit' : 'society');
     } finally { setBusy(false); }
   }
   async function finishPet(i: number, last: Partial<PetDraft>) {

@@ -27,7 +27,7 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await openPhone(page);
     await phone(page).getByRole('button', { name: '📷 Wrong code' }).click();
     await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Pending');
-    expect(await taskDetails(page, 'Lunch + fresh water')).toContain('Not confirmed');
+    await expect.poll(() => taskDetails(page, 'Lunch + fresh water')).toContain('Not confirmed');
   });
 
   test('E3 Re-sending an old photo is not counted', async ({ page }) => {

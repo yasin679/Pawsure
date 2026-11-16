@@ -849,3 +849,34 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .ai-composer{padding-top:10px}
 .ai-send{background:linear-gradient(135deg,#6F8F4E,#C79A1E)}
 @media (prefers-reduced-motion:reduce){.ai-orb i,.ai-orb span,.ai-wave b,.ai-step,.tabbar button .tab-spark .sparkle{animation:none}}
+
+/* 16 Nov: seamless Home. A solid, soft header with no circles (it fades into the page as you scroll),
+   solid colour pet pills, and a tab bar that floats over the content with nothing behind it. */
+:root{--head:#DCE8CB;--head-ink:#1F2A1F}
+.today .today-hero{color:color-mix(in srgb,var(--head-ink) calc((1 - var(--hp,0)) * 100%),var(--ink));padding:8px 20px 22px}
+.th-bg{background:var(--head)}
+.th-bg::before,.th-bg::after{display:none}
+.today .today-hero .th-greet{font-weight:800;font-size:1.75rem;letter-spacing:-.01em}
+.today .today-hero .th-date{font-size:var(--fs-s);font-weight:600;opacity:calc(.75 - .45 * var(--hp,0))}
+.today .today-hero .th-round{background:#fff;color:var(--head-ink);box-shadow:0 4px 12px -8px rgba(38,48,39,.5)}
+@media (min-width:600px) and (min-height:480px){
+  .device > .pwa:has(.today-hero):not(:has(> .demobar)) .sbar{background:color-mix(in srgb,var(--head) calc((1 - var(--hp,0)) * 100%),var(--bg));color:var(--ink)}
+}
+.pwa:has(.today-hero) .sbar{color:var(--ink)}
+/* pet pills */
+.pet-tabs{gap:10px;padding:2px 2px 8px}
+.today .pet-tab.petchip,.pet-tab{flex-direction:row;min-width:0;gap:10px;padding:5px 18px 5px 5px;border-radius:var(--r-pill);border:0;box-shadow:none;text-align:left}
+.pet-tab .avatar{width:40px!important;height:40px!important;margin:0;background:#fff}
+.pet-tab b{font-size:.95rem}
+.pet-tab.tone-0{background:#F6DCC6}.pet-tab.tone-1{background:#E2D9F3}.pet-tab.tone-2{background:#D3E5F1}.pet-tab.tone-3{background:#F3E6B5}
+.pet-tab[aria-selected="true"]{background:#263027!important;color:#fff}
+.pet-tab[aria-selected="true"] b{color:#fff}
+.pet-tab.add{padding:5px 18px 5px 5px;border:2px dashed var(--line-2);background:transparent}
+.pet-tab.add .pt-plus{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2)}
+/* floating tab bar: content scrolls underneath, no strip behind it */
+.pwa:has(> .tabbar) > .tabbar{position:absolute;left:0;right:0;bottom:0;z-index:22}
+.sheet-backdrop{z-index:25}
+.pwa:has(> .tabbar) > .body{padding-bottom:104px}
+.pwa:has(> .tabbar) > .composer{margin-bottom:84px;background:transparent;border-top:0}
+@media (min-width:600px) and (min-height:480px){.device > .pwa:has(> .tabbar) > .tabbar{bottom:12px}.device > .pwa:has(> .tabbar) > .body{padding-bottom:116px}.device > .pwa:has(> .tabbar) > .composer{margin-bottom:96px}}
+.picker.empty{display:flex;flex-direction:row;align-items:center;text-align:left;padding:0 7px 0 18px}

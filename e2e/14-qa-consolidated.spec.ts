@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, intake, intakeInfo, webhook, PHONE, findCoverForm } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, aboutYou, intake, intakeInfo, webhook, PHONE, findCoverForm } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -44,9 +44,8 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'Your information', level: 1 })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
-    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: 'English', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await aboutYou(page, 'Isha');
     await page.getByRole('button', { name: 'Choose manually' }).click();
     await pick(page, 'stt', 'Maharashtra');
     await pick(page, 'cty', 'Pune');
@@ -54,8 +53,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('option', { name: 'Lake Vista CHS · Baner' })).toHaveCount(1);
     await expect(page.getByRole('option', { name: /Powai/ })).toHaveCount(0);
     await page.getByRole('option', { name: 'Lake Vista CHS · Baner' }).click();
-    await expect(page.getByRole('button', { name: 'Change: Lake Vista CHS, Baner' })).toBeVisible();
-    await expect(page.locator('#tw')).toBeVisible();
+    await expect(page.locator('#tw')).toBeVisible(); // the same form moves on to the tower
   });
 
   test('R3 PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause', async ({ page }) => {
@@ -150,9 +148,8 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.locator('#nm').fill('12345');
     await expect(page.getByText('Enter a real name using letters, not numbers.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
-    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: 'Another language' }).click();
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await aboutYou(page, 'Isha', 'Another language');
     await page.locator('#lg').click();
     await expect(page.getByRole('option')).toHaveCount(23);
   });
@@ -170,22 +167,21 @@ test.describe('S. Onboarding conversation (15 Nov)', () => {
     await boot(page); await signUp(page, '9822200099');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.locator('#nm').fill('Isha'); await send();
-    await page.getByRole('button', { name: 'English', exact: true }).click();
+    const next = () => page.getByRole('button', { name: 'Next', exact: true }).click();
+    await aboutYou(page, 'Isha');
     await page.getByRole('button', { name: 'Choose manually' }).click();
     await pick(page, 'stt', 'Karnataka');
     await page.getByRole('button', { name: 'My city isn’t listed' }).click();
     await page.locator('#ctt').fill('Mumbai');
     await expect(page.getByText(/Mumbai is in Maharashtra, not Karnataka/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
-    await page.getByRole('button', { name: 'Change: Karnataka' }).click();
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); // back to the state, inside the same form
     await pick(page, 'stt', 'Maharashtra');
     await pick(page, 'cty', 'Mumbai');
     await page.getByRole('button', { name: 'My society isn’t listed' }).click();
     await page.locator('#sct').fill('12345');
     await expect(page.getByText('Enter your society’s name, not just numbers.')).toBeVisible();
-    await page.locator('#sct').fill('Green Acres CHS'); await send();
+    await page.locator('#sct').fill('Green Acres CHS'); await next();
     await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
     await page.getByRole('button', { name: 'Create my home' }).click();
     await petAndCare(page);
@@ -199,8 +195,7 @@ test.describe('T. Home location from the phone (16 Nov)', () => {
     await boot(page); await signUp(page, phone);
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Isha'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: 'English', exact: true }).click();
+    await aboutYou(page, 'Isha');
   };
   test('T1 The society, city and state are found from the location; Yes skips those questions', async ({ page }) => {
     await start(page, '9822200101');
@@ -219,7 +214,8 @@ test.describe('T. Home location from the phone (16 Nov)', () => {
     await expect(page.locator('#stt')).toContainText('Maharashtra'); // already filled in
     await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
     await page.locator('#soc').click(); await page.getByRole('option', { name: 'Hiranandani Gardens · Powai' }).click();
-    await expect(page.getByRole('button', { name: 'Change: Hiranandani Gardens, Powai' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await expect(page.locator('.cb-sum').last()).toContainText('Hiranandani Gardens, Powai');
   });
 });
 
