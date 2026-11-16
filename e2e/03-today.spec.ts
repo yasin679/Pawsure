@@ -45,6 +45,7 @@ test.describe('D. Today: daily care', () => {
 
   test('D5 Change a task: cancelling needs a reason and is kept in history', async ({ page }) => {
     await taskCard(page, 'Toilet pad change').click();
+    await dialog(page).locator('summary', { hasText: 'Task details' }).click();
     await dialog(page).getByRole('button', { name: 'Change this task' }).click();
     await dialog(page).getByRole('button', { name: 'Save' }).click();
     await expect(dialog(page).getByRole('alert')).toBeVisible();
@@ -97,5 +98,29 @@ test.describe('D. Today: daily care', () => {
     const days = await api<{ status: string }[]>(page, 'GET', `/v1/households/hh_demo/day/report?date=${DAY}`);
     expect(days.status).toBe(200);
     await expect(page.locator('.conf').first()).not.toHaveText('');
+  });
+
+  test('D10 A pending task: plain description, photo placeholder, Send reminder and Mark completed; completed shows the photo', async ({ page }) => {
+    await taskCard(page, 'Lunch + fresh water').click();
+    const d = dialog(page);
+    await expect(d.locator('.st-pill')).toHaveText('Pending');
+    await expect(d.locator('.task-desc')).toContainText('Feed Bruno: 1 cup kibble + curd rice at lunch');
+    await expect(d.locator('.ev-placeholder')).toBeVisible();
+    await expect(d.locator('.btnrow.even').getByRole('button')).toHaveText(['Send reminder', 'Mark completed']);
+    await d.getByRole('button', { name: 'Send reminder' }).click();
+    await expect(page.getByText('Reminder sent to Sunita on WhatsApp.')).toBeVisible();
+    await taskCard(page, 'Lunch + fresh water').click();
+    await dialog(page).getByRole('button', { name: 'Mark completed' }).click();
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Completed');
+    await taskCard(page, 'Lunch + fresh water').click();
+    await expect(dialog(page).locator('.ev-media img')).toBeVisible();
+    await expect(dialog(page).locator('.ev-media')).toContainText('Marked completed by you');
+    await expect(dialog(page).getByRole('button', { name: 'Mark completed' })).toHaveCount(0);
+  });
+
+  test('D11 The Plan sheet shows the helper’s status too', async ({ page }) => {
+    await openPlan(page);
+    await expect(dialog(page).locator('.plan-help')).toContainText('Sunita');
+    await expect(dialog(page).locator('.plan-help .st-pill')).toHaveText('Accepted');
   });
 });

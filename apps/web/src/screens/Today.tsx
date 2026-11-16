@@ -36,6 +36,11 @@ function HelperAvatar({ who }: { who: 'sunita' | 'helper' | 'friend' | 'none' })
     {who === 'sunita' && <circle cx="21" cy="33" r="1.4" fill={accent} />}
   </svg></span>;
 }
+/** Home shows a task as Pending or Completed (or Cancelled); the evidence label is in Task details. */
+function StatusPill({ t }: { t: DayTask }) {
+  const st = t.ev.state === 'Cancelled' ? 'Cancelled' : ['Confirmed', 'Likely', 'Matched'].includes(t.ev.state) ? 'Completed' : 'Pending';
+  return <span className={`st-pill ${st.toLowerCase()}`}>{st === 'Completed' ? '✓ ' : ''}{tr(st)}</span>;
+}
 const VERB: Record<string, string> = { feeding: 'feed', walk: 'walk', medicine: 'give medicine to', litter: 'clean the litter tray for', toilet: 'change the toilet pad for', water: 'top up water for' };
 
 export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void }) {
@@ -86,14 +91,33 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   // Pet tabs: whose schedule is shown. Pending first (by time), then completed.
   const petId = pets.some(p => p.id === petTab) ? petTab : pets[0]?.id;
   const mine = day.tasks.filter(t => t.petId === petId).sort((a, b) => a.due - b.due);
-  const isDone = (t: DayTask) => ['Confirmed', 'Likely', 'Cancelled'].includes(t.ev.state);
+  const isDone = (t: DayTask) => ['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(t.ev.state);
   const pending = mine.filter(t => !isDone(t)), completed = mine.filter(isDone);
   /** A task as in the prototype: type icon, title, time as sub text, status pill (cover details are in the task sheet). */
+  /** A plain description of what the task involves, from the pet's profile. */
+  const taskDescription = (t: DayTask) => {
+    const p = pets.find(x => x.id === t.petId); const n = p?.name ?? 'your pet';
+    switch (t.type) {
+      case 'feeding': return `Feed ${n}: ${p?.food ?? 'the usual meal'}. Rinse and refill the water bowl.`;
+      case 'medicine': return `Give ${n} the medicine: ${p?.medicines ?? 'as on the vet’s card'}. Only as written on the vet’s card.`;
+      case 'walk': return `Take ${n} for a walk on the lead, about 20 minutes. Bring a poop bag.`;
+      case 'toilet': return `Change ${n}’s toilet pad and top up the water bowl.`;
+      case 'litter': return `Clean ${n}’s litter tray and top up the water bowl.`;
+      case 'water': return `Top up ${n}’s water bowl with fresh water.`;
+      default: return `${t.title} for ${n}.`;
+    }
+  };
+  const evidenceCaption = (t: DayTask) => {
+    if (t.ev.state === 'Matched') return tr('Marked completed by you');
+    const s = t.signals.find(x => x.kind === 'photo' || x.kind === 'friend_photo') ?? t.signals[0];
+    const who = s?.kind === 'friend_photo' ? tr('the friend covering') : helperFirst;
+    return s ? `${s.kind.includes('photo') ? tr('Photo from') : tr('Check-in from')} ${who} · ${fmt(s.eventTime)}` : tr('Completed');
+  };
   const taskCard = (t: DayTask) => <button key={t.id} className={`task tl-row${isDone(t) ? ' done' : ''}`} onClick={() => { setTask(t); setSheet('task'); }}>
     <span className={`task-ic t-${t.type}`} aria-hidden="true"><Icon name={TASK_ICON[t.type] ?? 'paw'} size={22} /></span>
     <span className="grow task-txt"><b className="task-title">{t.title}</b>
       <span className="task-sub">{fmt(t.due)}{t.lifecycle.at(-1)?.state && t.lifecycle.at(-1)?.state !== 'Planned' ? ` · ${t.lifecycle.at(-1)?.state}` : ''}{t.signals.length ? ' · ' + t.signals.map(s => s.kind === 'photo' ? `📷 ${s.code === 'today' ? 'photo + code' : 'photo'}` : s.kind === 'friend_photo' ? '📷 photo' : s.kind).join(' · ') : ''}{t.ev.late ? ` · ${tr('Late')}` : ''}</span></span>
-    <Conf state={t.ev.state} label={t.ev.label} /><span className="chev" aria-hidden="true">›</span>
+    <StatusPill t={t} /><span className="chev" aria-hidden="true">›</span>
   </button>;
   // Who's caring: the carer's avatar and how far today's help has got (Accepted → Checked in → Completed).
   const inVisit = Object.values(day.visits).some(v => v.arrive != null && v.exit == null);
@@ -102,6 +126,12 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
     steps: (d.mode === 'tracked' || d.mode === 'friend') && !d.helperUnavailable,
     at: allDone ? 2 : inVisit || Object.values(day.visits).some(v => v.arrive != null) ? 1 : 0
   };
+  // The helper's status in one word or two (Plan sheet): can't come, invite state, or how far today has got.
+  const helpStatus: { text: string; tone: string } = d.helperUnavailable ? { text: 'Can’t come today', tone: 'cancelled' }
+    : d.mode === 'trusted' ? { text: 'Trusted Helper mode', tone: 'pending' } : d.mode === 'uncovered' ? { text: 'Cover needed', tone: 'pending' }
+    : d.mode === 'tracked' && helperRow && invite !== 'yes' ? { text: invite === 'pending' ? 'Invite pending' : invite === 'notnow' ? 'Said not now' : 'Stopped check-ins', tone: 'pending' }
+    : d.mode === 'tracked' && !helperRow && helpers ? { text: 'No helper', tone: 'cancelled' }
+    : { text: ['Accepted', 'Checked in', 'Completed'][carer.at]!, tone: carer.at === 2 ? 'completed' : 'pending' };
   const needsCover = d.helperUnavailable || d.mode === 'uncovered' || d.mode === 'friend';
 
   return <>
@@ -162,6 +192,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
 
     {sheet === 'plan' && <Sheet onClose={close}>
       <div className="row"><h2 className="grow">{tr('Plan for today')}</h2>{ov?.noCoverPlanned && day.covered.household !== 'Covered' ? <Conf state="Missed" label="No cover planned" /> : <Conf state={cs} label={cl} />}</div>
+      <div className="plan-help" aria-label="Your help today"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} />
+        <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><b>{d.mode === 'friend' ? tr('A friend (Find cover)') : d.mode === 'uncovered' ? tr('Nobody yet') : helperName || tr('No helper added yet')}</b></div>
+        <span className={`st-pill ${helpStatus.tone}`}>{tr(helpStatus.text)}</span></div>
       {d.alone.exceeds && <Banner kind="warn" icon="⏱"><b>Alone-window warning.</b> Your pets would be alone {(d.alone.longestMinutes / 60).toFixed(1)} h ({fmt(d.alone.from)}–{fmt(d.alone.to)}). Your limit is {d.alone.limitHours} h. <span className="xs muted">Your own threshold, not medical guidance.</span></Banner>}
       <div className="row wrap" style={{ gap: 4 }}>
         {onEditRoutine && <button className="btn ghost sm" onClick={onEditRoutine}>{tr('Edit routine')}</button>}
@@ -172,7 +205,20 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
     </Sheet>}
 
     {sheet === 'task' && task && <Sheet onClose={close}>
-      <div className="row"><h2 className="grow">{task.title}</h2><Conf state={task.ev.state} label={task.ev.label} /></div>
+      <div className="row"><h2 className="grow">{task.title}</h2><StatusPill t={task} /></div>
+      <div className="small muted">{petName(task.petId)} · {fmt(task.due)}{helperRow ? ` · ${helperFirst}` : ''}</div>
+      {isDone(task) && task.ev.state !== 'Cancelled'
+        ? <figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>
+        : task.ev.state === 'Cancelled' ? <div className="task-desc">{tr('Cancelled for today.')}</div>
+        : <>
+          <div className="task-desc">{taskDescription(task)}</div>
+          <div className="ev-placeholder"><Icon name="camera" size={28} /><span>{helperRow && invite === 'yes' ? `${helperFirst}${tr('’s photo will appear here after she checks in.')}` : tr('A photo will appear here once the task is done.')}</span></div>
+          <div className="btnrow even"><button className="btn" onClick={() => run(async () => { const r = await api<{ note?: string }>(`${H}/tasks/${task.id}/remind`, { body: {} }); setMsg(r.note ?? 'Reminder sent.'); })}>{tr('Send reminder')}</button>
+            <button className="btn primary" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`Marked “${task.title}” completed.`); })}>{tr('Mark completed')}</button></div>
+          {err && <span className="errtext" role="alert">{err}</span>}
+        </>}
+      <details className="task-more"><summary>{tr('Task details')}</summary>
+      <div className="row"><span className="eyebrow grow">{tr('Evidence')}</span><Conf state={task.ev.state} label={task.ev.label} /></div>
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
       {!task.cover && <CoverLineView line={ov?.lines[task.id]} />}
       {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">{tr('A Yes is a plan, not proof the task was done.')}</div></div>}
@@ -184,6 +230,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="btnrow">{task.visitId && d.gateApp && <button className="btn sm" onClick={() => run(() => api(`${H}/visits/${task.visitId}/gate`, { body: {} }))}>Attach my gate-app alert</button>}
         {task.ev.state !== 'Cancelled' && <button className="btn sm" onClick={() => setSheet('change')}>{tr('Change this task')}</button>}</div>
       <p className="xs muted">Gate alerts are marked as from you.</p>
+      </details>
     </Sheet>}
 
     {sheet === 'predeparture' && ov && <PreDepartureSheet hh={hh} ov={ov} pets={pets} onClose={close} onLeave={() => setSheet('leaving')} reload={reloadAll} />}

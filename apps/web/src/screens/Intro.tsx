@@ -12,6 +12,8 @@ const SLIDES = [
 ] as const;
 const KEY = 'pawsure.introSeen';
 export const introSeen = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return true; } };
+/** Show the welcome screens again (after signing out). */
+export const resetIntro = () => { try { localStorage.removeItem(KEY); } catch { /* storage blocked */ } };
 const markSeen = () => { try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ } };
 
 export function Intro({ onDone }: { onDone: (mode: 'login' | 'signup') => void }) {

@@ -12,6 +12,7 @@ const atRiskCard = (page: Page) => page.locator('.card.atrisk').first();
 /** The cover line is shown in the task's sheet (Home task cards show only icon, title, time and status). */
 const coverLine = async (page: Page, title: string) => {
   await page.locator('button.task', { hasText: title }).first().click();
+  await page.getByRole('dialog').locator('summary', { hasText: 'Task details' }).click();
   const text = await page.getByRole('dialog').locator('.coverline').first().innerText();
   await page.getByRole('dialog').getByRole('button', { name: 'Close' }).last().click();
   return text;
@@ -253,11 +254,12 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     await expect(page.locator('.card.warn', { hasText: 'Lunch + fresh water' }).first()).toContainText('Your backup was alerted at 2:00 PM.');
     await expect(page.getByText(/is alerted at 2:00 PM if you don’t acknowledge/)).toHaveCount(0);
   });
-  test('P3 “Planned” appears once on a task card', async ({ page }) => {
+  test('P3 A task card shows Pending (no “Planned”) and its cover only in the task sheet', async ({ page }) => {
     await boot(page); await signInOwner(page);
     const card = page.locator('button.task', { hasText: 'Lunch + fresh water' }).first();
     await expect(card).toBeVisible();
-    expect(((await card.innerText()).match(/Planned/g) ?? []).length).toBeLessThanOrEqual(1);
+    await expect(card).toContainText('Pending');
+    await expect(card).not.toContainText('Planned');
     await expect(card.locator('.coverline')).toHaveCount(0); // cover is shown in the task sheet, not on the card
     expect(await coverLine(page, 'Lunch + fresh water')).toContain('Sunita · assigned');
   });

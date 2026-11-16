@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, intake, PHONE, headOut } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, intake, PHONE, headOut, tab } from './helpers';
 
 test.describe('A. Sign-in and onboarding', () => {
   test('A1 New owner signs up: phone, code, consents, profile, then lands on Today', async ({ page }) => {
@@ -45,10 +45,13 @@ test.describe('A. Sign-in and onboarding', () => {
     await expect(page.locator('.petchip', { hasText: 'Misty' })).toBeVisible();
   });
 
-  test('A6 Sign out returns to the Log in screen (Welcome back)', async ({ page }) => {
+  test('A6 Signing out shows the welcome screens again, then Log in', async ({ page }) => {
     await boot(page);
     await signInOwner(page);
-    await signOut(page);
+    await tab(page, 'Me'); await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('pawsure.introSeen'))).toBeNull(); // shown again until Get started / Log in
+    await page.getByRole('button', { name: 'Log in', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   });
 });

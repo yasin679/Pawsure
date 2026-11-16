@@ -196,6 +196,25 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       [btn('consent_yes', lang, hh), btn('consent_notnow', lang, hh), { id: `lang_mr:${hh}`, label: 'मराठी' }, { id: `lang_hi:${hh}`, label: 'हिन्दी' }, { id: `lang_en:${hh}`, label: 'English' }]);
   }
 
+  /** Owner → "Send reminder" on a task: one WhatsApp nudge to the helper (at most one per task every 15 minutes). */
+  app.post('/v1/households/:hh/tasks/:id/remind', async (c) => {
+    const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'task', 'update'))) return x.deny(c);
+    const day = await loadDay(db, hh, x.careDate(c), now());
+    const t = day.tasks.find(y => y.id === c.req.param('id')); if (!t) return c.json({ error: 'not_found' }, 404);
+    const hlp = (await db.query<{ id: string; method: string | null; name: string }>(`select m.id, m.method, coalesce(m.display_label, u.display_name) as name from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper' and m.status='active' order by (m.id=$2) desc limit 1`, [hh, t.assignee]))[0];
+    const cst = hlp ? await consentOf(hlp.id) : null;
+    if (!hlp || !cst?.granted || cst.kind === 'helper_withdrawal') return c.json({ error: 'no_helper', message: 'Your helper hasn’t accepted the WhatsApp invite yet, so a reminder can’t be sent.' }, 409);
+    const key = `remind:${t.id}:${Math.floor(now().getTime() / 900000)}`;
+    const ins = await db.query(`insert into notifications(id, household_id, dedupe_key, recipient, channel, template) values ($1,$2,$3,$4,'whatsapp','W3_PROMPT') on conflict (dedupe_key) do nothing returning id`, [uid('ntf'), hh, key, hlp.id]);
+    const first = (hlp.name ?? '').split(' ')[0] || 'your helper';
+    if (!ins.length) return c.json({ ok: true, note: `A reminder was already sent to ${first} in the last 15 minutes.` });
+    const lang = await helperLang(hlp.id);
+    const pet = (await db.query<{ name: string }>(`select name from pets where id=$1`, [t.petId]))[0]?.name ?? '';
+    const hhmm = `${((Math.floor(t.due / 60) + 11) % 12) + 1}:${String(t.due % 60).padStart(2, '0')}`;
+    await helperSay(hh, hlp.id, 'W3_PROMPT', { pet, task: '⏰ ' + t.title, time: hhmm, how: render(hlp.method === 'voice' ? 'HOW_VOICE' : hlp.method === 'ivr' ? 'HOW_IVR' : 'HOW_PHOTO', lang) }, t.id);
+    await audit(db, c.get('userId'), hh, 'task.reminder_sent', { task: t.id, helper: hlp.id });
+    return c.json({ ok: true, note: `Reminder sent to ${first} on WhatsApp.` });
+  });
   app.get('/v1/households/:hh/helpers', async (c) => {
     const hh = c.req.param('hh'); const role = await x.guard(c, hh, 'helper_consent', 'read'); if (!role) return x.deny(c);
     const rows = await db.query<{ id: string; status: string; method: string | null; paused: boolean; name: string; language: string; invited_at: string }>(`select m.id, m.status, m.method, m.paused, coalesce(m.display_label, u.display_name) as name, coalesce(m.invite_language, u.language) as language, m.invited_at from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper'`, [hh]);

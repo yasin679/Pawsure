@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, clockTo, taskCard, meItem, tab, api, openPlan } from './helpers';
+import { boot, signInOwner, clockTo, taskCard, meItem, tab, api, openPlan , taskDetails } from './helpers';
 
 /** Sunita’s simulated phone (demo bar) posts to the same WhatsApp and IVR webhooks a real phone would. */
 const phone = (page: Page) => page.locator('.sheet', { hasText: 'Sunita’s phone (simulated)' });
@@ -14,17 +14,20 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(phone(page)).toContainText('Lunch + fresh water');
     await phone(page).getByRole('button', { name: '☎ Arrival call' }).click();
     await phone(page).getByRole('button', { name: '📷 Photo + today’s code' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Likely');
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Completed');
+    expect(await taskDetails(page, 'Lunch + fresh water')).toContain('Likely');
     await page.getByRole('button', { name: '+15m' }).click();
     await phone(page).getByRole('button', { name: '☎ Exit call' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Confirmed');
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Completed');
+    await expect.poll(() => taskDetails(page, 'Lunch + fresh water')).toContain('Confirmed');
   });
 
   test('E2 A wrong code is flagged and does not confirm the task', async ({ page }) => {
     await clockTo(page, '12:50');
     await openPhone(page);
     await phone(page).getByRole('button', { name: '📷 Wrong code' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Not confirmed');
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Pending');
+    expect(await taskDetails(page, 'Lunch + fresh water')).toContain('Not confirmed');
   });
 
   test('E3 Re-sending an old photo is not counted', async ({ page }) => {
@@ -44,11 +47,11 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await clockTo(page, '12:50');
     await openPhone(page);
     await phone(page).getByRole('button', { name: '🎤 Voice note' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Likely');
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Completed');
     await phone(page).locator('#simt').selectOption({ label: 'Wet food + litter tray' });
     await phone(page).getByRole('button', { name: '☎ IVR code' }).click();
     await page.getByRole('tab', { name: /Misty/ }).click(); // Home shows one pet's tasks at a time
-    await expect(taskCard(page, 'Wet food + litter tray')).toContainText('Likely');
+    await expect(taskCard(page, 'Wet food + litter tray')).toContainText('Completed');
   });
 
   test('E5 Helper reports “water ran out” → S3 incident on the owner’s Today', async ({ page }) => {

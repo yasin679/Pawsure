@@ -284,6 +284,16 @@ export function createApp(input: Deps) {
     await audit(db, c.get('userId'), hh, 'task.lifecycle', { task: t.id, ...b });
     return c.json({ ok: true });
   });
+  /** The owner marks a task done themselves: it counts as Matched (owner check), stops its alerts, and earns no helper points. */
+  app.post('/v1/households/:hh/tasks/:id/owner-done', async (c) => {
+    const hh = c.req.param('hh'); if (!(await guard(c, hh, 'task', 'update'))) return deny(c);
+    const day = await loadDay(db, hh, careDate(c), now());
+    const t = day.tasks.find(x => x.id === c.req.param('id')); if (!t) return c.json({ error: 'not_found' }, 404);
+    if (['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(t.ev.state)) return c.json({ ok: true, state: t.ev.state });
+    await db.query(`update care_tasks set return_check=$3, ack_at=coalesce(ack_at,$4), ack_by=coalesce(ack_by,$5) where id=$1 and household_id=$2`, [t.id, hh, JSON.stringify({ at: day.now, matched: true, by: 'owner' }), now().toISOString(), c.get('userId')]);
+    await audit(db, c.get('userId'), hh, 'task.owner_done', { task: t.id });
+    return c.json({ ok: true, state: 'Matched' });
+  });
   app.post('/v1/households/:hh/visits/:visitId/gate', async (c) => {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'task', 'update'))) return deny(c);
     const r = await ingestSignal(db, { householdId: hh, idempotencyKey: `gate:${c.req.param('visitId')}:${now().getTime()}`, kind: 'gate', visitId: c.req.param('visitId'), channel: 'owner', ownerProvided: true, eventTime: now(), receivedTime: now(), actor: c.get('userId') });

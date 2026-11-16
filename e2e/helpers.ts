@@ -135,6 +135,9 @@ export async function headOut(page: Page) {
 export async function signOut(page: Page) {
   if (await page.locator('nav.tabbar').isVisible()) await tab(page, 'Me');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  // Signing out shows the welcome screens again; "Already have an account? Log in" goes to Log in.
+  await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 }
 
@@ -160,6 +163,14 @@ export async function clockTo(page: Page, hhmm: string, day = DAY) {
 export const tab = (page: Page, name: string) => page.locator('nav.tabbar').getByRole('button', { name }).click();
 export const meItem = async (page: Page, name: string | RegExp) => { await tab(page, 'Me'); await page.locator('button.li', { hasText: name }).click(); };
 export const taskCard = (page: Page, title: string) => page.locator('button.task', { hasText: title }).first();
+/** Opens a task and its Task details, returns the details text (evidence label, cover, lifecycle), and closes it. */
+export async function taskDetails(page: Page, title: string) {
+  await taskCard(page, title).click();
+  const d = page.getByRole('dialog'); await d.locator('summary', { hasText: 'Task details' }).click();
+  const text = await d.locator('details.task-more').innerText();
+  await d.getByRole('button', { name: 'Close' }).last().click();
+  return text;
+}
 export const dialog = (page: Page) => page.getByRole('dialog');
 
 /** Staff sign-in on the console route (#admin). */

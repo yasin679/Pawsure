@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { api, API, ApiError, endSession, session, fmt, type DayView, type Incident, type Me, type Pet } from './api';
 import { AppBar, Art, Icon, LangSwitch } from './ui';
 import { Onboarding } from './screens/Onboarding';
+import { resetIntro } from './screens/Intro';
 import { Today } from './screens/Today';
 import { PetScreen } from './screens/PetScreen';
 import { RoutineScreen, HealthScreen, HelperScreen, CircleScreen } from './screens/CareSetup';
@@ -92,7 +93,8 @@ export function App() {
   if (lookinToken) return <div className="pwa"><AppBar title="Pawsure look-in" onBack={hash.startsWith('#lookin-') ? () => { location.hash = ''; } : undefined} /><LookIn token={lookinToken} /></div>;
   if (!authed) return <div className="pwa">{!online && <div className="offline">You’re offline. Your helper’s missed-call check-ins still work.</div>}<Onboarding onDone={() => setAuthed(true)} /></div>;
   const role = me?.memberships[0]?.role;
-  const signOut = async (everywhere = false) => { await endSession(everywhere); setAuthed(false); setMe(null); setDay(null); setPets([]); setIncidents([]); setInvites([]); setIsFriend(false); setDraft(''); setTab('today'); setSub(null); };
+  // Signing out shows the welcome screens again before Log in.
+  const signOut = async (everywhere = false) => { await endSession(everywhere); resetIntro(); setAuthed(false); setMe(null); setDay(null); setPets([]); setIncidents([]); setInvites([]); setIsFriend(false); setDraft(''); setTab('today'); setSub(null); };
   const signOutAll = () => signOut(true);
   if (!hh && isFriend) return <div className="pwa">{demo && tools && <DemoBar hh="" day={null} onChange={load} friendOnly />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}<FriendHome name={me?.user.display_name ?? ''} onSignOut={() => signOut()} /></div>;
   if (me && checked && !hh && !isFriend) return <div className="pwa"><Onboarding start="consent" onDone={() => load()} /></div>;
