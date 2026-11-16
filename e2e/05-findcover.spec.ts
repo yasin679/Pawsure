@@ -171,7 +171,27 @@ test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
     expect(await page.locator('.friend-card').count()).toBeGreaterThan(0);
     await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/avatars\//);
     await page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }).click();
-    await expect(page.locator('#ask')).toHaveValue('blah blah anything at all');
+    // Pawly can't read this one, so the simple form opens with the reason, not a blank text box
+    await expect(page.getByRole('heading', { name: 'Simple request form' })).toBeVisible();
+  });
+
+  test('G9b Asking the second friend from the assistant goes straight through: details → Pawly → that friend’s message → Sent (co-owner can answer questions)', async ({ page }) => {
+    await boot(page); await signInOwner(page);
+    await tab(page, 'Find cover');
+    await page.getByRole('button', { name: /Walk Bruno this evening/ }).click();
+    const second = page.locator('.friend-card').nth(1);
+    await expect(second).toBeVisible();
+    const first = (await second.locator('b').innerText()).split(' ')[0]!;
+    await second.getByRole('button', { name: /^Ask / }).click();
+    await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
+    await page.getByRole('alert').getByRole('button', { name: '6:00 PM' }).click();
+    await expect(page.getByText('forbidden')).toHaveCount(0);
+    await page.getByRole('button', { name: /Find with Pawly/ }).click();
+    await expect(page.getByRole('heading', { name: `Ask ${first}?` })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('checkbox', { name: /I approve/ }).check();
+    await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
+    await expect(page.locator('.conf', { hasText: 'Sent' })).toBeVisible();
+    await expect(page.locator('.li', { hasText: first })).toBeVisible();
   });
 });
 

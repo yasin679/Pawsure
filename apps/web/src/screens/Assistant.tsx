@@ -15,7 +15,7 @@ export const friendAvatar = (id: string) => POOL[[...id].reduce((a, c) => (a * 3
 const STEPS = ['Understanding what you need', 'Checking who is free', 'Finding friends nearby'];
 type Msg = { role: 'bot'; text: string } | { role: 'me'; text: string } | { role: 'thinking' } | { role: 'friends'; ask: string; friends: FriendSummary[] };
 
-export function CoverAssistant({ hh, pets, onAsk, onForm, onInvite }: { hh: string; pets: Pet[]; onAsk: (text: string) => void; onForm: () => void; onInvite?: () => void }) {
+export function CoverAssistant({ hh, pets, onAsk, onForm, onInvite }: { hh: string; pets: Pet[]; onAsk: (text: string, friendId: string) => void; onForm: () => void; onInvite?: () => void }) {
   const pet = pets[0]?.name ?? 'my pet';
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: tr('How can I help?') }]);
   const [draft, setDraft] = useState(''); const [busy, setBusy] = useState(false); const [step, setStep] = useState(0);
@@ -55,7 +55,7 @@ export function CoverAssistant({ hh, pets, onAsk, onForm, onInvite }: { hh: stri
             {m.friends.map(f => <div key={f.id} className="friend-card">
               <img className="friend-av" src={`${import.meta.env.BASE_URL}assets/avatars/${friendAvatar(f.id)}.webp`} alt="" width={52} height={52} />
               <div className="grow"><b>{f.name}</b><div className="small muted">{f.distance}</div>{f.availability && <div className="xs fc-free">● {f.availability}</div>}</div>
-              <button type="button" className="btn primary sm" onClick={() => onAsk(m.ask)}>{tr('Ask')} {f.name.split(' ')[0]}</button></div>)}
+              <button type="button" className="btn primary sm" onClick={() => onAsk(m.ask, f.id)}>{tr('Ask')} {f.name.split(' ')[0]}</button></div>)}
           </div>)}
       {msgs.length === 1 && <div className="cb-chips ai-suggest">{[`${tr('Feed')} ${pet} ${tr('at 6 PM today')}`, `${tr('Walk')} ${pet} ${tr('this evening')}`, tr('Someone to look in while I travel')].map(sg => <button key={sg} type="button" className="chip" onClick={() => send(sg)}>{sg}</button>)}</div>}
       {onInvite && msgs.some(m => m.role === 'bot' && m.text.startsWith(tr('None of your friends'))) && <button className="btn sm" onClick={onInvite}>{tr('Invite a friend')}</button>}

@@ -35,7 +35,7 @@ function PawlyThinking({ step, time }: { step: number; time: string }) {
   </main></>;
 }
 
-export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onInvite }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void; onInvite?: () => void }) {
+export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onInvite, prefer, onPreferUsed }: { hh: string; pets: Pet[]; draft: string; onDraft: (s: string) => void; openRequest?: string | null; onOpened?: () => void; onInvite?: () => void; prefer?: string | null; onPreferUsed?: () => void }) {
   const [thinking, setThinking] = useState<{ step: number; time: string } | null>(null); const [byPawly, setByPawly] = useState(false);
   const [v, setV] = useState<View>({ k: 'ask' });
   const [reqs, setReqs] = useState<ReqView[]>([]); const [req, setReq] = useState<ReqView | null>(null); const [sr, setSr] = useState<SearchResult | null>(null);
@@ -51,13 +51,22 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
   useEffect(() => { if (v.k !== 'request') return; const t = setInterval(() => loadReq(v.id), 5000); return () => clearInterval(t); }, [v]);
   const run = async (fn: () => Promise<void>) => { if (busy) return; setErr(null); setDupErr(null); setBusy(true); try { await fn(); } catch (e) { if (e instanceof ApiError && e.body.duplicateOf) setDupErr(String(e.body.duplicateOf)); setErr(e instanceof ApiError ? (e.body.error === 'clarification_needed' ? 'Answer the highlighted questions first.' : e.body.error === 'not_eligible' ? 'That friend is no longer eligible. Search again.' : String(e.body.message ?? e.body.error)) : 'Can’t reach Pawsure.'); } finally { setBusy(false); } };
   const petName = (id: string | null) => pets.find(p => p.id === id)?.name ?? '';
+  /** The friend picked in the assistant: once a search finds them, go straight to the message for them. */
+  const showResults = (r: SearchResult, pawly: boolean) => {
+    setSr(r); setSel([]); setByPawly(pawly);
+    if (prefer && r.top.some(t => t.id === prefer)) { setApproved(false); setV({ k: 'approve', id: r.request.id, ids: [prefer], mode: 'one' }); onPreferUsed?.(); }
+    else setV({ k: 'suggest', id: r.request.id });
+  };
+  /** Ask in the assistant hands over the request: understand it at once instead of showing the blank form. */
+  const understand = () => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { text: draft } }); if (r.needsManualForm) setV({ k: 'manual', reason: r.fallbackReason }); else { setReq(r); setV({ k: 'review', id: r.id }); } });
+  useEffect(() => { if (prefer && draft.trim()) understand(); }, []);
   /** Run the normal search with Pawly's steps on screen (about 5.5 s, so each step can be read). */
   const askPawly = (time: number | null | undefined, go: () => Promise<SearchResult>) => run(async () => {
     const t0 = Date.now(); setThinking({ step: 0, time: time != null ? fmt(time) : 'that time' });
     const iv = setInterval(() => setThinking(s => s && { ...s, step: Math.min(s.step + 1, 4) }), 1300);
     try {
       const r = await go(); const wait = 5600 - (Date.now() - t0); if (wait > 0) await new Promise(res => setTimeout(res, wait));
-      setSr(r); setSel([]); setByPawly(true); setV({ k: 'suggest', id: r.request.id });
+      showResults(r, true);
     } finally { clearInterval(iv); setThinking(null); }
   });
   /** PAW-033: every pet on the request. */
@@ -89,7 +98,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
       {p?.tasks.includes('meds') && <Banner kind="info" icon="✚">{tr('Medicine goes only to friends who chose it, with your written instructions.')}</Banner>}
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn pawly block lg" disabled={busy || req.blocked.length > 0} onClick={() => askPawly(req.parsed?.time, () => api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} }))}><span aria-hidden="true">✦</span> Find with Pawly</button>
-      <button className="btn ghost block" disabled={busy || req.blocked.length > 0} onClick={() => run(async () => { setSr(await api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} })); setSel([]); setByPawly(false); setV({ k: 'suggest', id: req.id }); })}>{tr('Search my friends')}</button>
+      <button className="btn ghost block" disabled={busy || req.blocked.length > 0} onClick={() => run(async () => showResults(await api<SearchResult>(`${H}/requests/${req.id}/search`, { body: {} }), false))}>{tr('Search my friends')}</button>
       {req.blocked.length > 0 && <p className="xs muted">Search is blocked until the highlighted questions are answered.</p>}
       <button className="btn ghost block" onClick={() => setV({ k: 'manual', id: req.id })}>{tr('Use the simple form instead')}</button>
     </main></>;
@@ -104,7 +113,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
     <div className="field"><label htmlFor="mk">{tr('Key needed?')}</label><select id="mk" className="input" value={manual.access} onChange={e => { const val = e.target.value; setManual(m => ({ ...m, access: val })); }}><option value="Key handover">{tr('Yes, key handover')}</option><option value="Someone at home">{tr('No, someone is home')}</option></select></div>
     {err && <span className="errtext" role="alert">{err}</span>}
     <button className="btn pawly block lg" disabled={busy || !manual.tasks.length} onClick={() => askPawly(manual.time, async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; return api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} }); })}><span aria-hidden="true">✦</span> Find with Pawly</button>
-    <button className="btn ghost block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; setSr(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} })); setSel([]); setByPawly(false); setV({ k: 'suggest', id: r.id }); })}>{tr('Search my friends')}</button>
+    <button className="btn ghost block" disabled={busy || !manual.tasks.length} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { manual } }); manualDraft = null; showResults(await api<SearchResult>(`${H}/requests/${r.id}/search`, { body: {} }), false); })}>{tr('Search my friends')}</button>
   </main></>;
 
   if (v.k === 'suggest' && sr) {
@@ -125,6 +134,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
       <div className="card flat"><div className="row"><b className="grow">{tr('Nearby ID-checked members')}</b><span className="tag flag-off">{tr('Switch OFF')}</span></div><div className="xs muted">{sr.nearbyFallback.reason}</div></div>
     </main></>;
     return <><AppBar title={tr('Suggestions')} onBack={() => setV({ k: 'review', id: sr.request.id })} /><main className="body">
+      {prefer && !sr.top.some(t => t.id === prefer) && <Banner kind="info" icon="ℹ">The friend you picked can’t do this one at that time. Here are others who can.</Banner>}
       {byPawly && <div className="pawly-found"><span aria-hidden="true">✦</span> Pawly found {sr.top.length} {sr.top.length === 1 ? 'friend' : 'friends'} who can help</div>}
       <div className="card flat small"><b>{summary(sr.request)}</b> · {sr.request.parsed?.access}<br /><span className="xs muted">{tr('Your own friends only. Nearest first.')}</span></div>
       {sr.request.duplicateOf && <Banner kind="warn" icon="!"><b>You already have a request out to friends for this.</b> Same pet, about the same time. <button className="btn sm" onClick={() => setV({ k: 'request', id: sr.request.duplicateOf! })}>{tr('Open it')}</button></Banner>}
@@ -187,7 +197,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
       <div className="row"><button className="btn sm" onClick={startVoice} aria-label="Speak your request"><Icon name="bell" size={16} />{tr('Speak')}</button><span className="xs muted grow">{tr('Typing always works.')}</span></div>
       <div className="chips">{EXAMPLES.map(([l, t]) => <button key={l} className="tag" onClick={() => onDraft(t)}>{l}</button>)}</div>
       {err && <span className="errtext" role="alert">{err}</span>}
-      <button className="btn primary block" disabled={busy || !draft.trim()} onClick={() => run(async () => { const r = await api<ReqView>(`${H}/requests`, { body: { text: draft } }); if (r.needsManualForm) setV({ k: 'manual', reason: r.fallbackReason }); else { setReq(r); setV({ k: 'review', id: r.id }); } })}>{tr(busy ? 'Understanding… (up to 8 s)' : 'Understand my request')}</button>
+      <button className="btn primary block" disabled={busy || !draft.trim()} onClick={understand}>{tr(busy ? 'Understanding… (up to 8 s)' : 'Understand my request')}</button>
       <div className="row"><span className="xs muted grow">{tr('Nothing is sent until you approve.')}</span><button className="btn ghost sm" onClick={() => setV({ k: 'manual' })}>{tr('Simple form')}</button></div></div>
     <h2 style={{ fontSize: 'var(--fs-l)' }}>{tr('Requests')}</h2>
     {reqs.length ? <div className="list">{reqs.map(r => <button key={r.id} className="li" onClick={() => setV(r.state === 'Draft' && r.parsed ? { k: 'review', id: r.id } : { k: 'request', id: r.id })}><div className="grow"><b>{summary(r) || 'Request'}</b><div className="small muted">{r.recipients.map(x => x.name?.split(' ')[0]).join(', ') || 'not sent'}</div></div><StateTag s={r.state} /></button>)}</div>

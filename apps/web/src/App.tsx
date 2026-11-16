@@ -54,7 +54,7 @@ export function App() {
   // One-time task links for a substitute or an ad-hoc number (PS-128, PS-133): /t/<token>, or #task-<token> in the demo.
   const taskToken = location.pathname.startsWith('/t/') ? location.pathname.slice(3) : hash.startsWith('#task-') ? hash.slice(6) : null;
   const [authed, setAuthed] = useState(!!session.get());
-  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false);
+  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [askFriend, setAskFriend] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [day, setDay] = useState<DayView | null>(null);
@@ -101,7 +101,7 @@ export function App() {
   if (me && checked && !hh && !isFriend) return <div className="pwa"><Onboarding start="consent" onDone={() => load()} /></div>;
   if (me && role === 'helper') return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <HelperHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
   if (me && role && ['backup', 'family', 'viewer'].includes(role)) return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <CircleHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
-  const go = (t: Tab, add = false) => { setTab(t); setSub(null); setAddPet(add); setFindForm(false); if (t === 'today') load(); };
+  const go = (t: Tab, add = false) => { setTab(t); setSub(null); setAddPet(add); setFindForm(false); setAskFriend(null); if (t === 'today') load(); };
 
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
@@ -117,8 +117,8 @@ export function App() {
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
     {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
-    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} onAsk={t => { setDraft(t); setFindForm(true); }} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
-    {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} onAsk={(t, fid) => { setDraft(t); setAskFriend(fid); setFindForm(true); }} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}
     {!sub && tab === 'me' && <><AppBar title={tr('Me')} /><main className="body">
       {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>{tr('Accept')}</button></div>)}
