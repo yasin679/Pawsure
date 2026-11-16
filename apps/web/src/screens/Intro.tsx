@@ -31,10 +31,11 @@ export function Intro({ onDone }: { onDone: (mode: 'login' | 'signup') => void }
       </section>)}
     </div>
     <div className="intro-dots" role="tablist" aria-label="Welcome screens">{SLIDES.map((s, n) => <button key={s.img} role="tab" aria-selected={n === i} aria-label={`Screen ${n + 1}`} onClick={() => go(n)} />)}</div>
-    {!last && <p className="intro-note">{tr('Pawsure is a coordination and evidence tool. It is not a vet or an emergency service.')}</p>}
+    <p className="intro-note">{tr('Pawsure is a coordination and evidence tool. It is not a vet or an emergency service.')}</p>
     <div className="intro-foot">
-      {!last && <button className="btn primary block lg" onClick={() => go(i + 1)}>{tr('Next')}</button>}
-      <button className={`btn block lg ${last ? 'primary' : 'outline'}`} onClick={() => done('signup')}>{tr('Get started')}</button>
+      {/* Same layout on every screen so nothing jumps: on the last one the first button becomes Get started and the second keeps its space. */}
+      <button className="btn primary block lg" onClick={() => last ? done('signup') : go(i + 1)}>{last ? tr('Get started') : tr('Next')}</button>
+      <button className="btn block lg outline" style={last ? { visibility: 'hidden' } : undefined} aria-hidden={last} tabIndex={last ? -1 : undefined} onClick={() => done('signup')}>{tr('Get started')}</button>
       <p className="intro-login">{tr('Already have an account?')} <button type="button" className="intro-link" onClick={() => done('login')}>{tr('Log in')}</button></p>
     </div>
   </div>;

@@ -739,8 +739,7 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .intro-slide{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 24px 0;overflow-y:auto}
 .intro-title{font:800 2rem/1.12 var(--f-display);color:var(--ink);margin:6px 0 10px;text-wrap:balance;letter-spacing:-.01em}
 .intro-text{font-size:1.05rem;line-height:1.5;color:var(--ink-2);margin:0 0 6px;max-width:340px}
-.intro-art{width:100%;max-width:370px;height:auto;margin:auto 0;mix-blend-mode:multiply;user-select:none;-webkit-user-drag:none}
-.intro-art.intro-whatsapp{max-width:310px}
+.intro-art{width:100%;max-width:370px;height:300px;object-fit:contain;flex:none;margin:auto 0;mix-blend-mode:multiply;user-select:none;-webkit-user-drag:none}
 .intro-dots{display:flex;justify-content:center;gap:10px;padding:10px 0 4px;flex:none}
 .intro-dots button{width:10px;height:10px;padding:0;border-radius:99px;border:0;background:var(--ink-3);opacity:.6;transition:width .25s}
 .intro-dots button[aria-selected="true"]{width:30px;background:var(--accent);opacity:1;box-shadow:0 0 0 1.5px var(--sage-dark)}
@@ -793,3 +792,5 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .plan-help .helper-av{width:44px;height:44px}
 .plan-help .helper-av svg{width:44px;height:44px}
 .plan-help b{display:block;font-size:1.02rem}
+.intro-title{min-height:2.24em;display:flex;align-items:center;justify-content:center}
+.intro-text{min-height:4.5em}
