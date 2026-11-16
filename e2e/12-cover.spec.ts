@@ -202,9 +202,8 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await boot(page); await signUp(page, '9811222777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await intake(page, 'Rohan & Ankita Verma', 'Raheja Vihar, Powai');
-    await expect(page.getByRole('heading', { name: 'Do you have anyone who can look in on your pet?' })).toBeVisible();
-    await page.getByRole('button', { name: 'No one yet' }).click();
+    await intake(page, 'Rohan & Ankita Verma', 'Raheja Vihar, Powai', { nobody: true });
+    // "Nobody yet" looks after the pets → straight to the circle builder (no second question).
     await expect(page.getByText('Cover is limited until you have a circle.')).toBeVisible();
     await expect(page.locator('[data-builder]')).toHaveCount(4);
     await expect(page.getByText('Day cares aren’t listed here.')).toBeVisible();

@@ -54,7 +54,6 @@ test.describe('N. Reported issues (regression)', () => {
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await intake(page, 'Kiran', 'Hiranandani, Powai');
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Kiran/ })).toBeVisible();
   });
 });

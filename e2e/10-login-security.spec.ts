@@ -71,7 +71,6 @@ test.describe('M. Login separation and security (on screen)', () => {
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await intake(page, 'Eve', 'Hiranandani, Powai');
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
     await expect(page.getByRole('heading', { name: /Eve/ })).toBeVisible();
     await expect(page.getByText('Bruno')).toHaveCount(0);
     await tab(page, 'Friends'); await expect(page.getByText('Priya Shah')).toHaveCount(0);

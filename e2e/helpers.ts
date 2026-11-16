@@ -54,7 +54,7 @@ export async function intakeInfo(page: Page, name: string, society = 'Raheja Vih
   await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Create my home' }).click();
 }
-export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string; pet?: string; helper?: { name: string; phone: string } } = {}) {
+export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string; pet?: string; helper?: { name: string; phone: string }; nobody?: boolean } = {}) {
   const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.locator('#nm').fill(name); await send();
   await page.getByRole('button', { name: 'English', exact: true }).click();
@@ -66,10 +66,10 @@ export async function intake(page: Page, name: string, society: string, o: { tow
   if (o.tower) { await page.locator('#tw').fill(o.tower); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   if (o.flat) { await page.locator('#fl').fill(o.flat); await send(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Create my home' }).click();
-  await petAndCare(page, o.pet ?? 'Coco', o.helper);
+  await petAndCare(page, o.pet ?? 'Coco', o.helper, o.nobody);
 }
 /** Playbooks 2 and 3 of the onboarding conversation: one dog, fed at 8 AM, no walks, cared for by the owner. */
-export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: string; phone: string }) {
+export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: string; phone: string }, nobody = false) {
   await page.locator('#pn0').fill(pet); await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.getByRole('button', { name: /Dog/ }).click();
   await page.getByRole('button', { name: '1–3 years' }).click();
@@ -82,6 +82,7 @@ export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: stri
   // Playbook 3: Care details
   await page.getByRole('button', { name: 'Morning · 8 AM' }).click(); await page.getByRole('button', { name: /^Done/ }).click();
   await page.getByRole('button', { name: 'No walks' }).click();
+  if (nobody) { await page.getByRole('button', { name: 'Nobody yet' }).click(); return; }
   if (!helper) { await page.getByRole('button', { name: 'Me or my family' }).click(); return; }
   await page.getByRole('button', { name: 'My house help' }).click();
   await page.locator('#hn').fill(helper.name); await page.getByRole('button', { name: 'Send', exact: true }).click();

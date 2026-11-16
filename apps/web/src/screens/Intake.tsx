@@ -331,9 +331,13 @@ export function Intake({ onDone }: { onDone: () => void }) {
       // With a helper: invite her on WhatsApp first, then give her the routine (prompts start once she says Yes).
       if (who === 'My house help') await api(`/v1/households/${hh}/helpers/invite`, { body: { name: h.name, phone: '+91' + h.phone, language: h.language } });
       for (const t of tasks) await api(`/v1/households/${hh}/routine`, { body: { ...t, assignee: who === 'My house help' ? 'helper' : 'owner' } });
-      setCare(c => ({ ...c, who })); setRoutineCount(tasks.length); setLock(steps.length); setPos(steps.length); setCircle('ask');
+      setCare(c => ({ ...c, who })); setRoutineCount(tasks.length); setLock(steps.length); setPos(steps.length);
+      // Only a house help needs a separate backup question; family is already the backup, and "nobody" goes straight to the circle builder.
+      if (who === 'My house help') setCircle('ask'); else if (who === 'Nobody yet') setCircle('no'); else { setCircle('yes'); setTimeout(onDone, reduced() ? 0 : 1800); }
     } catch (e) { setErr(e instanceof ApiError ? String(e.body.message ?? 'Your routine didn’t save. Try again.') : 'Can’t reach Pawsure. Check your connection and try again.'); } finally { setBusy(false); }
   }
+  const asked = care.who === 'My house help';
+  const helperFirst = helper.name.split(' ')[0] || tr('your helper');
   const yes = () => { setCircle('yes'); setTimeout(onDone, reduced() ? 0 : 1100); };
   function send(label: string, disabled: boolean, onSend: () => void) { return <button type="submit" className="cb-send" disabled={disabled} aria-label={label} onClick={e => { e.preventDefault(); onSend(); }}><Icon name="send" size={20} /></button>; }
 
@@ -363,9 +367,10 @@ export function Intake({ onDone }: { onDone: () => void }) {
           <Bot>✓ {tr('Your routine is saved')}{routineCount ? `: ${routineCount} ${routineCount === 1 ? tr('task a day') : tr('tasks a day')}` : ''}. {tr('It starts tomorrow, and you can change it any time in Pet → Routine.')}
           </Bot>
           {care.who === 'My house help' && <Bot><span className="wa-sent"><Icon name="send" size={16} /> {tr('Invite sent on WhatsApp')}</span>{tr('I’ve sent')} {helper.name.split(' ')[0]} {tr('a WhatsApp message to join Pawsure.')} <b>{tr('Her tasks move to her once she accepts.')}</b> {tr('Until then you get the reminders. You’ll see her status on Home.')}</Bot>}
-          {circle === 'ask' && !ready ? <Typing /> : <Bot><h2 className="cb-h">{tr('Do you have anyone who can look in on your pet?')}</h2><span className="cb-note">{tr('A family member, neighbour or friend who could step in if your helper can’t come.')}</span></Bot>}
-          {circle === 'yes' && <><Me text={tr('Yes, I have someone')} /><Bot>{tr('Great. You can add them any time in Me → Backups. All three playbooks are done')} 🎉 {tr('Taking you to your home…')}</Bot></>}
-          {circle === 'no' && <><Me text={tr('No one yet')} />{!ready ? <Typing /> : <><Bot><b>{tr('Cover is limited until you have a circle.')}</b> {tr('No problem, most people start here. Here are four easy ways to find someone who can step in:')}</Bot>
+          {asked && (circle === 'ask' && !ready ? <Typing /> : <Bot><h2 className="cb-h">{tr('If')} {helperFirst} {tr('can’t come one day, is there someone else who could step in?')}</h2><span className="cb-note">{tr('A family member, neighbour or friend. They’re only asked when a task is at risk.')}</span></Bot>)}
+          {circle === 'yes' && (asked ? <><Me text={tr('Yes, I have someone')} /><Bot>{tr('Great. You can add them any time in Me → Backups. All three playbooks are done')} 🎉 {tr('Taking you to your home…')}</Bot></>
+            : <Bot>{tr('All three playbooks are done')} 🎉 {tr('Your family looks after')} {allNames}, {tr('so they’re your backup too. You can add a neighbour or friend any time in Me → Backups. Taking you to your home…')}</Bot>)}
+          {circle === 'no' && <>{asked && <Me text={tr('No one yet')} />}{!ready ? <Typing /> : <><Bot><b>{tr('Cover is limited until you have a circle.')}</b> {tr('No problem, most people start here. Here are four easy ways to find someone who can step in when you can’t:')}</Bot>
             <div className="cb-builder"><CircleBuilder hh={hh} embedded onDone={onDone} /></div></>}</>}
         </>}
         <div ref={end} />

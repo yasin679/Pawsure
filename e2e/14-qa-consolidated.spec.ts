@@ -189,7 +189,6 @@ test.describe('S. Onboarding conversation (15 Nov)', () => {
     await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
     await page.getByRole('button', { name: 'Create my home' }).click();
     await petAndCare(page);
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
   });
 });
@@ -252,6 +251,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500011' } });
     await expect(page.getByText('Invite sent on WhatsApp')).toBeVisible();
     await expect(page.getByText(/I’ve sent Lata a WhatsApp message to join Pawsure/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'If Lata can’t come one day, is there someone else who could step in?' })).toBeVisible();
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     const card = page.locator('.help-card');
     await expect(card).toContainText('Lata Pawar');

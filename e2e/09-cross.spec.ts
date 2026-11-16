@@ -39,7 +39,6 @@ test.describe('L. Cross-cutting', () => {
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
     await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
     await page.reload();
