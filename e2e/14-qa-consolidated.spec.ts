@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, intake, intakeInfo, webhook, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, intake, intakeInfo, webhook, PHONE, findCoverForm } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -80,7 +80,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.locator('#wf').selectOption(String(16 * 60 + 30)); await page.locator('#wt').selectOption(String(21 * 60));
     await expect(page.locator('#wt option:checked')).toHaveText('9:00 PM');
     await signOut(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.getByRole('button', { name: 'Simple form' }).click();
     await page.getByRole('checkbox', { name: 'Feed' }).check();
     await page.getByRole('checkbox', { name: /Misty/ }).check();
@@ -102,7 +102,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByText('The owner has been alerted and backups are being asked. Take care.')).toBeVisible();
     await expect(page.getByText('This visit was interrupted. Thank you for letting the owner know.')).toBeVisible();
     await signOut(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('button.li', { hasText: 'Interrupted' }).first().click();
     await expect(page.getByText(/Priya had an emergency and left\./)).toBeVisible();
     await expect(page.getByText(/Finished: Feed\./)).toBeVisible();
@@ -111,7 +111,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
 
   test('R7 Pawly finds friends with its steps on screen; with nobody free it shows the no-friend page', async ({ page }) => {
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill('Can someone feed Bruno at 6 pm? Spare key with Ankita.');
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await page.getByRole('button', { name: /Find with Pawly/ }).click();

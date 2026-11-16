@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, intake } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, intake, findCoverForm } from './helpers';
 
 test.describe('M. Login separation and security (on screen)', () => {
   test('M1 Helper login → helper home only (WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe('M. Login separation and security (on screen)', () => {
 
   test('M5 Shared phone: after sign-out the old session is dead and the next person sees none of the previous person’s data', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill('Private draft from Neha: key under the mat');
     const oldToken = await page.evaluate(() => JSON.parse(localStorage.getItem('pawsure.session')!).token as string);
     await signOut(page);
@@ -47,7 +47,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     const reuse = await page.evaluate(async ([A, t]) => (await fetch(A + '/v1/me', { headers: { authorization: 'Bearer ' + t } })).status, [API, oldToken] as const);
     expect(reuse).toBe(401);
     await signIn(page, PHONE.rohan);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await expect(page.locator('#ask')).toHaveValue('');
     await expect(page.getByText('Private draft from Neha')).toHaveCount(0);
   });
@@ -74,7 +74,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     await expect(page.getByRole('heading', { name: /Eve/ })).toBeVisible();
     await expect(page.getByText('Bruno')).toHaveCount(0);
     await tab(page, 'Friends'); await expect(page.getByText('Priya Shah')).toHaveCount(0);
-    await tab(page, 'Find cover'); await expect(page.getByText('No requests yet')).toBeVisible();
+    await findCoverForm(page); await expect(page.getByText('No requests yet')).toBeVisible();
   });
 
   test('M8 Friend login sees only requests sent to them, never household tabs', async ({ page }) => {

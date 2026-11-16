@@ -45,8 +45,10 @@ export function Art({ name, width }: { name: keyof typeof ART | string; width: n
   const [x, y, w, h, alt] = a, s = width / w;
   return <span className="art" role={alt ? 'img' : 'presentation'} aria-label={alt || undefined} style={{ width, height: Math.round(h * s), backgroundSize: `${Math.round(1600 * s)}px auto`, backgroundPosition: `-${Math.round(x * s)}px -${Math.round(y * s)}px` }} />;
 }
+/** The pet's cartoon avatar (assets/avatars, from the brand sheet): dog, cat, or a bunny for other pets. */
 export function PetAvatar({ species, size = 40 }: { species: string; size?: number }) {
-  return <span className="avatar" style={{ width: size, height: size }}>{species === 'Cat' ? <Art name="catFace" width={size} /> : species === 'Dog' ? <Art name="dogFace" width={size} /> : <Icon name="paw" size={20} />}</span>;
+  const a = species === 'Cat' ? 'cat' : species === 'Dog' ? 'dog' : 'bunny';
+  return <span className="avatar pet-av" style={{ width: size, height: size }}><img src={`${import.meta.env.BASE_URL}assets/avatars/${a}.webp`} alt="" width={size} height={size} /></span>;
 }
 
 const CONF: Record<string, [string, string]> = {

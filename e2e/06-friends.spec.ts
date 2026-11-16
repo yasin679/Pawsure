@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, meItem, PHONE, api } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, meItem, PHONE, api, findCoverForm } from './helpers';
 
 test.describe('H. Friends (owner side)', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); await tab(page, 'Friends'); });
@@ -74,7 +74,7 @@ test.describe('I. The friend’s own app', () => {
     await signOut(page);
 
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('button.li').first().click();
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     await expect(page.locator('.conf', { hasText: 'Confirmed' }).first()).toBeVisible();
@@ -90,7 +90,7 @@ test.describe('I. The friend’s own app', () => {
     await signOut(page);
 
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await expect(page.locator('button.li').first()).toContainText('Completed');
   });
 });

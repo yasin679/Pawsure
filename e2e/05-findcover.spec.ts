@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, tab, clockTo, taskCard, dialog, api, openPlan, closePlan } from './helpers';
+import { boot, signInOwner, tab, clockTo, taskCard, dialog, api, openPlan, closePlan, findCoverForm } from './helpers';
 
 const friendsPhone = (page: Page) => page.locator('.sheet', { hasText: 'Friends’ phones (simulated)' });
 async function friendReply(page: Page, name: string, button?: string, text?: string) {
@@ -11,7 +11,7 @@ async function friendReply(page: Page, name: string, button?: string, text?: str
   await page.getByRole('button', { name: 'Hide friends’ phones' }).click();
 }
 async function ask(page: Page, text: string) {
-  await tab(page, 'Find cover');
+  await findCoverForm(page);
   await page.locator('#ask').fill(text);
   await page.getByRole('button', { name: 'Understand my request' }).click();
   await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
@@ -91,7 +91,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G5 AI unavailable → simple form; matching still works', async ({ page }) => {
     await api(page, 'POST', '/demo/llm', { mode: 'down' });
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await expect(page.locator('main').getByText(/AI unavailable/)).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G6 AI times out (8 s) → simple form', async ({ page }) => {
     await api(page, 'POST', '/demo/llm', { mode: 'timeout' });
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await expect(page.getByText(/AI timed out after 8 s/)).toBeVisible({ timeout: 20_000 });
@@ -157,3 +157,21 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     expect(req.body[0]!.history.filter(h => /Accepted/.test(h.state)).length).toBe(1);
   });
 });
+
+test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
+  test('G9 Find cover opens on “How can I help?”; any request shows the thinking animation, then friends who can help; Ask goes to the request form', async ({ page }) => {
+    await boot(page); await signInOwner(page);
+    await tab(page, 'Find cover');
+    await expect(page.getByRole('heading', { name: 'How can I help?' })).toBeVisible();
+    await page.locator('#ai-in').fill('blah blah anything at all');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByRole('status', { name: 'Pawly is thinking' })).toBeVisible();
+    await expect(page.locator('.friend-card').first()).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Pawly is thinking' })).toHaveCount(0);
+    expect(await page.locator('.friend-card').count()).toBeGreaterThan(0);
+    await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/avatars\//);
+    await page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }).click();
+    await expect(page.locator('#ask')).toHaveValue('blah blah anything at all');
+  });
+});
+

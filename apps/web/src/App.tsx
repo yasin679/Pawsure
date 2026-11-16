@@ -12,6 +12,7 @@ import { RoutineScreen, HealthScreen, HelperScreen, CircleScreen } from './scree
 import { LookIn } from './screens/LookIn';
 import { HelperSim } from './screens/HelperSim';
 import { FindCover } from './screens/FindCover';
+import { CoverAssistant, Sparkle } from './screens/Assistant';
 import { Friends, PrivacyScreen } from './screens/Friends';
 import { FriendHome } from './screens/FriendHome';
 import { FriendSim } from './screens/FriendSim';
@@ -32,7 +33,7 @@ export function hideSplash() {
   s.dataset.hiding = '1';
   setTimeout(() => { s.classList.add('gone'); setTimeout(() => s.remove(), 800); }, Math.max(0, SPLASH_MIN_MS - performance.now()));
 }
-const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'search'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
+const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'sparkle'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
 const TOOLS_KEY = 'pawsure.demoTools';
 const toolsOn = () => { try { if (location.hash.includes('tools')) localStorage.setItem(TOOLS_KEY, '1'); return localStorage.getItem(TOOLS_KEY) === '1'; } catch { return false; } };
@@ -53,7 +54,7 @@ export function App() {
   // One-time task links for a substitute or an ad-hoc number (PS-128, PS-133): /t/<token>, or #task-<token> in the demo.
   const taskToken = location.pathname.startsWith('/t/') ? location.pathname.slice(3) : hash.startsWith('#task-') ? hash.slice(6) : null;
   const [authed, setAuthed] = useState(!!session.get());
-  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false);
+  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [day, setDay] = useState<DayView | null>(null);
@@ -100,7 +101,7 @@ export function App() {
   if (me && checked && !hh && !isFriend) return <div className="pwa"><Onboarding start="consent" onDone={() => load()} /></div>;
   if (me && role === 'helper') return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <HelperHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
   if (me && role && ['backup', 'family', 'viewer'].includes(role)) return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <CircleHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
-  const go = (t: Tab, add = false) => { setTab(t); setSub(null); setAddPet(add); if (t === 'today') load(); };
+  const go = (t: Tab, add = false) => { setTab(t); setSub(null); setAddPet(add); setFindForm(false); if (t === 'today') load(); };
 
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
@@ -116,7 +117,8 @@ export function App() {
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
     {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
-    {!sub && tab === 'find' && hh && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} onAsk={t => { setDraft(t); setFindForm(true); }} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}
     {!sub && tab === 'me' && <><AppBar title={tr('Me')} /><main className="body">
       {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>{tr('Accept')}</button></div>)}
@@ -135,7 +137,7 @@ export function App() {
         <button className="btn ghost block" onClick={() => signOut()}>{tr('Sign out')}</button>
       <button className="btn ghost block" onClick={signOutAll}>{tr('Sign out of all devices')}</button>
     </main></>}
-    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} /><span className="tl">{tr(l)}</span></button>)}</nav>
+    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}>{i === 'sparkle' ? <span className="ic tab-spark"><Sparkle size={24} /></span> : <Icon name={i} size={22} />}<span className="tl">{tr(l)}</span></button>)}</nav>
   </div>;
 }
 
