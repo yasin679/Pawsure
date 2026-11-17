@@ -269,12 +269,11 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     const r = (await api(page, 'POST', `${HH}/requests`, { text: 'Can someone feed Bruno at 6 pm?' })).body;
     expect(r.parsedBy).toBe('rules (no AI connected)');
   });
-  test('P5 The welcome mascot is a transparent image, not a crop on a beige box', async ({ page }) => {
+  test('P5 The login page is text only: no illustration, no background shapes (17 Nov)', async ({ page }) => {
     await boot(page);
-    const img = page.locator('.login-hero img.login-mascot');
-    await expect(img).toBeVisible(); await expect(img).toHaveAttribute('src', /mascot-family\.png$/);
-    const corner = await img.evaluate(async (el: HTMLImageElement) => { const c = document.createElement('canvas'); c.width = el.naturalWidth; c.height = el.naturalHeight; const g = c.getContext('2d')!; g.drawImage(el, 0, 0); return g.getImageData(2, 2, 1, 1).data[3]; });
-    expect(corner).toBe(0);
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    await expect(page.locator('.login img')).toHaveCount(0);
+    expect(await page.locator('.login').evaluate(el => getComputedStyle(el, '::before').display)).toBe('none');
   });
   test('P6 On a wide screen the simulated phones sit beside the owner app, with no developer wording', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 980 });
