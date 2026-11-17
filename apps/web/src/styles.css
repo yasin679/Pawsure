@@ -934,3 +934,5 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .add-helper-note{margin:-4px 4px 0;text-align:center;color:var(--ink-2);font-weight:700;font-size:var(--fs-s)}
 /* floating tab bar: nothing behind it, the page runs to the bottom edge */
 .pwa:has(> .tabbar) > .tabbar{box-shadow:0 10px 24px -12px rgba(20,24,20,.55)}
+/* the subtitle stays readable: full strength, page ink, also when the header is compact */
+.today .today-hero .th-date{opacity:1;color:var(--ink-2);font-size:.95rem;font-weight:600;margin-top:4px}
