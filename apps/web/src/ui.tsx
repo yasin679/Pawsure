@@ -19,6 +19,15 @@ const PATHS: Record<string, string> = {
   alert: '<path d="M12 4 21 19.5H3Z"/><path d="M12 10v4.5M12 17h.01"/>',
   phone: '<path d="M6.5 4h3l1.5 4-2 1.5a10 10 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15 15 0 0 1 4.5 6a2 2 0 0 1 2-2Z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  food: '<path d="M3.5 12h17a8.5 6.5 0 0 1-17 0Z"/><path d="M7 9.5c1.5-1.8 3-2.6 5-2.6s3.5.8 5 2.6"/><path d="M12 6.9V4.5"/>',
+  water: '<path d="M12 3.5s-6 6.6-6 10.7a6 6 0 0 0 12 0c0-4.1-6-10.7-6-10.7Z"/><path d="M9.2 14.6a3 3 0 0 0 2.6 2.6"/>',
+  walk: '<circle cx="13" cy="4.6" r="1.8"/><path d="m9.5 21 2.2-6.2 2.6 2.4V21"/><path d="m8 11.5 2.6-3.4 3.7.6 2.3 3.3"/><path d="m10.6 8.1-1 5.8 2.1.9"/>',
+  pill: '<rect x="3.6" y="8.6" width="16.8" height="6.8" rx="3.4" transform="rotate(-35 12 12)"/><path d="m9.9 9 4.2 6"/>',
+  litter: '<path d="M3.5 10h17l-1.6 8.3a2 2 0 0 1-2 1.7H7.1a2 2 0 0 1-2-1.7Z"/><path d="M7 10c.6-2.3 2.6-3.8 5-3.8s4.4 1.5 5 3.8"/><path d="M9 14h.01M12 15h.01M15 14h.01"/>',
+  pad: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M8 9h8M8 12h8M8 15h5"/>',
+  camera: '<path d="M4.5 8.5h3l1.6-2.5h5.8l1.6 2.5h3a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18v-8a1.5 1.5 0 0 1 1.5-1.5Z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  mic: '<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v2.5"/>',
+  send: '<path d="M4.5 12 19.5 5l-4 14-4.2-5.8Z"/><path d="m11.3 13.2 8.2-8.2"/>',
   star: '<path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4-3.9-3.8 5.4-.8Z"/>'
 };
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {
@@ -36,8 +45,10 @@ export function Art({ name, width }: { name: keyof typeof ART | string; width: n
   const [x, y, w, h, alt] = a, s = width / w;
   return <span className="art" role={alt ? 'img' : 'presentation'} aria-label={alt || undefined} style={{ width, height: Math.round(h * s), backgroundSize: `${Math.round(1600 * s)}px auto`, backgroundPosition: `-${Math.round(x * s)}px -${Math.round(y * s)}px` }} />;
 }
+/** The pet's cartoon avatar (assets/avatars, from the brand sheet): dog, cat, or a bunny for other pets. */
 export function PetAvatar({ species, size = 40 }: { species: string; size?: number }) {
-  return <span className="avatar" style={{ width: size, height: size }}>{species === 'Cat' ? <Art name="catFace" width={size} /> : species === 'Dog' ? <Art name="dogFace" width={size} /> : <Icon name="paw" size={20} />}</span>;
+  const a = species === 'Cat' ? 'cat' : species === 'Dog' ? 'dog' : 'bunny';
+  return <span className="avatar pet-av" style={{ width: size, height: size }}><img src={`${import.meta.env.BASE_URL}assets/avatars/${a}.webp`} alt="" width={size} height={size} /></span>;
 }
 
 const CONF: Record<string, [string, string]> = {
@@ -50,8 +61,9 @@ export function Conf({ state, label }: { state: string; label?: string }) {
   return <span className={`conf ${cls}`}><span className="g" aria-hidden="true">{g}</span>{tr(label ?? state)}</span>;
 }
 
-export function AppBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }) {
-  return <div className="appbar">{onBack && <button className="back" onClick={onBack} aria-label="Back">‹</button>}<h1>{title}</h1>{right}</div>;
+/** Screen header. `hideTitle` keeps the title for screen readers only (Today shows the greeting instead). */
+export function AppBar({ title, onBack, right, hideTitle }: { title: string; onBack?: () => void; right?: ReactNode; hideTitle?: boolean }) {
+  return <div className="appbar">{onBack && <button className="back" onClick={onBack} aria-label="Back">‹</button>}{hideTitle ? <><h1 className="sr-only">{title}</h1><span className="grow" /></> : <h1>{title}</h1>}{right}</div>;
 }
 export const Banner = ({ kind, icon, children }: { kind: 'alert' | 'warn' | 'info' | 'sim'; icon: string; children: ReactNode }) => <div className={`banner ${kind}`}><span className="bi" aria-hidden="true">{icon}</span><div className="grow">{children}</div></div>;
 

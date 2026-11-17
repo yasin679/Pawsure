@@ -29,6 +29,7 @@ export async function runRetention(db: Db, now: Date): Promise<Record<string, nu
     evidenceRefsCleared: await n(`update checkin_signals s set evidence_ref=null where evidence_ref is not null and s.received_time < $1 and not exists (select 1 from care_tasks t where t.id=s.task_id and t.mismatch_case is not null)`, [ago(RETENTION.photosVoiceDays * DAY)]),
     incidentVoiceCleared: await n(`update incidents set voice_ref=null where voice_ref is not null and reported_at < $1`, [ago(RETENTION.incidentEvidenceYears * 365 * DAY)]),
     requestTextCleared: await n(`update friend_requests set parse=null, doc = doc - 'text' where created_at < $1 and (parse is not null or doc ? 'text')`, [ago(RETENTION.requestTextDays * DAY)]),
+    proofPhotosCleared: await n(`update evidence_photos set data_url=null where data_url is not null and created_at < $1`, [ago(RETENTION.photosVoiceDays * DAY)]),
     liveLocationDeleted: await n(`delete from live_location_sessions where delete_after < $1`, [now.toISOString()]),
     friendProfilesDeleted: await n(`delete from friend_profiles where opt_out_requested_at is not null and opt_out_requested_at < $1`, [ago(RETENTION.friendOptOutDays * DAY)]),
     helperMessagesDeleted: await n(`delete from helper_messages where at < $1`, [ago(RETENTION.messageMetadataMonths * 30 * DAY)]),

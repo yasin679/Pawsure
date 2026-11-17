@@ -18,7 +18,7 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | Source of truth | PRD v1.4, sections 7.7, 9.6, 8.8 (PS-127 to PS-141), 9.5, 10.4, 16.3, 17.1, Appendix F |
 | Repository | github.com/yasin679/Pawsure |
 | Database | Migration `006_cover_continuity.sql` (adds tables and columns only), with a rollback script |
-| Tests | 360 API, rules and database tests (211 in 1.0.1); 126 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
+| Tests | 364 API, rules and database tests (211 in 1.0.1); 127 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
 
 ## 2 What’s new: cover continuity
 
@@ -124,6 +124,17 @@ From *Pawsure_QA_Consolidated_Tracker_2026-11-14.xlsx* (PAW-017 to PAW-062 and a
 - **Every state and union territory:** sign-up and Edit profile ask for the state, then the city (main cities listed, others can be typed), then the society.
 - **Names must be names:** owner, friend, helper, care-circle and backup names need letters and no digits ("12345" or "Priya2" is refused, on screen and on the server). Pet and vet names need a letter.
 - **Consent in plain words:** **Read the Terms** and **Read the Privacy Notice** open a one-minute summary with its version (T-1.0, PN-1.0: the version of the text you agree to, recorded with the time). The pilot research toggle is removed.
+
+### 3.5 Proof from the app: photo and today's code (16 Nov 2026)
+
+Our principle is that a task counts only with proof. Helpers could already send it on WhatsApp or a basic phone, but friends and backups could tap **Done** with no proof, and that was recorded as evidence. Now:
+
+- **Everyone sends proof the same way:** a photo of the bowl or pet (**Take photo** or **Choose from gallery**) and today's 4-digit code from the card in the food box. Helpers do it from **Today's tasks** in their own login (or on WhatsApp / missed call as before); friends from **Done: send proof**; backups from **Done: send proof** on their one-time link.
+- **Graded like WhatsApp proof:** photo + today's code is strong; a photo without a code, or the code without a photo, is weaker; an old or wrong code is flagged; a photo sent before doesn't count again; proof outside the task's time window doesn't count.
+- **No proof is never evidence:** "mark done anyway" is recorded as *Said done, no photo or code* and the owner is told.
+- **The owner sees the proof:** the task on Today shows each photo, who sent it, when, and whether the code matched.
+- **Privacy:** photos are shrunk on the phone (under about 60 KB) and deleted after 90 days like other photos; only the home's owners and co-owners can see them. Migration `009_proof_photos.sql`.
+- **Demo:** the proof sheet shows today's code (demo only), so it can be tried without the printed card.
 
 ## 4 Upgrade notes
 

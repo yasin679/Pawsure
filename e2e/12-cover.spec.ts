@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, fillSociety, PHONE, SUNITA, DAY } from './helpers';
+import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY, openPlan } from './helpers';
 
 /** v1.4 cover continuity (PRD 17.1 new rows) through the real screens of the demo build. */
 const HH = '/v1/households/hh_demo';
@@ -9,6 +9,14 @@ const reminderButton = async (page: Page, kind: 'yes' | 'cant' | 'sub') => (awai
 const cover = async (page: Page) => (await api(page, 'GET', `${HH}/cover`)).body;
 const refresh = async (page: Page) => { await tab(page, 'Me'); await tab(page, 'Today'); };
 const atRiskCard = (page: Page) => page.locator('.card.atrisk').first();
+/** The cover line is shown in the task's sheet (Home task cards show only icon, title, time and status). */
+const coverLine = async (page: Page, title: string) => {
+  await page.locator('button.task', { hasText: title }).first().click();
+  await page.getByRole('dialog').locator('summary', { hasText: 'Task details' }).click();
+  const text = await page.getByRole('dialog').locator('.coverline').first().innerText();
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).last().click();
+  return text;
+};
 
 test.describe('O. Cover continuity (v1.4)', () => {
   test('O1 Helper taps Can’t make it at 2:30 → At risk → backups in order → Mrs Desai reads the note and accepts → owner confirms → gate and key', async ({ page }) => {
@@ -20,7 +28,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await refresh(page);
     await expect(atRiskCard(page)).toContainText('At risk · Bruno · Toilet pad change + water top-up');
     await expect(atRiskCard(page)).toContainText('Asking: Mrs Desai and Ankita');
-    await expect(page.locator('.coverline.risk').first()).toContainText('At risk');
+    expect(await coverLine(page, 'Toilet pad change')).toContain('At risk');
     const job = (await cover(page)).jobs[0];
     await webhook(page, { from: DESAI, type: 'button', payload: `cb_yes:${job.id}` }); // first-time carer: blocked until the note is read
     expect((await cover(page)).jobs[0].hold).toBeNull();
@@ -30,7 +38,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await page.getByRole('button', { name: 'Confirm Mrs Desai' }).click();
     const gk = page.locator('.gatekey').first();
     await expect(gk).toContainText('Gate and key · Mrs Desai'); await expect(gk).toContainText('To do');
-    await expect(page.locator('.coverline.ok').filter({ hasText: 'Mrs Desai · replacement confirmed' })).toBeVisible();
+    expect(await coverLine(page, 'Toilet pad change')).toContain('Mrs Desai · replacement confirmed');
     await gk.getByRole('checkbox').click(); await expect(gk.getByRole('checkbox')).toBeChecked();
     await gk.locator('select').selectOption({ index: 3 });
     await expect(gk).toContainText('Ready');
@@ -127,14 +135,15 @@ test.describe('O. Cover continuity (v1.4)', () => {
     const sheet = dialog(page); await expect(sheet).toContainText('Cover not found');
     await sheet.getByRole('button', { name: 'Move it' }).click();
     await dialog(page).getByRole('button', { name: 'Move it' }).click();
-    await expect(page.locator('.coverline').filter({ hasText: 'You’re handling it' })).toBeVisible();
+    expect(await coverLine(page, 'Evening play walk')).toContain('You’re handling it');
+    await openPlan(page);
     await page.getByRole('button', { name: 'Day report' }).click();
     await expect(dialog(page)).toContainText('Cover history'); await expect(dialog(page)).toContainText('Mrs Desai (no reply)');
   });
 
   test('O9 “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned', async ({ page }) => {
-    await boot(page); await signInOwner(page);
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await boot(page); await signInOwner(page, { home: true });
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await expect(dialog(page)).toContainText('Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet.');
@@ -143,11 +152,12 @@ test.describe('O. Cover continuity (v1.4)', () => {
     await expect(dialog(page)).toContainText('who is plan B');
     await dialog(page).locator('#pb').selectOption('I’ll come back myself');
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
+    await openPlan(page);
     await expect(page.locator('.conf').filter({ hasText: 'No cover planned' })).toBeVisible();
   });
 
   test('O10 “I’m delayed” 7 → 9 PM: Sunita only until 8 → a request for the dinner only', async ({ page }) => {
-    await boot(page); await signInOwner(page);
+    await boot(page); await signInOwner(page, { home: true });
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
     await clockTo(page, '18:30');
@@ -190,13 +200,11 @@ test.describe('O. Cover continuity (v1.4)', () => {
   });
 
   test('O13 Newcomer with nobody → honest message and the circle builder; no day-care list', async ({ page }) => {
-    await boot(page); await signIn(page, '9811222777');
+    await boot(page); await signUp(page, '9811222777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Rohan & Ankita Verma'); await fillSociety(page, 'Raheja Vihar, Powai');
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByRole('heading', { name: 'Do you have anyone who can look in on your pet?' })).toBeVisible();
-    await page.getByRole('button', { name: 'No one yet' }).click();
+    await intake(page, 'Rohan & Ankita Verma', 'Raheja Vihar, Powai', { nobody: true });
+    // "Nobody yet" looks after the pets → straight to the circle builder (no second question).
     await expect(page.getByText('Cover is limited until you have a circle.')).toBeVisible();
     await expect(page.locator('[data-builder]')).toHaveCount(4);
     await expect(page.getByText('Day cares aren’t listed here.')).toBeVisible();
@@ -246,12 +254,14 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     await expect(page.locator('.card.warn', { hasText: 'Lunch + fresh water' }).first()).toContainText('Your backup was alerted at 2:00 PM.');
     await expect(page.getByText(/is alerted at 2:00 PM if you don’t acknowledge/)).toHaveCount(0);
   });
-  test('P3 “Planned” appears once on a task card', async ({ page }) => {
+  test('P3 A task card shows Pending (no “Planned”) and its cover only in the task sheet', async ({ page }) => {
     await boot(page); await signInOwner(page);
     const card = page.locator('button.task', { hasText: 'Lunch + fresh water' }).first();
     await expect(card).toBeVisible();
-    expect(((await card.innerText()).match(/Planned/g) ?? []).length).toBeLessThanOrEqual(1);
-    await expect(card.locator('.coverline')).toContainText('Sunita · assigned');
+    await expect(card).toContainText('Pending');
+    await expect(card).not.toContainText('Planned');
+    await expect(card.locator('.coverline')).toHaveCount(0); // cover is shown in the task sheet, not on the card
+    expect(await coverLine(page, 'Lunch + fresh water')).toContain('Sunita · assigned');
   });
   test('P4 The request label says rules (no AI connected); the demo bar has no parser or scenario menus', async ({ page }) => {
     await boot(page); await signInOwner(page);

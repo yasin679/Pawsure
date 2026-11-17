@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, fillSociety, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, intake, PHONE } from './helpers';
 
 /** Issues reported on 11 Nov 2026, reproduced the way a user meets them (real waiting, no demo-clock jumps). */
 test.describe('N. Reported issues (regression)', () => {
@@ -44,7 +44,7 @@ test.describe('N. Reported issues (regression)', () => {
 
   test('N4 A new user who reloads part-way through setup continues setup (no blank screen)', async ({ page }) => {
     await boot(page);
-    await signIn(page, '9811777888');
+    await signUp(page, '9811777888');
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     // simulate the app restarting with the session kept but no household yet
     await page.evaluate(() => { location.hash = 'admin'; });
@@ -53,9 +53,7 @@ test.describe('N. Reported issues (regression)', () => {
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Kiran'); await fillSociety(page, 'Hiranandani, Powai');
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
+    await intake(page, 'Kiran', 'Hiranandani, Powai');
     await expect(page.getByRole('heading', { name: /Kiran/ })).toBeVisible();
   });
 });

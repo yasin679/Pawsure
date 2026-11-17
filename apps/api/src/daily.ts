@@ -9,6 +9,7 @@ import type { Deps } from './app.js';
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit, loadDay, ingestSignal, runEscalations, hashImage } from './care.js';
 import { seal, open } from './secrets.js';
+import { ProofIn, recordProof, proofMessage } from './proof.js';
 import { render, BUTTONS, type Lang } from './templates.js';
 import { runRetention, serviceChecks, raiseAlerts, runBackup } from './ops.js';
 
@@ -106,7 +107,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       if (t.escalation.ackAt != null) ev.push({ at: t.escalation.ackAt, kind: 'owner', text: `“I’m on it” for ${t.title}` });
     }
     const vs = await db.query<{ kind: string; event_time: string; registered_number: boolean | null; owner_provided: boolean }>(`select s.* from checkin_signals s join care_visits v on v.id=s.visit_id where v.household_id=$1 and v.care_date=$2`, [hh, date]);
-    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (s.kind === 'call_arrive' ? 'Arrival missed call' : s.kind === 'call_exit' ? 'Exit missed call' : 'Gate entry (owner-provided)') + (s.registered_number === false ? ', rejected (unregistered number)' : '') }));
+    const VS: Record<string, string> = { call_arrive: 'Arrival missed call', call_exit: 'Exit missed call', gate: 'Gate entry (owner-provided)', code_start: 'Start code photo', code_end: 'End code photo' };
+    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (VS[s.kind] ?? s.kind) + (s.registered_number === false ? ', rejected (unregistered number)' : '') + ((s as { code_ok?: boolean | null }).code_ok === false ? ', code did not match' : '') + ((s as { duplicate?: boolean }).duplicate ? ', not counted (reused image)' : '') }));
     const inc = await db.query<{ severity: string; category: string; reported_at: string }>(`select * from incidents where household_id=$1 and reported_at >= $2 and reported_at < $3`, [hh, atMinute(date, 0).toISOString(), atMinute(date, 1440).toISOString()]);
     inc.forEach(i => ev.push({ at: m(i.reported_at), kind: 'alert', text: `${i.severity} report: ${i.category.replace(/_/g, ' ')}` }));
     if (day.day.leftAt != null) ev.push({ at: day.day.leftAt, kind: 'owner', text: 'You left' });
@@ -196,6 +198,25 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       [btn('consent_yes', lang, hh), btn('consent_notnow', lang, hh), { id: `lang_mr:${hh}`, label: 'मराठी' }, { id: `lang_hi:${hh}`, label: 'हिन्दी' }, { id: `lang_en:${hh}`, label: 'English' }]);
   }
 
+  /** Owner → "Send reminder" on a task: one WhatsApp nudge to the helper (at most one per task every 15 minutes). */
+  app.post('/v1/households/:hh/tasks/:id/remind', async (c) => {
+    const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'task', 'update'))) return x.deny(c);
+    const day = await loadDay(db, hh, x.careDate(c), now());
+    const t = day.tasks.find(y => y.id === c.req.param('id')); if (!t) return c.json({ error: 'not_found' }, 404);
+    const hlp = (await db.query<{ id: string; method: string | null; name: string }>(`select m.id, m.method, coalesce(m.display_label, u.display_name) as name from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper' and m.status='active' order by (m.id=$2) desc limit 1`, [hh, t.assignee]))[0];
+    const cst = hlp ? await consentOf(hlp.id) : null;
+    if (!hlp || !cst?.granted || cst.kind === 'helper_withdrawal') return c.json({ error: 'no_helper', message: 'Your helper hasn’t accepted the WhatsApp invite yet, so a reminder can’t be sent.' }, 409);
+    const key = `remind:${t.id}:${Math.floor(now().getTime() / 900000)}`;
+    const ins = await db.query(`insert into notifications(id, household_id, dedupe_key, recipient, channel, template) values ($1,$2,$3,$4,'whatsapp','W3_PROMPT') on conflict (dedupe_key) do nothing returning id`, [uid('ntf'), hh, key, hlp.id]);
+    const first = (hlp.name ?? '').split(' ')[0] || 'your helper';
+    if (!ins.length) return c.json({ ok: true, note: `A reminder was already sent to ${first} in the last 15 minutes.` });
+    const lang = await helperLang(hlp.id);
+    const pet = (await db.query<{ name: string }>(`select name from pets where id=$1`, [t.petId]))[0]?.name ?? '';
+    const hhmm = `${((Math.floor(t.due / 60) + 11) % 12) + 1}:${String(t.due % 60).padStart(2, '0')}`;
+    await helperSay(hh, hlp.id, 'W3_PROMPT', { pet, task: '⏰ ' + t.title, time: hhmm, how: render(hlp.method === 'voice' ? 'HOW_VOICE' : hlp.method === 'ivr' ? 'HOW_IVR' : 'HOW_PHOTO', lang) }, t.id);
+    await audit(db, c.get('userId'), hh, 'task.reminder_sent', { task: t.id, helper: hlp.id });
+    return c.json({ ok: true, note: `Reminder sent to ${first} on WhatsApp.` });
+  });
   app.get('/v1/households/:hh/helpers', async (c) => {
     const hh = c.req.param('hh'); const role = await x.guard(c, hh, 'helper_consent', 'read'); if (!role) return x.deny(c);
     const rows = await db.query<{ id: string; status: string; method: string | null; paused: boolean; name: string; language: string; invited_at: string }>(`select m.id, m.status, m.method, m.paused, coalesce(m.display_label, u.display_name) as name, coalesce(m.invite_language, u.language) as language, m.invited_at from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper'`, [hh]);
@@ -225,6 +246,52 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     await helperSay(hh, c.req.param('mid'), 'W_PRACTICE'); await audit(db, c.get('userId'), hh, 'helper.practice', {}); return c.json({ ok: true, note: 'Practice prompt sent; nothing is recorded as evidence.' });
   });
   /** Helper's WhatsApp thread, for the owner-side simulator in demo mode only (owners never see the helper's chat in production). */
+  /* ---------- Proof from the helper's own login (16 Nov): today's tasks and Send proof ---------- */
+  app.get('/v1/me/helper/tasks', async (c) => {
+    const mems = await db.query<{ id: string; household_id: string; paused: boolean }>(`select id, household_id, paused from memberships where user_id=$1 and role='helper' and status='active'`, [c.get('userId')]);
+    const out = [];
+    for (const m of mems) {
+      const date = istDate(now());
+      const tasks = await db.query<{ id: string; title: string; due_minute: number; pet: string }>(`select t.id, t.title, t.due_minute, p.name as pet from care_tasks t join pets p on p.id=t.pet_id where t.household_id=$1 and t.care_date=$2 and t.assignee_membership_id=$3 order by t.due_minute, t.title`, [m.household_id, date, m.id]);
+      for (const t of tasks) {
+        const ph = await db.query<{ code_result: string }>(`select code_result from evidence_photos where task_id=$1 order by created_at desc limit 1`, [t.id]);
+        const sig = (await db.query<{ n: number }>(`select count(*)::int as n from checkin_signals where task_id=$1 and kind in ('photo','voice','ivr')`, [t.id]))[0]!.n;
+        out.push({ id: t.id, title: t.title, pet: t.pet, due: t.due_minute, householdId: m.household_id, proofSent: sig > 0, codeResult: ph[0]?.code_result ?? null });
+      }
+    }
+    const cst = mems[0] ? await consentOf(mems[0].id) : null;
+    return c.json({ tasks: out, canSend: !!cst?.granted && cst.kind !== 'helper_withdrawal' && !mems[0]?.paused });
+  });
+  app.post('/v1/me/helper/tasks/:id/proof', async (c) => {
+    const proof = ProofIn.parse(await c.req.json().catch(() => ({})));
+    const t = (await db.query<{ household_id: string; assignee_membership_id: string | null }>(`select household_id, assignee_membership_id from care_tasks where id=$1`, [c.req.param('id')]))[0];
+    const mem = t ? (await db.query<{ id: string; paused: boolean }>(`select id, paused from memberships where id=$1 and user_id=$2 and role='helper' and status='active'`, [t.assignee_membership_id, c.get('userId')]))[0] : undefined;
+    if (!t || !mem) return c.json({ error: 'not_found', message: 'This task isn’t yours.' }, 404);
+    const cst = await consentOf(mem.id);
+    if (!cst?.granted || cst.kind === 'helper_withdrawal' || mem.paused) return c.json({ error: 'no_helper_consent', message: 'Check-ins are stopped. Reply “start” on WhatsApp to begin again.' }, 409);
+    if (!proof.photo && !proof.code) return c.json({ error: 'no_proof', message: 'Add a photo or today’s code.' }, 400);
+    const r = await recordProof(db, { householdId: t.household_id, taskId: c.req.param('id'), actor: 'helper:' + mem.id, channel: 'app', proof, now: now(), key: `app-proof:${c.req.param('id')}:${mem.id}:${Math.floor(now().getTime() / 60000)}` });
+    return c.json({ ok: true, proof: r, message: proofMessage(r) });
+  });
+  /** The owner and co-owner see the proof photos for a task, with whether the code matched. */
+  app.get('/v1/households/:hh/tasks/:id/proof', async (c) => {
+    const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'evidence', 'read'))) return x.deny(c);
+    const rows = await db.query<{ data_url: string | null; code_result: string; actor: string; channel: string; created_at: string }>(`select data_url, code_result, actor, channel, created_at from evidence_photos where household_id=$1 and task_id=$2 order by created_at`, [hh, c.req.param('id')]);
+    const names = async (a: string) => {
+      const [kind, id] = a.split(':');
+      if (kind === 'helper') return (await db.query<{ n: string }>(`select coalesce(m.display_label, u.display_name, 'Helper') as n from memberships m join users u on u.id=m.user_id where m.id=$1`, [id]))[0]?.n ?? 'Helper';
+      if (kind === 'friend') return (await db.query<{ n: string }>(`select coalesce(display_name,'Friend') as n from users where id=$1`, [id]))[0]?.n ?? 'Friend';
+      return (await db.query<{ n: string }>(`select name as n from backup_contact where id=$1 union all select name from task_links where id=$1`, [id]))[0]?.n ?? 'Cover';
+    };
+    return c.json(await Promise.all(rows.map(async r => ({ photo: r.data_url, code: r.code_result, by: await names(r.actor), channel: r.channel, at: r.created_at }))));
+  });
+  /** Demo only: today's food-box code, so the demo can be tried without the printed card. */
+  app.get('/demo/code-today/:hh', async (c) => {
+    if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
+    const card = (await cards(c.req.param('hh'))).find(k => k.active);
+    return c.json({ code: card?.codes[Number(istDate(now()).slice(8, 10))] ?? null });
+  });
+
   app.get('/demo/helper-thread/:mid', async (c) => {
     if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
     return c.json(await db.query(`select direction, template, body, gloss, task_id, buttons, at from helper_messages where membership_id=$1 order by at, id`, [c.req.param('mid')]));
@@ -233,7 +300,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   /* Inbound WhatsApp (BSP webhook): buttons, text, photo, voice. Idempotent; consent-gated; tenant from the template context. */
   app.post('/webhooks/whatsapp', async (c) => {
     if (!webhookOk(c)) return c.json({ error: 'unauthorized_webhook' }, 401);
-    const b = z.object({ messageId: z.string(), from: z.string(), type: z.enum(['button', 'text', 'photo', 'voice']), payload: z.string().optional(), text: z.string().max(500).optional(), taskId: z.string().optional(), mediaRef: z.string().optional(), caption: z.string().max(200).optional(), sentAt: z.string().optional() }).parse(await c.req.json());
+    const b = z.object({ messageId: z.string(), from: z.string(), type: z.enum(['button', 'text', 'photo', 'voice']), payload: z.string().optional(), text: z.string().max(500).optional(), taskId: z.string().optional(), visitId: z.string().optional(), mediaRef: z.string().optional(), caption: z.string().max(200).optional(), sentAt: z.string().optional() }).parse(await c.req.json());
     const seen = await db.query(`insert into inbound_messages(message_id, channel, payload) values ($1,'whatsapp',$2) on conflict do nothing returning message_id`, ['wa:' + b.messageId, JSON.stringify({ type: b.type })]);
     if (!seen.length) return c.json({ status: 'duplicate_event' });
     const memberships = await db.query<{ id: string; household_id: string; status: string; paused: boolean; method: string | null }>(`select m.id, m.household_id, m.status, m.paused, m.method from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status in ('active','invited')`, [b.from]);
@@ -242,7 +309,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (x.ff && (b.payload?.startsWith('ff_') || !memberships.length)) { const r = await x.ff.inbound({ ...b, messageId: b.messageId }); return c.json(r.body, r.status as 200); }
     if (!memberships.length) return c.json({ error: 'unknown_sender' }, 404);
     const hhFromPayload = b.payload?.split(':')[1];
-    const taskHh = b.taskId ? (await db.query<{ household_id: string }>(`select household_id from care_tasks where id=$1`, [b.taskId]))[0]?.household_id : undefined;
+    const taskHh = b.taskId ? (await db.query<{ household_id: string }>(`select household_id from care_tasks where id=$1`, [b.taskId]))[0]?.household_id
+      : b.visitId ? (await db.query<{ household_id: string }>(`select household_id from care_visits where id=$1`, [b.visitId]))[0]?.household_id : undefined;
     const mem = memberships.find(m => m.household_id === (hhFromPayload ?? taskHh)) ?? (memberships.length === 1 ? memberships[0] : undefined);
     if (!mem) return c.json({ error: 'ambiguous_household', note: 'Reply to a specific message so we know which home it is for (PS-029).' }, 409);
     const hh = mem.household_id, mid = mem.id, lang = await helperLang(mid);
@@ -327,6 +395,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     // photo / voice evidence
     const cst = await consentOf(mid);
     if (!cst || !cst.granted || cst.kind === 'helper_withdrawal' || mem.paused) return c.json({ error: 'no_helper_consent', note: 'Nothing is collected before consent (PS-021)' }, 409);
+    if (b.type === 'photo' && b.visitId && !b.taskId) return c.json(await visitCodePhoto(hh, mid, b.visitId, b.caption, b.mediaRef, 'wa:' + b.messageId, b.sentAt ? new Date(b.sentAt) : now(), say));
     if (!b.taskId) return c.json({ error: 'reply_to_a_task_prompt' }, 400);
     const task = (await db.query<{ id: string; assignee_membership_id: string; care_date: string }>(`select id, assignee_membership_id, care_date::text as care_date from care_tasks where id=$1 and household_id=$2`, [b.taskId, hh]))[0];
     if (!task || task.assignee_membership_id !== mid) return c.json({ error: 'unknown_task' }, 404);
@@ -363,8 +432,45 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     // PAW-021 / PAW-025: a code typed from an unregistered phone never counts, even if it is today's code.
     if (b.event === 'code') codeOk = !!mem && !!b.digits && checkCode(await cards(target.household_id), Number(target.care_date.slice(8, 10)), b.digits) === 'today';
     const r = await ingestSignal(db, { householdId: target.household_id, idempotencyKey: `ivr:${b.callId}:${b.event}`, kind: b.event === 'code' ? 'ivr' : b.event === 'arrive' ? 'call_arrive' : 'call_exit', visitId: b.visitId, taskId: b.taskId, channel: 'ivr', codeOk, registeredNumber: !!mem, eventTime: b.at ? new Date(b.at) : now(), receivedTime: now(), actor: mem ? 'helper:ivr' : 'unregistered' });
-    return c.json({ ...r, registered: !!mem, codeOk });
+    const codeSent = mem && b.visitId && r.status === 'stored' && (b.event === 'arrive' || b.event === 'exit') ? await sendVisitCode(target.household_id, mem.id, b.visitId, b.event === 'arrive' ? 'start' : 'end') : false;
+    return c.json({ ...r, registered: !!mem, codeOk, codeSent });
   });
+
+  /* ================= Random start / end codes for a visit (17 Nov 2026) =================
+     The arrival and exit calls only prove a call came from her phone, not where she was. Right after each call we send a
+     fresh 3-digit code; she writes it on paper and sends a photo of it next to the pet or bowl within 10 minutes. Nobody
+     knew the code before the call, so an old or pre-taken photo can't match, and a copied code card doesn't help.
+     Only for helpers who check in with photos, on tracked days, once per visit per phase. */
+  const randomCode = () => { const n = new Uint32Array(1); randomFillSync(n); return String(100 + (n[0]! % 900)); };
+  async function sendVisitCode(hh: string, mid: string, visitId: string, phase: 'start' | 'end'): Promise<boolean> {
+    const m = (await db.query<{ method: string | null }>(`select method from memberships where id=$1`, [mid]))[0];
+    if (!m || (m.method ?? 'photo') !== 'photo') return false;
+    const v = (await db.query<{ care_date: string }>(`select care_date::text as care_date from care_visits where id=$1 and household_id=$2`, [visitId, hh]))[0];
+    if (!v) return false;
+    const mode = (await db.query<{ mode: string }>(`select mode from day_states where household_id=$1 and care_date=$2`, [hh, v.care_date]))[0]?.mode;
+    if (mode === 'trusted') return false;
+    const code = randomCode(), col = phase === 'start' ? 'start' : 'end';
+    const set = await db.query(`update care_visits set ${col}_code_sealed=$3, ${col}_code_at=$4 where id=$1 and household_id=$2 and ${col}_code_at is null and (helper_membership_id is null or helper_membership_id=$5) returning id`, [visitId, hh, seal(code), now().toISOString(), mid]);
+    if (!set.length) return false;
+    const pets = (await db.query<{ name: string }>(`select distinct p.name from care_tasks t join pets p on p.id=t.pet_id where t.visit_id=$1 order by p.name`, [visitId])).map(p => p.name).join(' & ');
+    await helperSay(hh, mid, phase === 'start' ? 'W_VISIT_CODE_START' : 'W_VISIT_CODE_END', { code, pets: pets || 'the pet' });
+    await audit(db, 'system', hh, 'visit.code.sent', { visit: visitId, phase }); // the code itself is never written to the audit log
+    return true;
+  }
+  /** A photo replying to a start / end code. Grades it against the codes sent for that visit (the latest one first). */
+  async function visitCodePhoto(hh: string, mid: string, visitId: string, caption: string | undefined, mediaRef: string | undefined, key: string, at: Date, say: (role: 'in', body: string) => Promise<unknown>) {
+    const v = (await db.query<{ helper_membership_id: string | null; start_code_sealed: string | null; end_code_sealed: string | null }>(`select helper_membership_id, start_code_sealed, end_code_sealed from care_visits where id=$1 and household_id=$2`, [visitId, hh]))[0];
+    if (!v || (v.helper_membership_id && v.helper_membership_id !== mid)) return { error: 'unknown_visit' };
+    const start = v.start_code_sealed ? open<string>(v.start_code_sealed) : null, end = v.end_code_sealed ? open<string>(v.end_code_sealed) : null;
+    if (!start && !end) return { error: 'no_code_sent' };
+    const typed = caption?.match(/\b(\d{3})\b/)?.[1];
+    const phase: 'start' | 'end' = typed && typed === end ? 'end' : typed && typed === start ? 'start' : end ? 'end' : 'start';
+    const codeOk = !!typed && typed === (phase === 'end' ? end : start);
+    const r = await ingestSignal(db, { householdId: hh, idempotencyKey: key, kind: phase === 'start' ? 'code_start' : 'code_end', visitId, channel: 'whatsapp', codeOk, registeredNumber: true, imageHash: mediaRef ? hashImage(mediaRef) : undefined, eventTime: at, receivedTime: now(), actor: 'helper:' + mid });
+    await say('in', `[photo]${caption ? ' ' + caption.replace(/\d{3}/, '•••') : ''}`);
+    await helperSay(hh, mid, r.duplicateImage ? 'W_REUSED' : codeOk ? 'W_VISIT_CODE_OK' : 'W_VISIT_CODE_WRONG');
+    return { ...r, phase, codeOk };
+  }
 
   /* ================= Code cards (PS-024, PS-109). Values never logged or sent in notifications. ================= */
   async function cards(hh: string): Promise<CodeCard[]> {

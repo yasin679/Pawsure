@@ -2,7 +2,7 @@
  * Trust / confidence engine — PRD 5.1, 10.5 (rule set v1), PS-030, PS-122.
  * Pure functions. Visit status and task status are computed separately; a visit alone never makes a task Confirmed or Likely.
  */
-import type { CareTask, CareVisit, Confidence, Minutes, ReasonedResult, TaskSignal, VisitStatus } from './types.js';
+import type { CareTask, CareVisit, Confidence, Minutes, ReasonedResult, TaskSignal, VisitSignal, VisitStatus } from './types.js';
 
 export interface TrustRules {
   version: string;
@@ -16,6 +16,8 @@ export interface TrustRules {
   visitMinCap: number;
   /** An arrival without exit is "in progress" for this long before it counts as "one call only". */
   inProgressFor: number;
+  /** The photo with the random start / end code must arrive within this many minutes of the code being sent. */
+  visitCodeWithin: number;
 }
 
 export const RULES_V1: TrustRules = {
@@ -24,7 +26,8 @@ export const RULES_V1: TrustRules = {
   grace: { standard: 30, medicine: 15, walk: 45 },
   lateAccept: 180,
   visitMinCap: 30,
-  inProgressFor: 45
+  inProgressFor: 45,
+  visitCodeWithin: 10
 };
 
 /** Random in-app photo prompt rate (PRD 10.5): 1 in 10 visits; 1 in 5 without a gate app or after a mismatch in the last 14 days. */
@@ -36,6 +39,9 @@ export function minVisitDuration(tasks: Pick<CareTask, 'minMinutes'>[], r: Trust
   return Math.min(r.visitMinCap, tasks.reduce((a, t) => a + t.minMinutes, 0));
 }
 
+/** ok: right code in time · late: right code after the window · wrong: a code that doesn't match · waiting: sent, still in time · missing: sent, nothing came. */
+export type VisitCodeState = 'ok' | 'late' | 'wrong' | 'waiting' | 'missing';
+
 export interface VisitEvaluation {
   status: VisitStatus | null;
   arrive: Minutes | null;
@@ -44,8 +50,23 @@ export interface VisitEvaluation {
   minimum: number;
   callsOk: boolean;
   gate: boolean;
+  /** Random codes sent at the arrival and exit calls; null = not sent (no call yet, or not a photo helper). */
+  codes: { start: VisitCodeState | null; end: VisitCodeState | null };
   reasons: string[];
 }
+
+function codeState(sentAt: Minutes | undefined, sigs: VisitSignal[], now: Minutes, r: TrustRules): VisitCodeState | null {
+  if (sentAt == null) return null;
+  const after = sigs.filter(s => !s.duplicate && s.eventTime >= sentAt);
+  if (after.some(s => s.codeOk && s.eventTime <= sentAt + r.visitCodeWithin)) return 'ok';
+  if (after.some(s => s.codeOk === false)) return 'wrong';
+  if (after.some(s => s.codeOk)) return 'late';
+  return now <= sentAt + r.visitCodeWithin ? 'waiting' : 'missing';
+}
+const CODE_REASON: Record<VisitCodeState, string> = {
+  ok: 'CODE-OK: photo with the code arrived in time', late: 'CODE-LATE: photo with the code arrived after the time limit',
+  wrong: 'CODE-WRONG: the code in the photo does not match', waiting: 'CODE-WAITING: code sent, photo not in yet', missing: 'CODE-MISSING: code sent, no photo came'
+};
 
 /** Visit status from registered arrival/exit calls and owner-provided gate entries only. */
 export function evaluateVisit(visit: CareVisit, visitTasks: CareTask[], hasStrongTaskEvidence: boolean, now: Minutes, r: TrustRules = RULES_V1): VisitEvaluation {
@@ -53,6 +74,12 @@ export function evaluateVisit(visit: CareVisit, visitTasks: CareTask[], hasStron
   const arrivals = ok.filter(s => s.kind === 'call_arrive').map(s => s.eventTime);
   const exits = ok.filter(s => s.kind === 'call_exit').map(s => s.eventTime);
   const gate = ok.some(s => s.kind === 'gate');
+  const codes = {
+    start: codeState(visit.codes?.start, ok.filter(s => s.kind === 'code_start'), now, r),
+    end: codeState(visit.codes?.end, ok.filter(s => s.kind === 'code_end'), now, r)
+  };
+  const codesOk = codes.start === 'ok' && codes.end === 'ok';
+  const codeWrong = codes.start === 'wrong' || codes.end === 'wrong';
   const arrive = arrivals.length ? Math.min(...arrivals) : null;
   const exit = exits.length ? Math.max(...exits) : null;
   const duration = arrive != null && exit != null ? exit - arrive : null;
@@ -64,14 +91,19 @@ export function evaluateVisit(visit: CareVisit, visitTasks: CareTask[], hasStron
   else if (duration != null) reasons.push(`R-VISIT-SHORT: ${duration} min < ${minimum} min minimum`);
   else if (arrive != null || exit != null) reasons.push(`R-VISIT-ONE-CALL: only ${arrive != null ? 'arrival' : 'exit'} call`);
   if (gate) reasons.push('R-GATE-OWNER: owner-provided gate entry (not a gate-app integration)');
+  if (codes.start) reasons.push(`R-START-${CODE_REASON[codes.start]}`);
+  if (codes.end) reasons.push(`R-END-${CODE_REASON[codes.end]}`);
   if (arrive != null && exit == null && !gate && now - arrive < r.inProgressFor) {
-    return { status: 'In progress', arrive, exit, duration, minimum, callsOk: false, gate, reasons: [`R-VISIT-IN-PROGRESS: arrived at ${arrive}`] };
+    return { status: 'In progress', arrive, exit, duration, minimum, callsOk: false, gate, codes, reasons: [`R-VISIT-IN-PROGRESS: arrived at ${arrive}`, ...(codes.start ? [`R-START-${CODE_REASON[codes.start]}`] : [])] };
   }
   let status: VisitStatus | null = null;
-  if (callsOk && (gate || hasStrongTaskEvidence)) status = 'Confirmed';
+  // A wrong start / end code is a conflict: the visit is never Likely or Confirmed on calls while it stands.
+  if (codeWrong && !gate) status = arrive != null || exit != null ? 'Not confirmed' : null;
+  // Fresh photos at the start and the end are a second channel next to the calls, like a gate entry.
+  else if (callsOk && (gate || hasStrongTaskEvidence || codesOk)) status = 'Confirmed';
   else if (callsOk || gate) status = 'Likely';
   else if (arrive != null || exit != null) status = 'Not confirmed';
-  return { status, arrive, exit, duration, minimum, callsOk, gate, reasons };
+  return { status, arrive, exit, duration, minimum, callsOk, gate, codes, reasons };
 }
 
 export interface ScoredSignal { signal: TaskSignal; strong: boolean; weak: boolean; conflict: boolean; late: boolean }

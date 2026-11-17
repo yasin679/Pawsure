@@ -5,12 +5,14 @@ import { createPortal } from 'react-dom';
 import { api, API, ApiError, endSession, session, fmt, type DayView, type Incident, type Me, type Pet } from './api';
 import { AppBar, Art, Icon, LangSwitch } from './ui';
 import { Onboarding } from './screens/Onboarding';
+import { resetIntro } from './screens/Intro';
 import { Today } from './screens/Today';
 import { PetScreen } from './screens/PetScreen';
 import { RoutineScreen, HealthScreen, HelperScreen, CircleScreen } from './screens/CareSetup';
 import { LookIn } from './screens/LookIn';
 import { HelperSim } from './screens/HelperSim';
 import { FindCover } from './screens/FindCover';
+import { CoverAssistant, Sparkle } from './screens/Assistant';
 import { Friends, PrivacyScreen } from './screens/Friends';
 import { FriendHome } from './screens/FriendHome';
 import { FriendSim } from './screens/FriendSim';
@@ -31,7 +33,7 @@ export function hideSplash() {
   s.dataset.hiding = '1';
   setTimeout(() => { s.classList.add('gone'); setTimeout(() => s.remove(), 800); }, Math.max(0, SPLASH_MIN_MS - performance.now()));
 }
-const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'search'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
+const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'sparkle'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
 const TOOLS_KEY = 'pawsure.demoTools';
 const toolsOn = () => { try { if (location.hash.includes('tools')) localStorage.setItem(TOOLS_KEY, '1'); return localStorage.getItem(TOOLS_KEY) === '1'; } catch { return false; } };
@@ -52,7 +54,7 @@ export function App() {
   // One-time task links for a substitute or an ad-hoc number (PS-128, PS-133): /t/<token>, or #task-<token> in the demo.
   const taskToken = location.pathname.startsWith('/t/') ? location.pathname.slice(3) : hash.startsWith('#task-') ? hash.slice(6) : null;
   const [authed, setAuthed] = useState(!!session.get());
-  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null);
+  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [askFriend, setAskFriend] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [day, setDay] = useState<DayView | null>(null);
@@ -92,13 +94,14 @@ export function App() {
   if (lookinToken) return <div className="pwa"><AppBar title="Pawsure look-in" onBack={hash.startsWith('#lookin-') ? () => { location.hash = ''; } : undefined} /><LookIn token={lookinToken} /></div>;
   if (!authed) return <div className="pwa">{!online && <div className="offline">You’re offline. Your helper’s missed-call check-ins still work.</div>}<Onboarding onDone={() => setAuthed(true)} /></div>;
   const role = me?.memberships[0]?.role;
-  const signOut = async (everywhere = false) => { await endSession(everywhere); setAuthed(false); setMe(null); setDay(null); setPets([]); setIncidents([]); setInvites([]); setIsFriend(false); setDraft(''); setTab('today'); setSub(null); };
+  // Signing out shows the welcome screens again before Log in.
+  const signOut = async (everywhere = false) => { await endSession(everywhere); resetIntro(); setAuthed(false); setMe(null); setDay(null); setPets([]); setIncidents([]); setInvites([]); setIsFriend(false); setDraft(''); setTab('today'); setSub(null); };
   const signOutAll = () => signOut(true);
   if (!hh && isFriend) return <div className="pwa">{demo && tools && <DemoBar hh="" day={null} onChange={load} friendOnly />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}<FriendHome name={me?.user.display_name ?? ''} onSignOut={() => signOut()} /></div>;
   if (me && checked && !hh && !isFriend) return <div className="pwa"><Onboarding start="consent" onDone={() => load()} /></div>;
   if (me && role === 'helper') return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <HelperHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
   if (me && role && ['backup', 'family', 'viewer'].includes(role)) return <div className="pwa">{sub === 'rights' ? <RightsScreen me={me} onBack={() => setSub(null)} reload={load} /> : <CircleHome me={me} onRights={() => setSub('rights')} onSignOut={() => signOut()} onSignOutAll={signOutAll} />}</div>;
-  const go = (t: Tab) => { setTab(t); setSub(null); if (t === 'today') load(); };
+  const go = (t: Tab, add = false) => { setTab(t); setSub(null); setAddPet(add); setFindForm(false); setAskFriend(null); if (t === 'today') load(); };
 
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
@@ -112,9 +115,10 @@ export function App() {
     {sub === 'rights' && <RightsScreen me={me} onBack={() => setSub(null)} reload={load} />}
     {sub === 'backups' && hh && <BackupsScreen hh={hh} onBack={() => { setSub(null); load(); }} onBuild={() => setSub('builder')} />}
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
-    {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} />}
-    {!sub && tab === 'pet' && hh && <PetScreen hh={hh} pets={pets} reload={load} onOpen={setSub} />}
-    {!sub && tab === 'find' && hh && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'today' && hh && <Today hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
+    {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
+    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} onAsk={(t, fid) => { setDraft(t); setAskFriend(fid); setFindForm(true); }} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}
     {!sub && tab === 'me' && <><AppBar title={tr('Me')} /><main className="body">
       {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>{tr('Accept')}</button></div>)}
@@ -133,12 +137,13 @@ export function App() {
         <button className="btn ghost block" onClick={() => signOut()}>{tr('Sign out')}</button>
       <button className="btn ghost block" onClick={signOutAll}>{tr('Sign out of all devices')}</button>
     </main></>}
-    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}><Icon name={i} size={22} />{tr(l)}</button>)}</nav>
+    <nav className="tabbar" aria-label="Primary">{TABS.map(([k, l, i]) => <button key={k} aria-current={tab === k && !sub ? 'page' : 'false'} onClick={() => go(k)}>{i === 'sparkle' ? <span className="ic tab-spark"><Sparkle size={24} /></span> : <Icon name={i} size={22} />}<span className="tl">{tr(l)}</span></button>)}</nav>
   </div>;
 }
 
 /** Demo-only controls: simulated clock + Sunita's simulated phone. Hidden when the API is not in DEMO_MODE. */
 function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView | null; onChange: () => void; friendOnly?: boolean }) {
+  const resetDemo = (window as unknown as { pawsureResetDemo?: () => Promise<void> }).pawsureResetDemo;
   const [busy, setBusy] = useState(false); const [phone, setPhone] = useState(false); const [friends, setFriends] = useState(false); const [cover, setCover] = useState(false); const [hint, setHint] = useState<string | null>(null);
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await api('/jobs/tick', { body: {}, auth: false }); await onChange(); } finally { setBusy(false); } };
   useEffect(() => {
@@ -153,6 +158,7 @@ function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView |
       {!friendOnly && <button aria-pressed={friends} onClick={() => { setFriends(!friends); setPhone(false); setCover(false); }}>{friends ? 'Hide' : 'Show'} friends’ phones</button>}
       {!friendOnly && <button aria-pressed={cover} onClick={() => { setCover(!cover); setPhone(false); setFriends(false); }}>{cover ? 'Hide' : 'Show'} backups’ phones</button>}
       <button onClick={() => { location.hash = 'admin'; }}>Ops console</button>
+      {resetDemo && <button onClick={() => { if (confirm('Reset the demo? Accounts and homes you created in this browser are deleted.')) resetDemo(); }}>Reset demo</button>}
     </div>
     {hint && <div className="banner sim" role="status"><span className="bi">▶</span><div className="grow">{hint} <button className="btn ghost sm" onClick={() => setHint(null)}>Hide</button></div></div>}
     {(phone || friends || cover) && <div className="simdock" aria-label="Simulated phones">{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}

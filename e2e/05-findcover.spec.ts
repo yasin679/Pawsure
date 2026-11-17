@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, tab, clockTo, taskCard, dialog, api } from './helpers';
+import { boot, signInOwner, tab, clockTo, taskCard, dialog, api, openPlan, closePlan, findCoverForm } from './helpers';
 
 const friendsPhone = (page: Page) => page.locator('.sheet', { hasText: 'Friends’ phones (simulated)' });
 async function friendReply(page: Page, name: string, button?: string, text?: string) {
@@ -11,7 +11,7 @@ async function friendReply(page: Page, name: string, button?: string, text?: str
   await page.getByRole('button', { name: 'Hide friends’ phones' }).click();
 }
 async function ask(page: Page, text: string) {
-  await tab(page, 'Find cover');
+  await findCoverForm(page);
   await page.locator('#ask').fill(text);
   await page.getByRole('button', { name: 'Understand my request' }).click();
   await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G1 Helper can’t come → ask Meera → she says Yes (Marathi) → owner confirms → only Bruno’s lunch moves to her', async ({ page }) => {
     await clockTo(page, '11:00');
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
     await page.getByRole('button', { name: 'Understand my request' }).click();
@@ -46,9 +46,11 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await expect(page.getByText(/Shared with Meera, minimum needed, this visit only/i)).toBeVisible();
     await tab(page, 'Today');
     await expect(page.getByRole('heading', { name: 'A friend (Find cover)' })).toBeVisible();
+    await closePlan(page);
     await expect(taskCard(page, 'Feed (friend cover)')).toBeVisible();
     await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Reassigned');
     await expect(taskCard(page, 'Joint supplement')).not.toContainText('Reassigned');
+    await page.getByRole('tab', { name: /Misty/ }).click(); // Home shows one pet's tasks at a time
     await expect(taskCard(page, 'Wet food + litter tray')).not.toContainText('Reassigned');
   });
 
@@ -89,7 +91,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G5 AI unavailable → simple form; matching still works', async ({ page }) => {
     await api(page, 'POST', '/demo/llm', { mode: 'down' });
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await expect(page.locator('main').getByText(/AI unavailable/)).toBeVisible();
@@ -101,7 +103,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G6 AI times out (8 s) → simple form', async ({ page }) => {
     await api(page, 'POST', '/demo/llm', { mode: 'timeout' });
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill(CLEAR);
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await expect(page.getByText(/AI timed out after 8 s/)).toBeVisible({ timeout: 20_000 });
@@ -155,3 +157,41 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     expect(req.body[0]!.history.filter(h => /Accepted/.test(h.state)).length).toBe(1);
   });
 });
+
+test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
+  test('G9 Find cover opens on “How can I help?”; any request shows the thinking animation, then friends who can help; Ask goes to the request form', async ({ page }) => {
+    await boot(page); await signInOwner(page);
+    await tab(page, 'Find cover');
+    await expect(page.getByRole('heading', { name: 'How can I help?' })).toBeVisible();
+    await page.locator('#ai-in').fill('blah blah anything at all');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByRole('status', { name: 'Pawly is thinking' })).toBeVisible();
+    await expect(page.locator('.friend-card').first()).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Pawly is thinking' })).toHaveCount(0);
+    expect(await page.locator('.friend-card').count()).toBeGreaterThan(0);
+    await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/avatars\//);
+    await page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }).click();
+    // Pawly can't read this one, so the simple form opens with the reason, not a blank text box
+    await expect(page.getByRole('heading', { name: 'Simple request form' })).toBeVisible();
+  });
+
+  test('G9b Asking the second friend from the assistant goes straight through: details → Pawly → that friend’s message → Sent (co-owner can answer questions)', async ({ page }) => {
+    await boot(page); await signInOwner(page);
+    await tab(page, 'Find cover');
+    await page.getByRole('button', { name: /Walk Bruno this evening/ }).click();
+    const second = page.locator('.friend-card').nth(1);
+    await expect(second).toBeVisible();
+    const first = (await second.locator('b').innerText()).split(' ')[0]!;
+    await second.getByRole('button', { name: /^Ask / }).click();
+    await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
+    await page.getByRole('alert').getByRole('button', { name: '6:00 PM' }).click();
+    await expect(page.getByText('forbidden')).toHaveCount(0);
+    await page.getByRole('button', { name: /Find with Pawly/ }).click();
+    await expect(page.getByRole('heading', { name: `Ask ${first}?` })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('checkbox', { name: /I approve/ }).check();
+    await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
+    await expect(page.locator('.conf', { hasText: 'Sent' })).toBeVisible();
+    await expect(page.locator('.li', { hasText: first })).toBeVisible();
+  });
+});
+

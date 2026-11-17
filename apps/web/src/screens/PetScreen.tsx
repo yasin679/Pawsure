@@ -8,11 +8,12 @@ const FIELDS: [keyof Pet, string, string?][] = [['name', 'Name'], ['breed', 'Bre
 
 const REQUIRED: (keyof Pet)[] = ['name', 'food', 'allergies', 'medicines', 'vet_name', 'vet_phone'];
 
-export function PetScreen({ hh, pets, reload, onOpen }: { hh: string; pets: Pet[]; reload: () => void; onOpen: (v: 'routine' | 'health') => void }) {
-  const [active, setActive] = useState(pets[0]?.id ?? 'new');
-  const [mode, setMode] = useState<'view' | 'edit' | 'card'>('view');
+/** `startAdd` opens straight on the add-a-pet form (from Home → Add pet). */
+export function PetScreen({ hh, pets, reload, onOpen, startAdd }: { hh: string; pets: Pet[]; reload: () => void; onOpen: (v: 'routine' | 'health') => void; startAdd?: boolean }) {
+  const [active, setActive] = useState(startAdd ? 'new' : pets[0]?.id ?? 'new');
+  const [mode, setMode] = useState<'view' | 'edit' | 'card'>(startAdd ? 'edit' : 'view');
   const pet = pets.find(p => p.id === active);
-  const [form, setForm] = useState<Partial<Pet>>({});
+  const [form, setForm] = useState<Partial<Pet>>(startAdd ? { name: '', species: 'Dog' } : {});
   const [err, setErr] = useState<string | null>(null);
   const startEdit = (p?: Pet) => { setForm(p ? { ...p } : { name: '', species: 'Dog' }); setMode('edit'); };
   const save = async () => {

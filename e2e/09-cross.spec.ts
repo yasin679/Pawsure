@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, tab, noHorizontalScroll, dialog } from './helpers';
+import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake, openPlan, closePlan, headOut } from './helpers';
 
 test.describe('L. Cross-cutting', () => {
   test('L1 Phone width (390 px): no sideways scrolling on any main tab', async ({ page }) => {
@@ -15,21 +15,42 @@ test.describe('L. Cross-cutting', () => {
     await expect(page.getByText(/You’re offline/)).toHaveCount(0);
   });
 
-  test('L3 Reloading the demo starts fresh (each visitor gets their own copy)', async ({ page }) => {
+  test('L3 Reloading the demo keeps you signed in with your changes; Reset demo starts fresh', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.getByRole('button', { name: 'My help can’t come today' }).click();
+    await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
+    await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
-    await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
+    await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
+    await closePlan(page);
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Reset demo' }).click();
+    await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await signInOwner(page);
-    await expect(page.getByRole('heading', { name: 'Sunita (tracked helper)' })).toBeVisible();
+    await expect(page.locator('.help-card')).toContainText('Tracked helper');
+  });
+
+  test('L3b A new owner who reloads after signing up is still signed in and lands on their home', async ({ page }) => {
+    await boot(page); await signUp(page, '9811777001');
+    await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+    await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
+    await page.reload();
+    await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+    await headOut(page);
+    await expect(page.locator('.petchip', { hasText: 'Coco' })).toBeVisible();
   });
 
   test('L4 Old “coming in phase 3” placeholders are gone everywhere', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
+    await page.locator('.help-card').getByRole('button', { name: 'Change' }).click();
     await expect(dialog(page)).toContainText('Ask your own friends. Nothing is sent until you approve');
     await expect(page.getByText(/arrives in phase|phase [0-9]/i)).toHaveCount(0);
     await dialog(page).getByRole('button', { name: 'Close' }).click();
@@ -38,7 +59,7 @@ test.describe('L. Cross-cutting', () => {
 
   test('L5 Choosing “A friend” under Who’s caring opens Find cover', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
+    await page.locator('.help-card').getByRole('button', { name: 'Change' }).click();
     await dialog(page).getByRole('button', { name: /A friend/ }).click();
     await expect(page.getByRole('heading', { name: 'Find cover' })).toBeVisible();
   });

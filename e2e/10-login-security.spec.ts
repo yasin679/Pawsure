@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, fillSociety } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, api, PHONE, API, fillPetEssentials, intake, findCoverForm } from './helpers';
 
 test.describe('M. Login separation and security (on screen)', () => {
-  test('M1 Helper login → helper home only (WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
+  test('M1 Helper login → helper home only (her own tasks to send proof, WhatsApp instructions), no owner tabs or household data', async ({ page }) => {
     await boot(page); await signIn(page, '9000000035');
     await expect(page.getByRole('heading', { name: 'Pawsure for helpers' })).toBeVisible();
     await expect(page.locator('nav.tabbar')).toHaveCount(0);
-    await expect(page.getByText('Bruno')).toHaveCount(0);
+    // She sees her own tasks (as in her WhatsApp prompts) but never the flat, access notes, medicines text or owner data.
+    await expect(page.getByText('Today’s tasks')).toBeVisible();
+    for (const hidden of ['B-1104', 'Spare key with Ankita', 'Neha', 'Dr. Aarti']) await expect(page.getByText(hidden)).toHaveCount(0);
     await page.getByRole('button', { name: 'Your data rights' }).click();
     await expect(page.getByRole('heading', { name: 'Your data rights' })).toBeVisible();
   });
@@ -39,7 +41,7 @@ test.describe('M. Login separation and security (on screen)', () => {
 
   test('M5 Shared phone: after sign-out the old session is dead and the next person sees none of the previous person’s data', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill('Private draft from Neha: key under the mat');
     const oldToken = await page.evaluate(() => JSON.parse(localStorage.getItem('pawsure.session')!).token as string);
     await signOut(page);
@@ -47,7 +49,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     const reuse = await page.evaluate(async ([A, t]) => (await fetch(A + '/v1/me', { headers: { authorization: 'Bearer ' + t } })).status, [API, oldToken] as const);
     expect(reuse).toBe(401);
     await signIn(page, PHONE.rohan);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await expect(page.locator('#ask')).toHaveValue('');
     await expect(page.getByText('Private draft from Neha')).toHaveCount(0);
   });
@@ -61,22 +63,20 @@ test.describe('M. Login separation and security (on screen)', () => {
     }, [API, '+91' + PHONE.neha] as const);
     await tab(page, 'Me');
     await page.getByRole('button', { name: 'Sign out of all devices' }).click();
-    await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible(); // welcome screens after signing out
     const status = await page.evaluate(async ([A, t]) => (await fetch(A + '/v1/me', { headers: { authorization: 'Bearer ' + t } })).status, [API, other] as const);
     expect(status).toBe(401);
   });
 
   test('M7 A new user sees only their own (empty) home, none of Neha’s pets, friends or requests', async ({ page }) => {
-    await boot(page); await signIn(page, '9811666777');
+    await boot(page); await signUp(page, '9811666777');
     await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.locator('#nm').fill('Eve'); await fillSociety(page, 'Hiranandani, Powai');
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByRole('button', { name: 'Yes, I have someone' }).click(); // v1.4 PS-140 circle question
+    await intake(page, 'Eve', 'Hiranandani, Powai');
     await expect(page.getByRole('heading', { name: /Eve/ })).toBeVisible();
     await expect(page.getByText('Bruno')).toHaveCount(0);
     await tab(page, 'Friends'); await expect(page.getByText('Priya Shah')).toHaveCount(0);
-    await tab(page, 'Find cover'); await expect(page.getByText('No requests yet')).toBeVisible();
+    await findCoverForm(page); await expect(page.getByText('No requests yet')).toBeVisible();
   });
 
   test('M8 Friend login sees only requests sent to them, never household tabs', async ({ page }) => {

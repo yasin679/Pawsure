@@ -15,7 +15,7 @@ export const t = (s: string) => (lang === 'hi' ? HI[s] ?? s : s);
 const HI: Record<string, string> = {
   // tabs and titles
   'Today': 'आज', 'Find cover': 'मदद ढूँढें', 'Friends': 'दोस्त', 'Pet': 'पालतू', 'Me': 'मैं',
-  'Before you start': 'शुरू करने से पहले', 'Enter the code': 'कोड डालें', 'About you': 'आपके बारे में', 'Your circle': 'आपका सर्कल',
+  'Before you start': 'शुरू करने से पहले', 'Log in': 'लॉग इन', 'Sign up': 'साइन अप', 'Welcome back': 'फिर से स्वागत है', 'Create your account': 'अपना खाता बनाएँ', 'No account yet': 'अभी कोई खाता नहीं', 'Enter the code': 'कोड डालें', 'About you': 'आपके बारे में', 'Your circle': 'आपका सर्कल',
   'Check the details': 'विवरण जाँचें', 'Simple request form': 'आसान अनुरोध फ़ॉर्म', 'No friend free': 'कोई दोस्त खाली नहीं', 'Suggestions': 'सुझाव', 'Request': 'अनुरोध',
   'Pawly': 'Pawly', 'Profile and privacy': 'प्रोफ़ाइल और गोपनीयता',
   // sign-in
@@ -43,7 +43,7 @@ const HI: Record<string, string> = {
   'Who’s caring today?': 'आज देखभाल कौन कर रहा है?', 'Change': 'बदलें', 'Covered': 'हो गया', 'Ask my backups': 'मेरे बैकअप से पूछें', 'Ask a friend to cover': 'किसी दोस्त से पूछें',
   'My help can’t come today': 'मेरी मदद आज नहीं आ सकती', 'Heading out?': 'बाहर जा रहे हैं?', '30-second leaving checklist': '30 सेकंड की जाने से पहले की सूची',
   'I’m leaving': 'मैं जा रहा/रही हूँ', 'I’m delayed': 'मुझे देर हो रही है', 'I’m back': 'मैं वापस आ गया/गई', 'Quick return check (10 s)': 'वापसी पर जल्दी जाँच (10 सेकंड)', 'Start': 'शुरू करें',
-  'Plan & evidence': 'योजना और सबूत', 'Edit routine': 'दिनचर्या बदलें', 'Timeline': 'टाइमलाइन', 'Day report': 'दिन की रिपोर्ट', 'Visit': 'विज़िट', 'Arrived': 'पहुँचे', 'Left': 'गए', 'Late': 'देर',
+  'Plan & evidence': 'योजना और सबूत', 'Edit routine': 'दिनचर्या बदलें', 'Timeline': 'टाइमलाइन', 'Day report': 'दिन की रिपोर्ट', 'Visit': 'विज़िट', 'minimum': 'कम से कम', 'Started': 'शुरू', 'Ended': 'ख़त्म', 'no exit call yet': 'जाने की कॉल अभी नहीं', 'no arrival call': 'आने की कॉल नहीं', 'Start code': 'शुरू का कोड', 'Visit confirmed': 'विज़िट पक्की', 'Visit likely': 'विज़िट शायद हुई', 'Visit not confirmed': 'विज़िट पक्की नहीं', 'Visit in progress': 'विज़िट चल रही है', 'End code': 'आख़िरी कोड', 'photo matched ✓': 'फ़ोटो मिल गई ✓', 'photo came late': 'फ़ोटो देर से आई', 'code didn’t match': 'कोड नहीं मिला', 'waiting for photo': 'फ़ोटो का इंतज़ार', 'no photo sent': 'फ़ोटो नहीं भेजी', 'Arrived': 'पहुँचे', 'Left': 'गए', 'Late': 'देर',
   'A Yes is a plan, not proof the task was done.': '“हाँ” एक योजना है, काम होने का सबूत नहीं।', 'Change this task': 'यह काम बदलें', 'Save': 'सहेजें', 'History is kept.': 'इतिहास रखा जाता है।',
   'Help can’t come today': 'मदद आज नहीं आ सकती', 'Reason (optional, private)': 'कारण (वैकल्पिक, निजी)', 'Not given': 'नहीं बताया', 'Unwell': 'बीमार', 'Family emergency': 'पारिवारिक आपात स्थिति', 'Holiday': 'छुट्टी',
   'Mark unavailable': 'अनुपलब्ध चिह्नित करें', 'Before you go': 'जाने से पहले', 'Expected return': 'वापसी का समय', 'Skip': 'छोड़ें', 'Quick return check': 'वापसी पर जल्दी जाँच',
@@ -104,6 +104,12 @@ const HI: Record<string, string> = {
   'Nobody yet, cover needed': 'अभी कोई नहीं, कवर चाहिए',
   'A friend (Find cover)': 'एक दोस्त (मदद ढूँढें)',
   'Good morning': 'सुप्रभात',
+  'Hi': 'नमस्ते',
+  'Society or building': 'सोसायटी या बिल्डिंग',
+  'Which language?': 'कौन सी भाषा?',
+  'You can fill in your address yourself.': 'आप अपना पता ख़ुद भर सकते हैं।',
+  'Go back and change the state.': 'वापस जाकर राज्य बदलें।',
+  'Here’s who’s helping today.': 'आज कौन मदद कर रहा है, यहाँ देखें।',
   'Good afternoon': 'नमस्ते',
   'Good evening': 'शुभ संध्या',
   'Understand my request': 'मेरा अनुरोध समझें',

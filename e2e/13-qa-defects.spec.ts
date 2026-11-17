@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, tab, api } from './helpers';
+import { boot, signInOwner, tab, api, openPlan, findCoverForm } from './helpers';
 
 /** QA defect tracker (Pawsure_QA_Defect_Tracker.xlsx): the on-screen half of PAW-001 to PAW-016. API checks: apps/api/test/qa-defects.test.ts. */
 async function ask(page: Page, text: string) {
-  await tab(page, 'Find cover');
+  await findCoverForm(page);
   await page.locator('#ask').fill(text);
   await page.getByRole('button', { name: 'Understand my request' }).click();
   await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
@@ -64,6 +64,7 @@ test.describe('Q. QA defect tracker (PAW)', () => {
 
   test('Q4 PAW-002/008 New task: Save without a name shows a plain error by the field and saves nothing', async ({ page }) => {
     await tab(page, 'Today');
+    await openPlan(page);
     await page.getByRole('button', { name: 'Edit routine' }).click();
     await page.getByRole('button', { name: 'Add' }).click();
     await expect(page.locator('#rtt')).toBeFocused(); // the name is the first field
@@ -78,6 +79,7 @@ test.describe('Q. QA defect tracker (PAW)', () => {
 
   test('Q5 PAW-013 unsaved work: leaving New task asks first; the simple form survives a tab switch', async ({ page }) => {
     await tab(page, 'Today');
+    await openPlan(page);
     await page.getByRole('button', { name: 'Edit routine' }).click();
     await page.getByRole('button', { name: 'Add' }).click();
     await page.locator('#rtt').fill('Evening brush');
@@ -85,10 +87,10 @@ test.describe('Q. QA defect tracker (PAW)', () => {
     await expect(page.getByText('Discard your changes to this task?')).toBeVisible();
     await page.getByRole('button', { name: 'Keep editing' }).click();
     await expect(page.locator('#rtt')).toHaveValue('Evening brush');
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.getByRole('button', { name: 'Simple form' }).click();
     await page.getByLabel('Feed').check();
-    await tab(page, 'Today'); await tab(page, 'Find cover');
+    await tab(page, 'Today'); await findCoverForm(page);
     await page.getByRole('button', { name: 'Simple form' }).click();
     await expect(page.getByLabel('Feed')).toBeChecked();
   });

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, meItem, api, PHONE } from './helpers';
+import { boot, signIn, signUp, signInOwner, signOut, tab, meItem, api, pick, petAndCare, aboutYou, intake, intakeInfo, webhook, PHONE, findCoverForm } from './helpers';
 
 /** QA consolidated tracker (14 Nov 2026): the on-screen half of PAW-017 to PAW-062. API checks: apps/api/test/qa-consolidated.test.ts. */
 
@@ -40,18 +40,20 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
   });
 
   test('R2 PAW-018/036 sign-up asks for the state and city first; Pune and Mumbai list their own Lake Vista CHS', async ({ page }) => {
-    await signIn(page, '9822200077');
+    await signUp(page, '9822200077');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
-    await page.locator('#nm').fill('Isha');
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await page.locator('#stt').selectOption('Maharashtra');
-    await page.locator('#cty').selectOption('Pune');
-    await expect(page.locator('#soc option', { hasText: 'Lake Vista CHS · Baner' })).toHaveCount(1);
-    await expect(page.locator('#soc option', { hasText: 'Powai' })).toHaveCount(0);
-    await page.locator('#soc').selectOption({ label: 'Lake Vista CHS · Baner' });
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    await expect(page.getByRole('heading', { name: 'Your information', level: 1 })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await aboutYou(page, 'Isha');
+    await page.getByRole('button', { name: 'Choose manually' }).click();
+    await pick(page, 'stt', 'Maharashtra');
+    await pick(page, 'cty', 'Pune');
+    await page.locator('#soc').click();
+    await expect(page.getByRole('option', { name: 'Lake Vista CHS · Baner' })).toHaveCount(1);
+    await expect(page.getByRole('option', { name: /Powai/ })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Lake Vista CHS · Baner' }).click();
+    await expect(page.locator('#tw')).toBeVisible(); // the same form moves on to the tower
   });
 
   test('R3 PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause', async ({ page }) => {
@@ -76,7 +78,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.locator('#wf').selectOption(String(16 * 60 + 30)); await page.locator('#wt').selectOption(String(21 * 60));
     await expect(page.locator('#wt option:checked')).toHaveText('9:00 PM');
     await signOut(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.getByRole('button', { name: 'Simple form' }).click();
     await page.getByRole('checkbox', { name: 'Feed' }).check();
     await page.getByRole('checkbox', { name: /Misty/ }).check();
@@ -98,7 +100,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByText('The owner has been alerted and backups are being asked. Take care.')).toBeVisible();
     await expect(page.getByText('This visit was interrupted. Thank you for letting the owner know.')).toBeVisible();
     await signOut(page); await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('button.li', { hasText: 'Interrupted' }).first().click();
     await expect(page.getByText(/Priya had an emergency and left\./)).toBeVisible();
     await expect(page.getByText(/Finished: Feed\./)).toBeVisible();
@@ -107,7 +109,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
 
   test('R7 Pawly finds friends with its steps on screen; with nobody free it shows the no-friend page', async ({ page }) => {
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('#ask').fill('Can someone feed Bruno at 6 pm? Spare key with Ankita.');
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await page.getByRole('button', { name: /Find with Pawly/ }).click();
@@ -129,13 +131,13 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await boot(fresh, '', { tools: false });
     await fresh.evaluate(() => localStorage.removeItem('pawsure.demoTools'));
     await fresh.reload(); await fresh.waitForSelector('html[data-demo-ready]', { state: 'attached' });
-    await signInOwner(fresh);
+    await signInOwner(fresh, { home: true });
     await expect(fresh.locator('.demobar')).toHaveCount(0);
     await expect(fresh.getByText('9:00 AM')).toHaveCount(0);
   });
 
   test('R9 consent explains the Terms and Privacy Notice in plain words; no research toggle; a name of numbers is refused', async ({ page }) => {
-    await signIn(page, '9822200078');
+    await signUp(page, '9822200078');
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
     await expect(page.getByText('Pilot research interviews')).toHaveCount(0);
     await page.getByRole('button', { name: /Read the Privacy Notice/ }).click();
@@ -146,8 +148,27 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.locator('#nm').fill('12345');
     await expect(page.getByText('Enter a real name using letters, not numbers.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await expect(page.locator('#lg option')).toHaveCount(23);
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await aboutYou(page, 'Isha', 'Another language');
+    await page.locator('#lg').click();
+    await expect(page.getByRole('option')).toHaveCount(23);
+  });
+
+  test('R10 the helper sends proof from her own login (gallery photo + today’s code); the owner sees it on the task', async ({ page }) => {
+    await signIn(page, '9000000035');
+    await expect(page.getByRole('heading', { name: /Hello Sunita/ })).toBeVisible();
+    await expect(page.getByText('Today’s tasks')).toBeVisible();
+    await page.locator('.li', { hasText: 'Joint supplement' }).getByRole('button', { name: 'Send proof' }).click();
+    await page.getByLabel('Choose a photo from the gallery').setInputFiles('apps/web/public/assets/mascot-family.png');
+    await page.locator('#pcode').fill((await page.locator('.hint b.mono').innerText()).trim());
+    await page.getByRole('dialog').getByRole('button', { name: 'Send proof', exact: true }).click();
+    await expect(page.getByText('Thank you! Photo and today’s code received.')).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('.li', { hasText: 'Joint supplement' })).toContainText('proof sent ✓');
+    await signOut(page); await signInOwner(page);
+    await page.locator('button.task', { hasText: 'Joint supplement' }).first().click();
+    await expect(page.getByText('Proof photos')).toBeVisible();
+    await expect(page.locator('.proofs figure').first()).toContainText('today’s code');
   });
 
   test('R6 PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong', async ({ page }) => {
@@ -157,3 +178,134 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByText('Thanks. The owner has been asked to check, and Pawsure support can help.')).toBeVisible();
   });
 });
+
+test.describe('S. Onboarding conversation (15 Nov)', () => {
+  test('S1 A typed city in another state is caught at the city question, and the home is created after fixing the state', async ({ page }) => {
+    await boot(page); await signUp(page, '9822200099');
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    const next = () => page.getByRole('button', { name: 'Next', exact: true }).click();
+    await aboutYou(page, 'Isha');
+    await page.getByRole('button', { name: 'Choose manually' }).click();
+    await pick(page, 'stt', 'Karnataka');
+    await page.getByRole('button', { name: 'My city isn’t listed' }).click();
+    await page.locator('#ctt').fill('Mumbai');
+    await expect(page.getByText(/Mumbai is in Maharashtra, not Karnataka/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); // back to the state, inside the same form
+    await pick(page, 'stt', 'Maharashtra');
+    await pick(page, 'cty', 'Mumbai');
+    await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+    await page.locator('#sct').fill('12345');
+    await expect(page.getByText('Enter your society’s name, not just numbers.')).toBeVisible();
+    await page.locator('#sct').fill('Green Acres CHS'); await next();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await page.getByRole('button', { name: 'Create my home' }).click();
+    await petAndCare(page);
+    await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
+  });
+});
+
+test.describe('T. Home location from the phone (16 Nov)', () => {
+  test.use({ geolocation: { latitude: 19.1178, longitude: 72.9058 }, permissions: ['geolocation'] }); // next to Lake Vista CHS, Powai
+  const start = async (page: import('@playwright/test').Page, phone: string) => {
+    await boot(page); await signUp(page, phone);
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await aboutYou(page, 'Isha');
+  };
+  test('T1 The society, city and state are found from the location; Yes skips those questions', async ({ page }) => {
+    await start(page, '9822200101');
+    await expect(page.getByText('Is this home?')).toBeVisible();
+    await expect(page.locator('.cb-sum').last()).toContainText('Lake Vista CHS, Powai');
+    await expect(page.locator('.cb-sum').last()).toContainText('Mumbai');
+    await expect(page.locator('.cb-sum').last()).toContainText('Maharashtra');
+    await page.getByRole('button', { name: 'Yes, that’s home' }).click();
+    await expect(page.getByRole('button', { name: /Change: 📍 Lake Vista CHS, Powai/ })).toBeVisible();
+    await expect(page.locator('#tw')).toBeVisible(); // straight to the tower question
+    await expect(page.locator('#stt')).toHaveCount(0);
+  });
+  test('T2 Change keeps the suggestion filled in and lets the owner pick another society', async ({ page }) => {
+    await start(page, '9822200102');
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
+    await expect(page.locator('#stt')).toContainText('Maharashtra'); // already filled in
+    await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
+    await page.locator('#soc').click(); await page.getByRole('option', { name: 'Hiranandani Gardens · Powai' }).click();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await expect(page.locator('.cb-sum').last()).toContainText('Hiranandani Gardens, Powai');
+  });
+});
+
+test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () => {
+  const toCare = async (page: import('@playwright/test').Page, phone: string, opts: { fakeVoice?: boolean } = {}) => {
+    if (opts.fakeVoice) await page.addInitScript(() => {
+      // A stand-in for the browser's speech recognition: "hears" one sentence when started.
+      class FakeRec { lang = ''; interimResults = false; continuous = false; onresult: ((e: unknown) => void) | null = null; onend: (() => void) | null = null; onerror: ((e: unknown) => void) | null = null;
+        start() { setTimeout(() => { this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: 'Two cups of rice and curd at lunch' }], { isFinal: true })] }); this.onend?.(); }, 200); }
+        stop() { this.onend?.(); } }
+      for (const k of ['SpeechRecognition', 'webkitSpeechRecognition']) Object.defineProperty(window, k, { value: FakeRec, configurable: true, writable: true });
+    });
+    await boot(page); await signUp(page, phone);
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+  };
+  test('U1 Food can be answered by voice: what is said is written into the message', async ({ page }) => {
+    await toCare(page, '9822200201', { fakeVoice: true });
+    await intakeInfo(page, 'Isha');
+    await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: /Dog/ }).click();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Female', exact: true }).click();
+    await page.getByRole('button', { name: '1–3 years' }).click();
+    await page.getByRole('button', { name: 'Speak your answer' }).click();
+    await expect(page.locator('#pf0')).toHaveValue('Two cups of rice and curd at lunch');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Change: Two cups of rice and curd at lunch' })).toBeVisible();
+  });
+  test('U2 “My house help” asks her name and WhatsApp number, sends the invite, and Home shows it pending until she accepts', async ({ page }) => {
+    await toCare(page, '9822200202');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500011' } });
+    await expect(page.getByText('Invite sent on WhatsApp')).toBeVisible();
+    await expect(page.getByText(/I’ve sent Lata a WhatsApp message to join Pawsure/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'If Lata can’t come one day, is there someone else who could step in?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    const card = page.locator('.help-card');
+    await expect(card).toContainText('Lata Pawar');
+    await expect(card).toContainText('Invite pending');
+    await expect(card.locator('.help-track')).toHaveCount(0);
+    const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+    await webhook(page, { from: '+919876500011', type: 'button', payload: `consent_yes:${hh}` });
+    await tab(page, 'Me'); await tab(page, 'Today');
+    await expect(card).not.toContainText('Invite pending');
+    await expect(card.locator('.help-track')).toContainText('Accepted');
+    await expect(card.getByRole('button', { name: 'My help can’t come' })).toBeVisible();
+  });
+});
+
+test.describe('V. Breed and sex, and small forms in the conversation (16 Nov)', () => {
+  test('V1 Breed and sex are one question; the answers show as one reply and are saved on the pet', async ({ page }) => {
+    await boot(page); await signUp(page, '9822200301');
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await intakeInfo(page, 'Isha');
+    await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: /Dog/ }).click();
+    const form = page.getByRole('group', { name: 'Breed and sex' });
+    await expect(form).toContainText('1 of 2');
+    await form.locator('#pb0').fill('Golden Retriever'); await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(form).toContainText('2 of 2');
+    await form.getByRole('button', { name: 'Back' }).click();
+    await expect(form.locator('#pb0')).toHaveValue('Golden Retriever');
+    await form.getByRole('button', { name: 'Next', exact: true }).click(); await form.getByRole('button', { name: 'Female', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Change: Golden Retriever · Female' })).toBeVisible();
+    await page.getByRole('button', { name: '1–3 years' }).click();
+    await page.locator('#pf0').fill('Kibble twice a day'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.getByRole('button', { name: 'None known', exact: true }).click(); await page.getByRole('button', { name: 'None', exact: true }).click();
+    await page.locator('#pv0').fill('Dr. Rao'); await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByText('Coco’s profile is saved.')).toBeVisible();
+    const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+    const pets = (await api(page, 'GET', `/v1/households/${hh}/pets`)).body as { name: string; breed: string; sex: string }[];
+    expect(pets.find(p => p.name === 'Coco')).toMatchObject({ breed: 'Golden Retriever', sex: 'Female' });
+  });
+});
+

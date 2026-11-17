@@ -1,9 +1,19 @@
 /**
- * Phone status bar for the device frame shown on wide screens (styles.css, "Phone frame"). It is drawn inside the
- * app's root `.pwa` element through a portal and hidden by CSS on real phones, which have their own status bar.
+ * Phone status bar for the iPhone 18 Pro frame shown on wide screens (styles.css, "Phone frame"). It is drawn inside the
+ * app's `.device > .pwa` element through a portal and hidden by CSS on real phones, which have their own status bar.
+ * It also keeps the frame's scale up to date, so the whole device fits the window (preview pane or full screen).
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+/** Device size in CSS px at scale 1 (styles.css: --dev-w, --dev-h), the docked demo phones, and the margin around them. */
+const DEV_W = 428 + 8, DEV_H = 900, DOCK = 30 + 440, MARGIN = 24;
+function fitDevice() {
+  const w = innerWidth - 2 * MARGIN, h = innerHeight - 2 * MARGIN;
+  const z = (width: number) => String(Math.max(0.3, Math.min(1, h / DEV_H, w / width)));
+  const s = document.documentElement.style;
+  s.setProperty('--dev-z', z(DEV_W)); s.setProperty('--dev-zd', z(DEV_W + DOCK));
+}
 
 const now = () => { const d = new Date(); return `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
@@ -11,11 +21,12 @@ export function StatusBar() {
   const [host, setHost] = useState<Element | null>(null); const [t, setT] = useState(now());
   useEffect(() => {
     const root = document.getElementById('root')!;
-    const find = () => setHost(root.querySelector(':scope > .pwa'));
+    const find = () => setHost(root.querySelector(':scope > .device > .pwa'));
     find();
-    const mo = new MutationObserver(find); mo.observe(root, { childList: true });
+    const mo = new MutationObserver(find); mo.observe(root, { childList: true, subtree: true });
+    fitDevice(); addEventListener('resize', fitDevice);
     const iv = setInterval(() => setT(now()), 15000);
-    return () => { mo.disconnect(); clearInterval(iv); };
+    return () => { mo.disconnect(); clearInterval(iv); removeEventListener('resize', fitDevice); };
   }, []);
   if (!host) return null;
   return createPortal(<div className="sbar" aria-hidden="true">

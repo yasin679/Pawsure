@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, tab, fillPetEssentials } from './helpers';
+import { boot, signInOwner, tab, fillPetEssentials, openPlan } from './helpers';
 
 test.describe('B. Pets and C. routine and health', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); await tab(page, 'Pet'); });
@@ -61,6 +61,7 @@ test.describe('B. Pets and C. routine and health', () => {
 
   test('C4 From Today, Edit routine → Add “Just for today”: it joins today’s plan and doesn’t repeat', async ({ page }) => {
     await tab(page, 'Today');
+    await openPlan(page);
     await page.getByRole('button', { name: 'Edit routine' }).click();
     await expect(page.getByRole('heading', { name: 'Routine' })).toBeVisible();
     await page.getByRole('button', { name: 'Add' }).click();
@@ -72,6 +73,6 @@ test.describe('B. Pets and C. routine and health', () => {
     await expect(page.getByText(/Added to today’s plan: Extra play time at 6:00 PM/)).toBeVisible();
     await expect(page.locator('button.li', { hasText: 'Extra play time' })).toContainText('today only');
     await page.locator('.appbar', { hasText: 'Routine' }).getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByRole('button', { name: /6:00 Extra play time/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Extra play time 6:00 PM/ })).toBeVisible();
   });
 });

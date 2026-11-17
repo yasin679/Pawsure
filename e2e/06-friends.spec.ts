@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, tab, meItem, PHONE, api } from './helpers';
+import { boot, signIn, signInOwner, signOut, tab, meItem, PHONE, api, findCoverForm } from './helpers';
 
 test.describe('H. Friends (owner side)', () => {
   test.beforeEach(async ({ page }) => { await boot(page); await signInOwner(page); await tab(page, 'Friends'); });
@@ -74,7 +74,7 @@ test.describe('I. The friend’s own app', () => {
     await signOut(page);
 
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await page.locator('button.li').first().click();
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     await expect(page.locator('.conf', { hasText: 'Confirmed' }).first()).toBeVisible();
@@ -85,12 +85,19 @@ test.describe('I. The friend’s own app', () => {
     await expect(page.getByText(/Flat B-1104, Tower B/)).toBeVisible();
     await page.getByRole('button', { name: 'I’ve arrived' }).click();
     await expect(page.getByText('The owner has been told you arrived.')).toBeVisible();
-    await page.getByRole('button', { name: 'Done' }).click();
-    await expect(page.getByText('Done, thank you! Access details have been removed.')).toBeVisible();
+    // Proof (16 Nov): a photo from the gallery and today's code from the food-box card.
+    await page.getByRole('button', { name: 'Done: send proof' }).click();
+    await page.getByLabel('Choose a photo from the gallery').setInputFiles('apps/web/public/assets/mascot-family.png');
+    await expect(page.getByRole('img', { name: 'Your proof photo' })).toBeVisible();
+    const code = (await page.locator('.hint b.mono').innerText()).trim();
+    await page.locator('#pcode').fill(code);
+    await page.getByRole('dialog').getByRole('button', { name: 'Send proof', exact: true }).click();
+    await expect(page.getByText('Thank you! Photo and today’s code received.')).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).click();
     await signOut(page);
 
     await signInOwner(page);
-    await tab(page, 'Find cover');
+    await findCoverForm(page);
     await expect(page.locator('button.li').first()).toContainText('Completed');
   });
 });

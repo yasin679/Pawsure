@@ -15,6 +15,7 @@ import type { Ctx } from './daily.js';
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { audit } from './care.js';
 import { requestText, FRIEND_MSG, BTN, type Lang } from './friendTemplates.js';
+import { ProofIn, recordProof, proofMessage } from './proof.js';
 
 type Env = { Variables: { userId: string } };
 const BAND_LABEL = ['Same tower', 'About 2 min away', 'About 5 min away', 'Next society, about 8 min'];
@@ -528,7 +529,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
       const grant = (await db.query(`select expires_at from access_grants where request_id=$1 and friend_user_id=$2 and revoked_at is null and expires_at > $3`, [r.id, uidv, now().toISOString()]))[0];
       const ftime = ((await db.query<{ n: number }>(`select help_count as n from friend_links where household_id=$1 and friend_user_id=$2`, [r.household_id, uidv]))[0]?.n ?? 0) === 0;
       const note = ftime ? (await db.query<{ n: string | null }>(`select handling_note as n from pets where id=$1`, [r.parse?.parsed?.petId]))[0]?.n ?? null : null;
-      return { id: r.id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, careDate: r.parse?.careDate, tasks: r.parse?.parsed?.tasks ?? [], lateMin: r.doc.lateMin ?? null, arrived: r.doc.friendSignalAt != null, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text, handlingNote: note, noteRead: (r.doc.noteReadBy ?? []).includes(uidv) };
+      return { id: r.id, householdId: r.household_id, state: r.state, myState: me.state, taskTime: r.doc.taskTime, careDate: r.parse?.careDate, tasks: r.parse?.parsed?.tasks ?? [], lateMin: r.doc.lateMin ?? null, arrived: r.doc.friendSignalAt != null, confirmedForMe: r.doc.confirmedFriendId === uidv, accessActive: !!grant, message: (await ff.messageFor(r.household_id, r, uidv)).text, handlingNote: note, noteRead: (r.doc.noteReadBy ?? []).includes(uidv) };
     })) });
   });
   app.put('/v1/me/friend', async (c) => {
@@ -601,6 +602,7 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
   app.post('/v1/me/requests/:id/:action{arrived|done|cancel}', async (c) => {
     const row0 = await myRequest(c); if (!row0 || row0.doc.confirmedFriendId !== c.get('userId')) return c.json({ error: 'not_found' }, 404);
     const action = c.req.param('action');
+    const proof = action === 'done' ? ProofIn.parse(await c.req.json().catch(() => ({}))) : {};
     return ff.withLock(row0.id, async () => {
     const row = (await ff.getReq(row0.id))!;
     // PAW-054 / PAW-062: a repeated or late tap (second Done, Done after an emergency exit or after a replacement took over) changes nothing.
@@ -609,14 +611,15 @@ export function registerFriends(app: Hono<Env>, x: Ctx, ff: FriendFinder) {
     if (action === 'arrived') await ff.friendArrived(row, c.get('userId'));
     if (action === 'cancel') await ff.step(row.household_id, row, { type: 'friend_cancel' });
     if (action === 'done') await db.query(`delete from visit_access_checklist where task_id=$1`, ['cover_' + row.id]);
+    let result: Awaited<ReturnType<typeof recordProof>> | null = null;
     if (action === 'done') {
-      const { ingestSignal } = await import('./care.js');
-      await ingestSignal(db, { householdId: row.household_id, idempotencyKey: `friend-done:${row.id}`, kind: 'friend_photo', taskId: 'cover_' + row.id, channel: 'app', imageHash: undefined, eventTime: now(), receivedTime: now(), actor: 'friend:' + c.get('userId') });
-      await db.query(`update friend_links set help_count=help_count+1, checked_in_count=checked_in_count+1 where household_id=$1 and friend_user_id=$2`, [row.household_id, c.get('userId')]);
+      // Proof: a photo of the bowl or pet and/or today's code from the food-box card (graded like WhatsApp proof).
+      result = await recordProof(db, { householdId: row.household_id, taskId: 'cover_' + row.id, actor: 'friend:' + c.get('userId'), channel: 'app', proof, now: now(), key: `friend-done:${row.id}` });
+      await db.query(`update friend_links set help_count=help_count+1, checked_in_count=checked_in_count+$3 where household_id=$1 and friend_user_id=$2`, [row.household_id, c.get('userId'), result.grade === 'none' ? 0 : 1]);
       await ff.step(row.household_id, row, { type: 'completed' });
-      await A.push.push('owner:' + row.household_id, 'Find cover', 'Your friend finished. Say thanks on WhatsApp?');
+      await A.push.push('owner:' + row.household_id, 'Find cover', result.grade === 'strong' ? 'Your friend finished and sent a photo with today’s code.' : result.grade === 'none' ? 'Your friend says they finished, but sent no photo or code.' : 'Your friend finished. The proof is incomplete: open Today to see it.');
     }
-    return c.json({ ok: true, state: row.state });
+    return c.json({ ok: true, state: row.state, ...(result ? { proof: result, message: proofMessage(result) } : {}) });
     });
   });
   /** Access details + emergency card: only for the confirmed friend, only while the grant is active (PS-063, 9.5). */

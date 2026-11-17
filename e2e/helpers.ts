@@ -7,8 +7,16 @@ export const PHONE = { neha: '9800000021', rohan: '9800000022', priya: '99000000
 export const SUNITA = '+919000000035';
 
 /** Opens the demo. Tests switch the demo tools on (clock, simulated phones); real users see them only on request. */
-export async function boot(page: Page, hash = '', opts: { tools?: boolean } = {}) {
+export async function boot(page: Page, hash = '', opts: { tools?: boolean; intro?: boolean } = {}) {
+  // The welcome screens show once per browser; tests start at Log in unless they are about the welcome screens.
+  if (!opts.intro) await page.addInitScript(() => { try { localStorage.setItem('pawsure.introSeen', '1'); } catch { /* ignore */ } });
   if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools', '1'); } catch { /* ignore */ } });
+  // The demo keeps its data in the browser; a test that boots again in the same page starts from a fresh demo.
+  if (page.url().startsWith('http')) await page.evaluate(async () => {
+    try { localStorage.removeItem('pawsure.session'); localStorage.removeItem('pawsure.staff.session'); } catch { /* ignore */ }
+    const dbs = (await indexedDB.databases?.()) ?? [];
+    for (const d of dbs) if (d.name?.includes('pawsure-demo')) indexedDB.deleteDatabase(d.name);
+  });
   await page.goto('/demo.html' + hash);
   await page.waitForSelector('html[data-demo-ready]', { state: 'attached', timeout: 90_000 });
 }
@@ -28,6 +36,75 @@ export async function fillSociety(page: Page, name: string, city = 'Mumbai', sta
   await page.getByRole('button', { name: 'My society isn’t listed' }).click();
   await page.locator('#sct').fill(name);
 }
+/** Opens one of the in-app pickers (state, city, society, language) and taps an option. */
+export async function pick(page: Page, id: string, option: string) {
+  await page.locator('#' + id).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
+/** Onboarding is a conversation with Pawly in three playbooks: your information (→ create my home), your pet, care details. The circle question follows. */
+/** Playbook 1 only, choosing the location by hand: name, English, Maharashtra, Mumbai, a typed society, no tower or flat, create the home. */
+const next = (page: Page) => page.getByRole('button', { name: 'Next', exact: true }).click();
+/** The "About you" form: name, then the messaging language (a tap answers it). */
+export async function aboutYou(page: Page, name: string, lang = 'English') {
+  await page.locator('#nm').fill(name); await next(page);
+  await page.getByRole('button', { name: lang, exact: true }).click();
+}
+export async function intakeInfo(page: Page, name: string, society = 'Raheja Vihar, Powai') {
+  await aboutYou(page, name);
+  await page.getByRole('button', { name: 'Choose manually' }).click();
+  await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+  await page.locator('#sct').fill(society); await next(page);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByRole('button', { name: 'Create my home' }).click();
+}
+export async function intake(page: Page, name: string, society: string, o: { tower?: string; flat?: string; city?: string; state?: string; pet?: string; helper?: { name: string; phone: string }; nobody?: boolean } = {}) {
+  await aboutYou(page, name);
+  await page.getByRole('button', { name: 'Choose manually' }).click(); // the test browser doesn't share its location
+  // "Your home" form: state, city, society, then tower and flat
+  await pick(page, 'stt', o.state ?? 'Maharashtra');
+  await pick(page, 'cty', o.city ?? 'Mumbai');
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click();
+  await page.locator('#sct').fill(society); await next(page);
+  // Tower and flat: one small form (Next / Skip, then Done / Skip).
+  if (o.tower) { await page.locator('#tw').fill(o.tower); await page.getByRole('button', { name: 'Next', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  if (o.flat) { await page.locator('#fl').fill(o.flat); await page.getByRole('button', { name: 'Done', exact: true }).click(); } else await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByRole('button', { name: 'Create my home' }).click();
+  await petAndCare(page, o.pet ?? 'Coco', o.helper, o.nobody);
+}
+/** Playbooks 2 and 3 of the onboarding conversation: one dog, fed at 8 AM, no walks, cared for by the owner. */
+export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: string; phone: string }, nobody = false) {
+  await page.locator('#pn0').fill(pet); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: /Dog/ }).click();
+  await page.getByRole('button', { name: 'Indie', exact: true }).click(); await page.getByRole('button', { name: 'Male', exact: true }).click(); // breed and sex
+  await page.getByRole('button', { name: '1–3 years' }).click();
+  await page.locator('#pf0').fill('1 cup kibble at 8 AM and 7 PM'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: 'None known', exact: true }).click(); // health form: allergies, then medicines
+  await page.getByRole('button', { name: 'None', exact: true }).click();
+  await page.locator('#pv0').fill('Dr. Rao, Powai Pet Clinic'); await page.getByRole('button', { name: 'Next', exact: true }).click(); // vet form
+  await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'No, that’s all' }).click();
+  // Playbook 3: Care details
+  await page.getByRole('button', { name: 'Morning · 8 AM' }).click(); await page.getByRole('button', { name: /^Done/ }).click();
+  await page.getByRole('button', { name: 'No walks' }).click();
+  if (nobody) { await page.getByRole('button', { name: 'Nobody yet' }).click(); return; }
+  if (!helper) { await page.getByRole('button', { name: 'Me or my family' }).click(); return; }
+  await page.getByRole('button', { name: 'My house help' }).click();
+  await page.locator('#hn').fill(helper.name); await page.getByRole('button', { name: 'Next', exact: true }).click(); // helper form
+  await page.locator('#hp').fill(helper.phone); await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('button', { name: /Marathi/ }).click();
+}
+/** Closes the Plan for today sheet if it is open (it covers Home and the demo bar). */
+export async function closePlan(page: Page) {
+  const plan = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Plan for today' }) });
+  if (await plan.isVisible()) await plan.getByRole('button', { name: 'Close' }).click();
+}
+/** Opens Home → Plan for today (who's caring, leaving / back, timeline, day report, edit routine, tomorrow). */
+export async function openPlan(page: Page) {
+  if (await page.getByRole('heading', { name: 'Plan for today' }).isVisible()) return;
+  await page.getByRole('button', { name: 'Plan for today' }).click();
+  await expect(page.getByRole('heading', { name: 'Plan for today' })).toBeVisible();
+}
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});
 export const webhook = (page: Page, body: Record<string, unknown>) => api(page, 'POST', '/webhooks/whatsapp', { messageId: 'e2e-' + Math.random().toString(36).slice(2), ...body });
 
@@ -39,15 +116,34 @@ export async function signIn(page: Page, phone10: string) {
   await page.locator('#otp').fill(code);
   await page.getByRole('button', { name: 'Verify' }).click();
 }
-export async function signInOwner(page: Page) {
+/** New account: the Sign up tab, then the same number + code steps (consent and the Pawly conversation follow). */
+export async function signUp(page: Page, phone10: string) {
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click();
+  await signIn(page, phone10);
+}
+/** Owner sign-in. Home shows the day's tasks once the owner has headed out, so by default this heads out at 9 AM
+ *  (back around 7 PM, no checklist) through the API; pass { home: true } for tests about the leaving flow itself. */
+export async function signInOwner(page: Page, o: { home?: boolean } = {}) {
   await signIn(page, PHONE.neha);
   await expect(page.getByRole('heading', { name: /Neha/ })).toBeVisible();
+  if (!o.home) await headOut(page);
+}
+/** Heads out (I'm leaving, no checklist) so Home shows the day's tasks. */
+export async function headOut(page: Page) {
+  const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
+  await api(page, 'POST', `/v1/households/${hh}/day/leaving`, { checklist: null, returnAt: 1140, planB: null });
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Me' }).click();
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByText(/Out since/)).toBeVisible();
 }
 /** Signs out with the app's own button (owner: Me → Sign out; friend: Sign out). The page isn't reloaded, so data is kept. */
 export async function signOut(page: Page) {
   if (await page.locator('nav.tabbar').isVisible()) await tab(page, 'Me');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Log in or create an account' })).toBeVisible();
+  // Signing out shows the welcome screens again; "Already have an account? Log in" goes to Log in.
+  await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 }
 
 /** The essential care and medical details every new pet needs. */
@@ -61,6 +157,7 @@ export async function fillPetEssentials(page: Page) {
 
 /** Sets the demo clock so that one +5m tap from the demo bar lands on HH:MM; the tap also runs the job and refreshes. */
 export async function clockTo(page: Page, hhmm: string, day = DAY) {
+  await closePlan(page);
   const [h, m] = hhmm.split(':').map(Number) as [number, number];
   const t = h * 60 + m - 5;
   await api(page, 'POST', '/demo/clock', { set: `${day}T${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}:00+05:30` });
@@ -70,7 +167,20 @@ export async function clockTo(page: Page, hhmm: string, day = DAY) {
 
 export const tab = (page: Page, name: string) => page.locator('nav.tabbar').getByRole('button', { name }).click();
 export const meItem = async (page: Page, name: string | RegExp) => { await tab(page, 'Me'); await page.locator('button.li', { hasText: name }).click(); };
+/** Find cover opens on Pawly, the assistant; this goes to the full request form (understand → search → approve). */
+export async function findCoverForm(page: Page) {
+  await tab(page, 'Find cover');
+  await page.getByRole('button', { name: 'Use the request form' }).click();
+}
 export const taskCard = (page: Page, title: string) => page.locator('button.task', { hasText: title }).first();
+/** Opens a task and its Task details, returns the details text (evidence label, cover, lifecycle), and closes it. */
+export async function taskDetails(page: Page, title: string) {
+  await taskCard(page, title).click();
+  const d = page.getByRole('dialog'); await d.locator('summary', { hasText: 'Task details' }).click();
+  const text = await d.locator('details.task-more').innerText();
+  await d.getByRole('button', { name: 'Close' }).last().click();
+  return text;
+}
 export const dialog = (page: Page) => page.getByRole('dialog');
 
 /** Staff sign-in on the console route (#admin). */
