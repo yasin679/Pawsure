@@ -21,7 +21,7 @@ const HI: Record<string, string> = {
   // sign-in
   'Be sure, whoever’s caring.': 'देखभाल कोई भी करे, आप निश्चिंत रहें।', 'Log in or create an account': 'लॉग इन करें या खाता बनाएँ',
   'We’ll text you a 6-digit code.': 'हम आपको 6 अंकों का कोड भेजेंगे।', 'Mobile number': 'मोबाइल नंबर', 'Send code': 'कोड भेजें',
-  'Evidence': 'सबूत', 'Task by task': 'हर काम का', 'Asked first': 'पहले पूछे जाते हैं', 'Alerts': 'अलर्ट', 'That escalate': 'जो आगे बढ़ते हैं',
+  'Evidence': 'सबूत', 'Status': 'स्थिति', 'Cover': 'कवर', 'Task by task': 'हर काम का', 'Asked first': 'पहले पूछे जाते हैं', 'Alerts': 'अलर्ट', 'That escalate': 'जो आगे बढ़ते हैं',
   'Try a demo number': 'डेमो नंबर आज़माएँ', 'Tap one to fill it in, or use any new number to start fresh.': 'भरने के लिए किसी पर टैप करें, या नया नंबर डालें।',
   '6-digit code': '6 अंकों का कोड', 'Verify': 'पुष्टि करें', 'Resend code': 'कोड फिर भेजें', 'Demo mode: no SMS is sent. Your code is': 'डेमो मोड: कोई SMS नहीं भेजा जाता। आपका कोड है',
   // consent and profile

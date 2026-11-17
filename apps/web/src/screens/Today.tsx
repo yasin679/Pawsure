@@ -220,18 +220,11 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         </>}
       {task.visitId && day.visits[task.visitId]?.status && <VisitTime v={day.visits[task.visitId]!} />}
       <details className="task-more"><summary>{tr('Task details')}</summary>
-      <div className="row"><span className="eyebrow grow">{tr('Evidence')}</span><Conf state={task.ev.state} label={task.ev.label} /></div>
-      <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
-      {!task.cover && <CoverLineView line={ov?.lines[task.id]} />}
-      {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">{tr('A Yes is a plan, not proof the task was done.')}</div></div>}
-      {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span>{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
-      <div className="card flat"><span className="eyebrow">Why this label</span>{task.ev.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>
-      {task.esc && <div className="card"><span className="eyebrow">Escalation ladder</span>{task.esc.steps.map(s => <div key={s.n} className="row small"><span className="mono" style={{ minWidth: 60 }}>{fmt(s.at)}</span><span className="grow">{s.kind.replace(/_/g, ' ')}</span><span className={`tag ${s.fired ? 'flag-on' : s.stoppedByAck || s.notRepeated ? 'owner' : ''}`}>{s.fired ? 'Sent' : s.stoppedByAck ? 'Stopped' : s.notRepeated ? 'Not repeated (asked before the task)' : 'Pending'}</span></div>)}</div>}
-      <div className="card"><span className="eyebrow">Lifecycle (append-only)</span>{task.lifecycle.map((l, i) => <div key={i} className="row small"><span className="mono muted" style={{ minWidth: 48 }}>{hm(l.at)}</span><span className="grow"><b>{l.state}</b> · {l.actor}{l.note ? ', ' + l.note : ''}</span></div>)}</div>
-      <div className="small"><b>Helper points:</b> {task.points.kind === 'earn' ? `+${task.points.points}` : task.points.kind === 'hold' ? 'held (review, max 7 days)' : (task.points.reason ?? '').replace(/_/g, ' ')}</div>
+      <div className="row small"><span className="grow">{tr('Status')}</span><Conf state={task.ev.state} label={task.ev.label} /></div>
+      {ov?.lines[task.id] ? <CoverLineView line={ov.lines[task.id]} /> : task.cover && <div className="row small"><span className="grow">{tr('Cover')}</span><b>{task.cover.label}</b></div>}
+      {task.esc?.open && !task.esc.resolved && <div className="card"><span className="eyebrow">Escalation ladder</span>{task.esc.steps.map(s => <div key={s.n} className="row small"><span className="mono" style={{ minWidth: 60 }}>{fmt(s.at)}</span><span className="grow">{s.kind.replace(/_/g, ' ')}</span><span className={`tag ${s.fired ? 'flag-on' : s.stoppedByAck || s.notRepeated ? 'owner' : ''}`}>{s.fired ? 'Sent' : s.stoppedByAck ? 'Stopped' : s.notRepeated ? 'Not repeated (asked before the task)' : 'Pending'}</span></div>)}</div>}
       <div className="btnrow">{task.visitId && d.gateApp && <button className="btn sm" onClick={() => run(() => api(`${H}/visits/${task.visitId}/gate`, { body: {} }))}>Attach my gate-app alert</button>}
         {task.ev.state !== 'Cancelled' && <button className="btn sm" onClick={() => setSheet('change')}>{tr('Change this task')}</button>}</div>
-      <p className="xs muted">Gate alerts are marked as from you.</p>
       </details>
     </Sheet>}
 
