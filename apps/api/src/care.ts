@@ -101,7 +101,8 @@ export async function loadDay(db: Db, householdId: string, careDate: string, now
   for (const v of visits) {
     const vt = domainTasks.filter(t => t.visitId === v.id);
     const strong = vt.some(t => t.signals.some(s => s.kind === 'photo' && s.code === 'today' && !s.duplicate));
-    const cv: CareVisit = { id: v.id as string, who: (v.helper_membership_id as string) ?? '', signals: signals.filter(s => s.visit_id === v.id).map(s => ({ id: s.id as string, kind: s.kind as VisitSignal['kind'], registeredNumber: s.registered_number as boolean | undefined, ownerProvided: !!s.owner_provided, eventTime: m(s.event_time), receivedTime: m(s.received_time), source: s.channel as string })) };
+    const cv: CareVisit = { id: v.id as string, who: (v.helper_membership_id as string) ?? '', signals: signals.filter(s => s.visit_id === v.id).map(s => ({ id: s.id as string, kind: s.kind as VisitSignal['kind'], registeredNumber: s.registered_number as boolean | undefined, ownerProvided: !!s.owner_provided, codeOk: (s.code_ok as boolean | null) ?? undefined, duplicate: !!s.duplicate, eventTime: m(s.event_time), receivedTime: m(s.received_time), source: s.channel as string })),
+      codes: { ...(v.start_code_at ? { start: m(v.start_code_at) } : {}), ...(v.end_code_at ? { end: m(v.end_code_at) } : {}) } };
     visitEval[v.id as string] = { id: v.id as string, ...evaluateVisit(cv, vt, strong, nowMin, RULES_V1) };
   }
   let monthEarned = (await db.query<{ n: number }>(`select coalesce(sum(points),0)::int as n from reward_ledger where household_id=$1 and month=$2 and state in ('earned','released') and (task_id is null or task_id not in (select id from care_tasks where household_id=$1 and care_date=$3))`, [householdId, careDate.slice(0, 7), careDate]))[0]?.n ?? 0;
@@ -133,7 +134,7 @@ export async function loadDay(db: Db, householdId: string, careDate: string, now
 
 /** Ingest a helper/friend/IVR/owner signal. Idempotent by key; duplicate image hashes are stored but never count (PRD 10.5). */
 export async function ingestSignal(db: Db, p: {
-  householdId: string; idempotencyKey: string; kind: 'photo' | 'voice' | 'ivr' | 'friend_photo' | 'call_arrive' | 'call_exit' | 'gate';
+  householdId: string; idempotencyKey: string; kind: 'photo' | 'voice' | 'ivr' | 'friend_photo' | 'call_arrive' | 'call_exit' | 'gate' | 'code_start' | 'code_end';
   taskId?: string; visitId?: string; channel: string; eventTime: Date; receivedTime: Date; photoCode?: string; imageHash?: string; namesTask?: boolean; codeOk?: boolean; registeredNumber?: boolean; ownerProvided?: boolean; actor: string;
 }): Promise<{ status: 'stored' | 'duplicate_event'; duplicateImage?: boolean }> {
   return db.tx(async (t) => {

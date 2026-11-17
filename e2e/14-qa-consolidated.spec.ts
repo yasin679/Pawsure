@@ -154,6 +154,23 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.getByRole('option')).toHaveCount(23);
   });
 
+  test('R10 the helper sends proof from her own login (gallery photo + today’s code); the owner sees it on the task', async ({ page }) => {
+    await signIn(page, '9000000035');
+    await expect(page.getByRole('heading', { name: /Hello Sunita/ })).toBeVisible();
+    await expect(page.getByText('Today’s tasks')).toBeVisible();
+    await page.locator('.li', { hasText: 'Joint supplement' }).getByRole('button', { name: 'Send proof' }).click();
+    await page.getByLabel('Choose a photo from the gallery').setInputFiles('apps/web/public/assets/mascot-family.png');
+    await page.locator('#pcode').fill((await page.locator('.hint b.mono').innerText()).trim());
+    await page.getByRole('dialog').getByRole('button', { name: 'Send proof', exact: true }).click();
+    await expect(page.getByText('Thank you! Photo and today’s code received.')).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('.li', { hasText: 'Joint supplement' })).toContainText('proof sent ✓');
+    await signOut(page); await signInOwner(page);
+    await page.locator('button.task', { hasText: 'Joint supplement' }).first().click();
+    await expect(page.getByText('Proof photos')).toBeVisible();
+    await expect(page.locator('.proofs figure').first()).toContainText('today’s code');
+  });
+
   test('R6 PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong', async ({ page }) => {
     await signIn(page, '9000000035');
     await expect(page.getByRole('heading', { name: /Hello Sunita/ })).toBeVisible();

@@ -2,6 +2,7 @@
  * DEMO ONLY: the phones of backups, a substitute and any "ask someone else" number, replying through the real webhook,
  * plus the one-time task link page they open. Hidden unless the API runs in DEMO_MODE. Nothing reaches a real phone.
  */
+import { ProofSheet } from './Proof';
 import { useEffect, useState } from 'react';
 import { api, ApiError, fmt } from '../api';
 import { AppBar, Banner } from '../ui';
@@ -35,6 +36,7 @@ export function TaskLink({ token, onBack }: { token: string; onBack?: () => void
   const [v, setV] = useState<LinkView | null>(null); const [err, setErr] = useState<string | null>(null); const [read, setRead] = useState(false); const [msg, setMsg] = useState<string | null>(null);
   const load = () => api<LinkView>(`/t/${token}`, { auth: false }).then(x => { setV(x); setErr(null); }).catch(e => setErr(e instanceof ApiError ? String(e.body.note ?? 'This link has expired or was switched off.') : 'Can’t reach Pawsure.'));
   useEffect(() => { load(); }, [token]);
+  const [proof, setProof] = useState(false);
   const act = (a: string, body: Record<string, unknown> = {}) => api<{ status?: string }>(`/t/${token}/${a}`, { body, auth: false }).then(r => { setMsg(a === 'accept' ? (r.status === 'hold' ? `Thank you! ${v?.owner} will confirm in a few minutes. Please wait for the confirmation before going.` : 'Thank you. The details are below.') : a === 'decline' ? 'Thank you for replying.' : a === 'done' ? 'Thank you! The owner has been told.' : 'Thanks for telling us. The details have been removed.'); load(); }).catch(e => setErr(e instanceof ApiError ? String(e.body.note ?? e.body.error) : 'Can’t reach Pawsure.'));
   return <><AppBar title="Pawsure task link" onBack={onBack} /><main className="body">
     {err && <div className="empty"><b>{err}</b><p>Links work for one task only.</p></div>}
@@ -44,8 +46,9 @@ export function TaskLink({ token, onBack }: { token: string; onBack?: () => void
       {v.canAccept && <div className="btnrow"><button className="btn primary" disabled={!!v.handlingNote && !read} onClick={() => act('accept', { noteRead: read })}>{v.kind === 'substitute' ? 'Open the details' : 'Accept'}</button>{v.kind !== 'substitute' && <button className="btn" onClick={() => act('decline')}>Decline</button>}</div>}
       {msg && <Banner kind="info" icon="ℹ">{msg}</Banner>}
       {v.details ? <div className="card"><span className="eyebrow">Only for this visit</span><div><b>Flat {v.details.flat}, {v.details.tower}</b></div><div className="small">Gate: {v.details.gate}</div><div className="small">Key: {v.details.key}</div><div className="small">{v.details.instructions}</div>
-        <div className="btnrow"><button className="btn primary" onClick={() => act('done')}>📷 Done: send photo</button><button className="btn" onClick={() => act('cant')}>Can’t make it</button></div></div>
+        <div className="btnrow"><button className="btn primary" onClick={() => setProof(true)}>📷 Done: send proof</button><button className="btn" onClick={() => act('cant')}>Can’t make it</button></div></div>
         : <p className="xs muted">{v.notice}</p>}
+      {proof && <ProofSheet title="Send proof" householdId={(v as { householdId?: string }).householdId} allowNoProof onClose={() => { setProof(false); load(); }} onSend={b => api<{ message?: string }>(`/t/${token}/done`, { body: { ...b }, auth: false })} />}
       <p className="xs muted">Pawsure is not an emergency or vet service. {v.tasks.map(t => `${t.title}: ${t.label}`).join(' · ')}</p>
     </>}
   </main></>;
