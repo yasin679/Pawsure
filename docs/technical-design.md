@@ -58,7 +58,7 @@ flowchart LR
 | Path | Contents |
 |---|---|
 | `packages/domain/src` | `trust.ts` (evidence), `escalation.ts`, `coveredDay.ts`, `emergency.ts`, `lifecycle.ts`, `rewards.ts`, `ledger.ts`, `codeCard.ts`, `permissions.ts`, `daily.ts`, `pilot.ts`, `friendfinder/` (parse, match, state machine) |
-| `packages/db` | `migrations/001–005`, client (`index.ts`), demo seed, encrypted backup and restore verification |
+| `packages/db` | `migrations/001–010`, rollbacks, client (`index.ts`), demo seed, encrypted backup and restore verification |
 | `apps/api/src` | `app.ts` (auth, households, pets, today), `daily.ts` (daily care, helper channel, code cards, look-in, incidents, health, circle, jobs), `friends.ts` (Friend Finder), `admin.ts` (console, rights, wallet, share record), `ops.ts` (retention, monitoring, backups), `delivery.ts` (failover), `adapters.ts`, `templates.ts` |
 | `apps/web/src` | `App.tsx` (shell and routing), `screens/` (Today, Pet, CareSetup, FindCover, Friends, FriendHome, Account, RoleHomes, Admin, LookIn, simulators) |
 | `e2e`, `apps/api/test`, `packages/*/test` | Playwright end-to-end tests; API, rules and database tests |
@@ -74,6 +74,8 @@ flowchart LR
 | Arrival and exit calls from the registered number | Visit evidence only |
 | Wrong or old code; reused image (same fingerprint) | Not confirmed / not counted |
 | Two independent channels (for example photo + code and sufficient arrival/exit calls, or photo + owner-provided gate entry) | Confirmed |
+
+**Visit codes (D-52, D-53).** After a registered arrival call, and again after the exit call, the API sends the helper a random 3-digit code (`care_visits.start_code_sealed` / `end_code_sealed`, sealed like the code card; the send time in `start_code_at` / `end_code_at`). A photo replying with the code is stored as a `code_start` or `code_end` signal with `code_ok`. `evaluateVisit` grades each code `ok` (right code within `visitCodeWithin` = 10 min), `late`, `wrong`, `waiting` or `missing`, ignoring re-sent images and anything sent before the code. Long-enough calls with both codes `ok` make the visit *Confirmed*; a `wrong` code makes it *Not confirmed* unless an owner-provided gate entry exists; codes never change a task's label directly. Reason codes: `R-START-CODE-*`, `R-END-CODE-*`.
 
 Grace periods: standard 30 minutes, medicine 15, walk 45. Evidence up to 3 hours late is kept and marked late. A visit shorter than the summed task minimums (capped at 30 minutes) does not count; an arrival without exit is *in progress* for 45 minutes. Random photo checks are requested on 1 in 5 tasks without a gate app (or after a mismatch in 14 days), otherwise 1 in 10, chosen with a server secret.
 
@@ -194,6 +196,15 @@ erDiagram
 | `003_friend_finder.sql` | Friend messages, cover-task fields, access grants, live location sessions |
 | `004_ops_rights_rewards.sql` | Staff roles, cohorts, ledger decisions, share links, rights fields, breach checklist and events |
 | `005_pilot_readiness.sql` | Delivery log, service checks, retention runs |
+| `006_cover_continuity.sql` | Cover rows, cover jobs, backups list, reminders, holds, advisories, urgency (rollback in `packages/db/rollback/`) |
+| `007_qa_consolidated.sql` | Friend capacity and species, society list (name + city), the home's city, state and society id |
+| `008_languages.sql` | All 22 scheduled languages for owners, helpers and friends |
+| `009_proof_photos.sql` | `evidence_photos`: proof from the app (small photo, code result, who sent it), deleted after 90 days |
+| `009_society_location.sql` | Society positions, so sign-up can suggest a nearby society (the phone's location is not stored) |
+| `010_pet_sex.sql` | A pet's sex (him/her in friend messages) |
+| `010_visit_codes.sql` | Sealed start and end codes and their send times on `care_visits`; `code_start` and `code_end` signal kinds |
+
+Two numbers are used twice because the work was built on separate branches. Migrations are tracked by full file name and run in name order, so they must not be renamed.
 
 Schema rules: every household-owned row has `household_id`; event and received times are stored separately and care days are IST dates; `audit_log`, `task_events` and `consent_records` reject UPDATE and DELETE; idempotency keys are unique (`checkin_signals.idempotency_key`, `notifications.dedupe_key`, `inbound_messages.message_id`); migrations only add (expand-only).
 

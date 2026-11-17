@@ -1,7 +1,7 @@
 ---
 id: PS-UAT-06
 title: UAT Test Cases
-subtitle: 125 acceptance test cases with steps, expected results and the latest result
+subtitle: 146 acceptance test cases with steps, expected results and the latest result
 audience: Testers, product owner and sign-off owners
 ---
 
@@ -13,8 +13,8 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 15 Nov 2026, 01:27 IST |
-| Result | **125 of 125 passed** |
+| Latest run | 17 Nov 2026, 16:20 IST |
+| Result | **146 of 146 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
 | Evidence | PS-TE-08 Test Evidence workbook; `e2e/report` (HTML report with traces on failure) |
@@ -34,8 +34,14 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | A3 | H | A wrong code is refused with a clear message | 1. Enter Neha’s number, Send code<br>2. Enter 000000, Verify | Error: code doesn’t match | Pass |
 | A4 | H | An invalid phone number is refused | 1. Enter 12345, Send code | Error asking for a 10-digit Indian mobile number | Pass |
 | A5 | H | Existing owner signs in and sees both pets on Today | 1. Sign in as 98000 00021 | Today shows Bruno and Misty | Pass |
-| A6 | H | Sign out returns to Log in or create an account | 1. Me → Sign out | Log in or create an account shown | Pass |
+| A6 | H | Signing out shows the welcome screens again, then Log in | 1. Me → Sign out | Log in or create an account shown | Pass |
 | A7 | H | Co-owner Rohan signs in and sees the same household | 1. Sign in as 98000 00022 | Today greets Rohan and shows the shared pets | Pass |
+| A10 | H | Log in (returning owner): number and code only, straight to the home with her pets and today’s activity | 1. Log in tab<br>2. Enter number, Send code<br>3. Enter code, Verify | Straight to the home with her pets and today’s activity; no onboarding | Pass |
+| A11 | H | Log in with a new number goes straight into the full sign-up journey | 1. Log in tab<br>2. Enter a new number and the code | Told there is no account and taken into the full sign-up journey | Pass |
+| A12 | H | Sign up with a number that already has an account goes straight to that home | 1. Sign up tab<br>2. Enter the existing number and code | Goes straight to that home, nothing is created twice | Pass |
+| A13 | H | The product owner’s number (88607 50239) logs straight into the demo home: pets and today’s tasks, no onboarding | 1. Log in with 88607 50239 | Logs straight into the demo home: pets and today’s tasks, no onboarding | Pass |
+| A14 | H | First visit: three welcome screens; Next moves on; Get started opens Sign up; they are not shown again | 1. Open the app<br>2. Next through the three welcome screens<br>3. Get started | Three welcome screens; Get started opens Sign up; not shown again | Pass |
+| A15 | H | Welcome screens: “Already have an account? Log in” opens Log in | 1. On a welcome screen tap “Already have an account? Log in” | Log in opens | Pass |
 
 ## 3 Pets
 
@@ -65,14 +71,18 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | D5 | H | Change a task: cancelling needs a reason and is kept in history | 1. Open Toilet pad task → Change this task<br>2. Save without reason<br>3. Add reason → Save | Reason required; task shows Cancelled | Pass |
 | D6 | H | Timeline and day report open with today’s plan | 1. Timeline<br>2. Close → Day report | Timeline lists the plan; report lists tasks and the Thank Sunita link | Pass |
 | D7 | H | SOS: report “Pet hurt” → S1 incident → I’m on it → resolved with a note | 1. SOS → Pet hurt<br>2. Incident card → I’m on it<br>3. Open → resolution note → Mark resolved | S1 incident created, acknowledged, then closed | Pass |
-| D8 | H | Can’t come today → plan kept, alone-window warning, “Ask a friend” pre-fills Find cover | 1. My help can’t come today → Mark unavailable<br>2. Ask a friend to cover | Plan kept, alone-window warning, no phase-3 placeholder; Find cover pre-filled for Bruno 1:00 pm | Pass |
+| D8 | H | Can’t come today → plan kept, alone-window warning, “Ask a friend” pre-fills Find cover | 1. My help can’t come → Mark unavailable<br>2. Ask a friend to cover | Plan kept, alone-window warning, no phase-3 placeholder; Find cover pre-filled for Bruno 1:00 pm | Pass |
 | D9 | H | Day close at 11:59 PM stores the covered-day result | 1. Clock to 11:59 PM | Day closes; covered-day status shown | Pass |
+| D10 | H | A pending task: plain description, photo placeholder, Send reminder and Mark completed; completed shows the photo | 1. Tap Lunch + fresh water<br>2. Send reminder<br>3. Mark completed<br>4. Open it again | Description, photo placeholder, Send reminder and Mark completed; after completing, the photo with “Marked completed by you” | Pass |
+| D11 | H | The Plan sheet shows the helper’s status too | 1. Open Plan for today | The helper and her status (Accepted) are shown | Pass |
 
 ## 6 Helper check-ins and backup look-in
 
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
 | E1 | H | Prompt arrives 10 min before; photo + today’s code → Likely; plus arrival and exit calls → Confirmed | 1. Show Sunita’s phone<br>2. Arrival call<br>3. Photo + today’s code<br>4. +15 min → Exit call | Prompt received; task Likely after photo; Confirmed after exit call | Pass |
+| E1b | H | Arrival and exit calls each send a fresh random code; photos of both confirm the visit and show on the task | 1. Arrival call<br>2. Photo with the start code<br>3. +15 min, exit call<br>4. Photo with the end code<br>5. Owner opens the task | A fresh code after each call; both match; visit Confirmed; task shows Start and End code: photo matched ✓ | Pass |
+| E1c | H | A photo with the wrong visit code is flagged: the visit is Not confirmed | 1. Arrival call<br>2. Photo with a wrong visit code<br>3. +15 min, exit call<br>4. Owner opens the task | Helper told it doesn’t match; visit Not confirmed; “Start code: code didn’t match” | Pass |
 | E2 | H | A wrong code is flagged and does not confirm the task | 1. Photo with wrong code | Task Not confirmed | Pass |
 | E3 | H | Re-sending an old photo is not counted | 1. Re-send old photo on two tasks<br>2. Open Timeline | Helper told the photo was sent before (Marathi); timeline: not counted (reused image) | Pass |
 | E4 | H | Voice note and IVR code each give Likely | 1. Voice note for Lunch<br>2. IVR code for Litter tray | Both tasks Likely | Pass |
@@ -104,6 +114,8 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | G7 | H | No friend free (10:30 PM) → honest empty result; nearby members stay switched off | 1. Feed Bruno at 10:30 pm → Search | Honest ‘none of your friends can do this’; nearby members Switch OFF | Pass |
 | G8 | H | Friend suggests another time → owner confirms the new time | 1. Priya replies ‘5:30’<br>2. Owner Confirm 5:30 | Confirmed at 5:30 PM (header shows the agreed time) | Pass |
 | G9 | H | Friend declines → nobody accepted, “Try again” offered | 1. Priya taps No | Nobody accepted; Try again offered | Pass |
+| G9a | H | Find cover opens on “How can I help?”; any request shows the thinking animation, then friends who can help; Ask goes to the request form | 1. Open Find cover<br>2. Tap a suggestion or type a request<br>3. Ask on a friend card | Opens on “How can I help?”; shows the thinking animation, then friends who can help; Ask goes to the request form | Pass |
+| G9b | H | Asking the second friend from the assistant goes straight through: details → Pawly → that friend’s message → Sent (co-owner can answer questions) | 1. Tap “Walk Bruno this evening”<br>2. Ask on the second friend<br>3. Answer the time question<br>4. Find with Pawly, approve, Send | Goes straight to that friend’s message and is Sent; a co-owner can answer questions | Pass |
 | G10 | H | Request screen says it was understood by rules (no AI connected); owner cancels the request | 1. Look at how the request was understood<br>2. Cancel request | Says “understood by rules (no AI connected)”, never “parsed by AI”; request Cancelled | Pass |
 | G11 | H | Duplicate WhatsApp “Yes” is ignored (idempotent) | 1. Priya taps Yes<br>2. Replay the same webhook | Only one acceptance recorded (idempotent) | Pass |
 
@@ -157,7 +169,8 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 |---|---|---|---|---|---|
 | L1 | M | Phone width (390 px): no sideways scrolling on any main tab | 1. Visit Today, Find cover, Friends, Pet, Me | No sideways scrolling | Pass |
 | L2 | M | Offline banner appears when the connection drops | 1. Go offline<br>2. Back online | Offline banner appears then disappears | Pass |
-| L3 | M | Reloading the demo starts fresh (each visitor gets their own copy) | 1. Reload<br>2. Sign in | Fresh demo data (tracked helper again) | Pass |
+| L3 | M | Reloading the demo keeps you signed in with your changes; Reset demo starts fresh | 1. Reload<br>2. Sign in | Fresh demo data (tracked helper again) | Pass |
+| L3b | M | A new owner who reloads after signing up is still signed in and lands on their home | 1. Reload the page | Still signed in and lands on their home | Pass |
 | L4 | M | Old “coming in phase 3” placeholders are gone everywhere | 1. Open Who’s caring sheet and every tab | No ‘arrives in phase’ placeholders anywhere | Pass |
 | L5 | M | Choosing “A friend” under Who’s caring opens Find cover | 1. Who’s caring → A friend | Find cover opens | Pass |
 | L6 | M | No console errors while using the main screens | 1. Visit every tab | No JavaScript errors in the console | Pass |
@@ -166,7 +179,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
-| M1 | H | Helper login → helper home only (WhatsApp instructions), no owner tabs or household data | 1. Sign in as 90000 00035<br>2. Open Your data rights | Helper home with WhatsApp instructions; no owner tabs, no pet data; data rights reachable | Pass |
+| M1 | H | Helper login → helper home only (her own tasks to send proof, WhatsApp instructions), no owner tabs or household data | 1. Sign in as 90000 00035<br>2. Open Your data rights | Helper home with WhatsApp instructions; no owner tabs, no pet data; data rights reachable | Pass |
 | M2 | H | Backup login → care-circle home: today’s timeline and alerts, no pets, flat or owner tabs | 1. Sign in as 97000 00008 | Care-circle home: today’s timeline, ‘never give medicine’; no tabs, no flat number | Pass |
 | M3 | H | Backup can acknowledge an emergency the owner reported | 1. Owner SOS → Pet hurt, sign out<br>2. Backup signs in → I’m on it | Backup can acknowledge the emergency | Pass |
 | M4 | H | Staff who sign in on the owner app go to the console, not owner sign-up | 1. Sign in on the owner app with a staff number | Sent to the ops console, not owner sign-up | Pass |
@@ -211,9 +224,9 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 |---|---|---|---|---|---|
 | P1 | M | A friend’s Yes before the cutoff can still be confirmed after it; new requests are blocked at the cutoff | 1. Priya says Yes at 4:28<br>2. Owner confirms at 4:35<br>3. Owner tries a new request at 4:35 | Confirm works; the new request is blocked with “Too close to the task for Friend Finder” | Pass |
 | P2 | M | Alert text uses the past tense once the backup step has happened | 1. Advance to 4:30 PM | Alert says “Your backup was alerted at 2:00 PM.” | Pass |
-| P3 | M | “Planned” appears once on a task card | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
+| P3 | M | A task card shows Pending (no “Planned”) and its cover only in the task sheet | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
 | P4 | M | The request label says rules (no AI connected); the demo bar has no parser or scenario menus | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
-| P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the app (Log in or create an account) | The mascot is a transparent image with no beige box | Pass |
+| P5 | M | The login page is text only: no illustration, no background shapes (17 Nov) | 1. Open the app at Log in | Text only: brand name, Log in / Sign up, “Welcome back”, number and Send code; no illustration or background shapes | Pass |
 | P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
 | P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
 
@@ -232,15 +245,43 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | ID | Pri | Test | Steps | Expected result | P/F |
 |---|---|---|---|---|---|
 | R1 | M | PAW-017 the owner edits the profile: tower saved, flat stays private, every owner is told | 1. Edit profile<br>2. Change tower → Save<br>3. Change it back | City and society pre-selected; Saved: tower; the change is shown; every owner is told (PAW-017) | Pass |
-| R2 | M | PAW-018/036 sign-up asks for the city first; Pune and Mumbai list their own Lake Vista CHS | 1. Enter a name<br>2. Choose Pune<br>3. Choose Lake Vista CHS · Baner | Continue stays off until a city and society are chosen; each city lists its own societies (PAW-018, PAW-036) | Pass |
+| R2 | M | PAW-018/036 sign-up asks for the state and city first; Pune and Mumbai list their own Lake Vista CHS | 1. Enter a name<br>2. Choose Pune<br>3. Choose Lake Vista CHS · Baner | Continue stays off until a city and society are chosen; each city lists its own societies (PAW-018, PAW-036) | Pass |
 | R3 | M | PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause | 1. Pause for 6 days<br>2. Turn the pause switch off | Switch shows On with the last paused day and the day requests return; off ends it at once (PAW-029) | Pass |
 | R4 | M | PAW-026/033 a two-pet request: both pets ticked, summary names both; capacity and overnight hours in settings | 1. Priya sets 2 pets, tries 9 PM–6 AM<br>2. Owner: Simple form, Feed, tick Misty too → Search | Overnight end shows (next day); suggestion names Bruno and Misty and says 2 pets at once (PAW-026, PAW-033, R-13) | Pass |
 | R5 | M | PAW-041/056 Priya says she is running late, then has an emergency after feeding: the owner sees both | 1. Running late 20 min<br>2. I’ve arrived<br>3. Emergency, tick Fed → Send<br>4. Owner opens the request | Owner told about the delay; the visit is Interrupted with Feed finished; backups asked (PAW-041, PAW-056, PAW-060) | Pass |
 | R6 | M | PAW-019 the helper can’t change the home’s details but can tell the owner they are wrong | 1. Wrong society or tower? Tell the owner | Confirmation shown; owner asked to check; no edit rights for the helper (PAW-019) | Pass |
 | R7 | M | Pawly finds friends with its steps on screen; with nobody free it shows the no-friend page | 1. Ask for a 6 PM feed → Find with Pawly<br>2. Ask for 10:30 PM → Find with Pawly<br>3. Invite a friend | Pawly shows its steps, then the friends found; with nobody free, the no-friend page offers another time, any distance, invite and call your backup | Pass |
 | R8 | M | The demo tools are hidden unless switched on | 1. Sign in | No demo bar on any page; tools come back with the Demo tools switch or #tools | Pass |
+| R9 | M | consent explains the Terms and Privacy Notice in plain words; no research toggle; a name of numbers is refused | 1. Read the Privacy Notice<br>2. Accept both, Continue<br>3. Type 12345 as the name | Plain summary with its version; no research toggle; the name is refused with a clear message; 23 languages offered | Pass |
+| R10 | M | the helper sends proof from her own login (gallery photo + today’s code); the owner sees it on the task | 1. Today’s tasks → Send proof<br>2. Choose from gallery, enter today’s code → Send<br>3. Owner opens the task | Photo and today’s code received; task shows proof sent; the owner sees the photo with ✓ today’s code | Pass |
 
-## 20 Sign-off
+## 20 Onboarding conversation
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| S1 | M | A typed city in another state is caught at the city question, and the home is created after fixing the state | 1. Type a city that is in another state<br>2. Fix the state | Caught at the city question; the home is created after the fix | Pass |
+
+## 21 Home location from the phone
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| T1 | M | The society, city and state are found from the location; Yes skips those questions | 1. Allow location<br>2. Yes to the suggestion | Society, city and state found from the location; those questions are skipped; the location is not stored | Pass |
+| T2 | M | Change keeps the suggestion filled in and lets the owner pick another society | 1. Change on the suggestion<br>2. Pick another society | Pickers open already filled in; the owner’s choice is kept | Pass |
+
+## 22 Helper invite and voice answers
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| U1 | M | Food can be answered by voice: what is said is written into the message | 1. Tap the microphone on the food question and speak | What is said is written into the message | Pass |
+| U2 | M | “My house help” asks her name and WhatsApp number, sends the invite, and Home shows it pending until she accepts | 1. Choose My house help<br>2. Enter her name, WhatsApp number and language | Invite sent; Home shows Invite pending until she accepts | Pass |
+
+## 23 Breed, sex and small forms
+
+| ID | Pri | Test | Steps | Expected result | P/F |
+|---|---|---|---|---|---|
+| V1 | M | Breed and sex are one question; the answers show as one reply and are saved on the pet | 1. Choose breed and sex in one question | Shown as one reply and saved on the pet | Pass |
+
+## 24 Sign-off
 
 | Role | Name | Decision | Date |
 |---|---|---|---|

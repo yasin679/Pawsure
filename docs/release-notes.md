@@ -14,11 +14,11 @@ Pawsure 1.1.0 adds **cover continuity** from PRD v1.4 (revised 12 Nov 2026): Paw
 | Item | Value |
 |---|---|
 | Version | 1.1.0 (P0 pilot build) |
-| Date | 13 Nov 2026, QA update 14 Nov 2026 (1.0.1: 11 Nov 2026; 1.0: 10 Nov 2026) |
+| Date | 13 Nov 2026, QA update 14 Nov 2026, updates 15–17 Nov 2026 (1.0.1: 11 Nov 2026; 1.0: 10 Nov 2026) |
 | Source of truth | PRD v1.4, sections 7.7, 9.6, 8.8 (PS-127 to PS-141), 9.5, 10.4, 16.3, 17.1, Appendix F |
 | Repository | github.com/yasin679/Pawsure |
 | Database | Migration `006_cover_continuity.sql` (adds tables and columns only), with a rollback script |
-| Tests | 364 API, rules and database tests (211 in 1.0.1); 127 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. QA update 14 Nov: migration `007_qa_consolidated.sql` |
+| Tests | 380 API, rules and database tests (211 in 1.0.1); 146 end-to-end browser tests (90 in 1.0.1); all 24 mandatory P0 scenarios and all 14 new v1.4 scenarios. Later migrations: `007` to `010` (section 4) |
 
 ## 2 What’s new: cover continuity
 
@@ -136,7 +136,36 @@ Our principle is that a task counts only with proof. Helpers could already send 
 - **Privacy:** photos are shrunk on the phone (under about 60 KB) and deleted after 90 days like other photos; only the home's owners and co-owners can see them. Migration `009_proof_photos.sql`.
 - **Demo:** the proof sheet shows today's code (demo only), so it can be tried without the printed card.
 
+### 3.6 New look in an iPhone frame, and sign-up with Pawly (16 Nov 2026)
+
+- **Phone frame:** on a laptop or tablet the app shows inside an iPhone 18 Pro frame that scales to fit the window; on a phone it fills the screen.
+- **Welcome screens:** three slides before Log in (ask friends, know who's caring, WhatsApp check-ins) with **Next**, **Get started** and **Log in**. Signing out shows them again.
+- **Plain login page (17 Nov):** text only, with the brand name, **Log in** / **Sign up** tabs, *Welcome back*, the number and **Send code**; no illustration or background shapes.
+- **Log in and Sign up are separate.** Log in goes straight to the home; a number with no account is told so after the code. Sign up goes to consent and then Pawly. Whether a number has an account is checked only after the code, so numbers can't be guessed.
+- **Sign-up is a conversation with Pawly,** in three parts: your information (name, language, then state, city, society, tower and flat in one small form; Pawly can suggest the city and a nearby society from the phone's location, which is not stored), your pet (a full profile per pet, breed and sex asked together) and care details (feeding, walks, litter, who helps). Choosing a house help asks her name, WhatsApp number and language and sends the invite. Answers can be spoken.
+- **Home:** a greeting with **Plan** and **SOS**, a tab per pet, and that pet's tasks under **Pending** and **Completed**. Who's caring, leaving and coming back, the timeline, the day report and tomorrow's cover are in the **Plan for today** sheet. The helper card shows *Invite pending* until she accepts, then *Accepted*, *Checked in* and *Completed*.
+- **Task sheet:** a plain description, the proof photo (or a placeholder until there is one), **Send reminder** (one WhatsApp nudge per 15 minutes, once the helper has accepted) and **Mark completed** (counts as *Matched by owner*, stops alerts, no helper points). The evidence label, cover, escalation and history are under **Task details**.
+- **Find cover is an assistant:** Pawly asks “How can I help?”, with suggestions, typed or spoken requests, then the friends who can help. **Ask** on a friend card goes straight to the message for that friend.
+- **Cartoon pet avatars,** and the demo keeps your account across reloads (**Reset demo** in the demo tools starts over).
+- Migrations `009_society_location.sql` (society positions) and `010_pet_sex.sql` (a pet's sex).
+
+### 3.7 Visit time and random start and end codes (17 Nov 2026)
+
+The arrival and exit missed calls show that a call came from the helper's phone, but not where she was, and a code card photographed once gives every day's code. Now:
+
+- **Visit time on the task:** the task sheet shows when the visit started and ended (the arrival and exit calls), how long it lasted, the minimum its tasks need, and the visit's status, for example *Visit 12:50–1:02 · 12 min (minimum 11 min) · Visit confirmed*. It turns red when the visit was too short.
+- **A fresh code at the start and at the end:** right after the arrival call, and again after the exit call, Pawsure sends the helper a new 3-digit code on WhatsApp in her language. She writes it on paper, puts it next to the pet or bowl and sends a photo within 10 minutes. Nobody knew the code before the call, so an old or pre-taken photo can't match.
+- **What it changes:** long-enough calls plus both code photos in time make the **visit** *Confirmed*. Missing or late code photos leave it *Likely*. A code that doesn't match makes the visit *Not confirmed* until the right one arrives in time. A re-sent photo, or one sent before the code existed, never counts. The codes never confirm a **task** on their own; each task still needs its own proof.
+- **The owner sees it** on the task sheet (*Start code: photo matched ✓*, *waiting for photo*, *no photo sent*, *photo came late*, *code didn't match*) and in the timeline (*Start code photo*, *End code photo*).
+- **Who gets codes:** helpers who check in with photos, on tracked days, once per visit for each of start and end. Not on Trusted Helper days; voice-note and keypad helpers get none. The code is stored sealed, like the code card, and never written to the audit log.
+- **Proof sheet fix:** **Send proof** now waits while a picked photo is still loading, so a quick tap no longer sends the code without the photo.
+- Migration `010_visit_codes.sql`.
+
 ## 4 Upgrade notes
+
+- **Migrations 008 to 010** (15–17 Nov) run at start-up: `008_languages.sql`, `009_proof_photos.sql`, `009_society_location.sql`, `010_pet_sex.sql`, `010_visit_codes.sql`. Two pairs share a number because they were built on separate branches; each is tracked by its full file name, they run in name order and touch different tables, so they must **not** be renamed (a database that already ran one would run it again). `010_visit_codes.sql` widens the check on `checkin_signals.kind` (adds `code_start`, `code_end`) and adds four columns to `care_visits`. Each has a rollback in `packages/db/rollback/`.
+- New API: `POST /v1/households/:hh/tasks/:id/remind` and `POST /v1/households/:hh/tasks/:id/owner-done`. The WhatsApp webhook accepts an optional `visitId` for a start or end code photo; the IVR webhook answers `codeSent` after an arrival or exit call.
+- Four new helper WhatsApp templates (en/hi/mr): `W_VISIT_CODE_START`, `W_VISIT_CODE_END`, `W_VISIT_CODE_OK`, `W_VISIT_CODE_WRONG` (`apps/api/src/templates.ts`). Not submitted to Meta yet.
 
 - QA update (14 Nov): migration `007_qa_consolidated.sql` adds friend capacity and species, a society list (name + city) and the home’s city, state and society id. Existing homes keep their society text; open Edit profile to pick the city and listed society. Rollback: `packages/db/rollback/007_qa_consolidated.down.sql`.
 - Migration `006_cover_continuity.sql` runs at start-up and only adds tables and columns. Rollback: `packages/db/rollback/006_cover_continuity.down.sql` (by hand, after a backup; it removes all cover data).
@@ -158,14 +187,16 @@ Own-helper care with an honest evidence layer, alerts and escalation, SOS, pets 
 - The reminder adds about 30 WhatsApp utility messages per household per month; it must be costed against the ₹10 per household gate once a provider quote exists.
 - Distance is shown as bands, with no route distance, live traffic or GPS check (D-23). Telugu and Kannada are not supported. Friends need WhatsApp.
 - Owner app in English only; no photo OCR; no live location coordinates; no coupon vendor; code-card **Print** does not work inside the shared demo frame.
+- Start and end codes are checked from the photo's caption only; Pawsure can't see whether the pet is in the photo. WhatsApp photos stay with the provider, so the owner doesn't see code photos in the app yet, and the helper app doesn't show the codes (WhatsApp only).
 - Release gates outside the software: legal review, helper acceptance and usability tests, vendor quotes, ops rota, trademark check (`docs/runbooks/pilot-runbook.md`).
 
 ## 7 PRD gaps found and decisions taken
 
-The PRD is silent or ambiguous on these; each is recorded in `docs/decision-log.md` (D-40 to D-51) for sign-off:
+The PRD is silent or ambiguous on these; each is recorded in `docs/decision-log.md` (D-40 to D-53) for sign-off:
 
 - **Evening reminders:** no deadline is given for a reminder sent the evening before; Pawsure uses 45 minutes after the reminder (D-40).
 - **“I’m leaving” warning:** read literally, it would warn every morning before reminders go out; it warns only for tasks known to be uncovered (D-41).
 - **Medicine and backups:** PS-130 doesn’t say who may give medicine; only backups the owner marks for it are asked (D-42).
 - **I’m delayed (17.1 row):** “the 7:30 dinner is added” and “Only until 8 creates a request for the dinner only” can’t both hold; the demo uses a 7:30 walk and an 8:30 dinner (D-47).
 - **Friend reminders:** PS-127 includes confirmed friend cover; 1.1.0 relies on the friend’s own confirmation and no-show rule instead of a second reminder (D-48).
+- **Visit codes:** the PRD asks for arrival and exit calls but doesn't say how to tie them to the home; Pawsure sends a fresh code at each call and asks for a photo of it within 10 minutes (D-52). A wrong code makes the visit *Not confirmed* rather than only *Likely* (D-53).

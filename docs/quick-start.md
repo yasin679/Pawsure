@@ -30,20 +30,20 @@ This card takes you from signing in to your first covered care day. Full details
 
 | Step | Where | What you do | Takes |
 |---|---|---|---|
-| 1 | Sign in | **Log in or create an account**: your number → **Send code** → enter the code → **Verify**. Accept the Terms and Privacy Notice; enter your name and society. | 2 min |
-| 2 | Pet → **+ Add** | Add each pet with its essentials: name, food and feeding, allergies, medicine instructions, and your vet’s name and phone (write *None* where there are none). These go on the emergency card. | 3 min |
-| 3 | Pet → **Routine** → **Add** | Add the daily tasks: what, when, and whether your helper or you do it. Changes start tomorrow. | 3 min |
-| 4 | Me → **Helper and check-ins** → **Invite** | Invite your helper on WhatsApp in their language. Nothing is recorded until they say Yes; they choose photo, voice note or missed call. | 1 min |
+| 1 | Sign up | **Get started** (or the **Sign up** tab): your number → **Send code** → enter the code → **Verify**. Accept the Terms and Privacy Notice. Pawly then asks about you, your home, your pets and their care, and turns the answers into your routine; choosing your house help sends her the WhatsApp invitation. | 5 min |
+| 2 | Pet | Check each pet’s essentials from sign-up: food and feeding, allergies, medicine instructions, and your vet’s name and phone. These go on the emergency card. **+ Add** adds another pet. | 2 min |
+| 3 | Pet → **Routine** | Check the daily tasks Pawly made: what, when, and whether your helper or you do it. Changes start tomorrow. | 2 min |
+| 4 | Today → **Your help today** | Your helper shows *Invite pending* until she says Yes on WhatsApp (tap **Resend** if needed). Nothing is recorded until then; she chooses photo, voice note or missed call. To invite another helper: Me → **Helper and check-ins**. | 1 min |
 | 5 | Me → **Helper and check-ins** | Print the **code card** and keep it inside the food box. The helper shows the bowl and today’s code. | 2 min |
 | 6 | Me → **Care circle** → **Invite** | Add your backup. They get a 15-minute look-in link only if a check-in is missed and you haven’t responded. | 1 min |
 | 7 | Friends → **Invite** | Invite friends who might cover. They choose whether to be findable, what they help with and when. | 2 min |
-| 8 | Today | Each day: check **Who’s caring today?**, tap **I’m leaving** when you go out and **I’m back** when you return. Tap **I’m on it** if an alert arrives. | daily |
+| 8 | Today | Each day: check **Your help today**, tap **I’m leaving** when you go out (your pets’ tasks then show) and **I’m back** when you return. Tap a task to see its photo and your helper’s visit time and start and end codes. Tap **I’m on it** if an alert arrives. | daily |
 
 ### 1.3 When your help can’t come
 
-1. Today → **My help can’t come today** → **Mark unavailable**.
+1. Today → **My help can’t come** → **Mark unavailable**.
 2. Tap **Ask a friend to cover**. The request is already written for the next task; correct it if needed.
-3. **Understand my request** → check the details → **Search my friends**.
+3. **Understand my request** → check the details → **Search my friends**. (Or open **Find cover** and just tell Pawly what you need.)
 4. **Ask** a friend (or **Ask all 3**) → tick **I approve** → **Send on WhatsApp**.
 5. When they say Yes, tap **Confirm**. Only then do they see your flat number and key arrangement, for this visit only.
 
@@ -53,6 +53,7 @@ This card takes you from signing in to your first covered care day. Full details
 |---|---|
 | Likely | One good signal, such as a photo with today’s code. |
 | Confirmed | Two independent signals, such as a photo with code plus arrival and exit calls. |
+| Visit confirmed | Your helper’s arrival and exit calls were long enough and her start and end code photos came back in time. A visit alone never completes a task. |
 | Not confirmed | Weak or contradictory evidence, or a visit with no task evidence. |
 | Missed | Nothing by the end of the grace period: you are alerted, then your backup. |
 

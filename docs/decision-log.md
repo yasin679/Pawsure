@@ -55,4 +55,5 @@ Format: ID · decision · status · owner · basis. **Proposed** items need sign
 | D-49 | Once cover continuity has run for a task, the missed-task ladder still alerts the owner at due + grace but does not repeat the backup and cover steps | Agreed (PRD 10.4) | Product | 10.4 |
 | D-50 | The AI label always says “rules (no AI connected)” while no model is connected; the demo switch was renamed “Request parser” and its options say “simulate …” | Agreed | Product | Demo fix #4 |
 | D-51 | Names in Hindi and Marathi messages are shown in Devanagari from a small transliteration table (demo names); real sign-up will ask for the name in the helper’s script | Proposed | Product | PS-110 |
-
+| D-52 | After each arrival and exit call Pawsure sends the helper a fresh random 3-digit code; a photo showing it within 10 minutes counts. Only for photo helpers on tracked days; codes stored sealed and never audited | Proposed | Product | Calls alone don't show where the helper was, and a photographed code card gives every day's code (17 Nov 2026) |
+| D-53 | Both code photos in time plus long-enough calls make the **visit** Confirmed (like a gate entry); a wrong code makes it Not confirmed until the right one arrives in time; codes never confirm a task on their own | Proposed | Product | PRD 10.5: never Confirmed from one signal, never from visit evidence alone |

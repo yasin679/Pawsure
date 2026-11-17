@@ -40,13 +40,13 @@ e2e = []
 def walk(suite):
     for s in suite.get('suites', []): walk(s)
     for sp in suite.get('specs', []):
-        m = re.match(r'^([A-Z]\d+)\s+(.*)$', sp['title'])
+        m = re.match(r'^([A-Z]\d+[a-z]?)\s+(.*)$', sp['title'])
         if not m: continue
         res = sp['tests'][0]['results'][-1]
         err = (res.get('error') or {}).get('message', '')
         e2e.append({'id': m.group(1), 'title': m.group(2), 'file': sp['file'], 'status': 'Passed' if res['status'] == 'passed' else 'Failed', 'secs': round(res['duration'] / 1000, 1), 'error': re.sub(r'\x1b\[[0-9;]*m', '', err)[:400]})
 for s in pw['suites']: walk(s)
-order = lambda c: (c['id'][0], int(c['id'][1:]))
+order = lambda c: (c['id'][0], int(re.match(r'\d+', c['id'][1:]).group()), c['id'][1:])
 e2e.sort(key=order)
 
 wb = Workbook()
