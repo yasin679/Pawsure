@@ -880,6 +880,16 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .pwa:has(> .tabbar) > .composer{margin-bottom:84px;background:transparent;border-top:0}
 @media (min-width:600px) and (min-height:480px){.device > .pwa:has(> .tabbar) > .tabbar{bottom:12px}.device > .pwa:has(> .tabbar) > .body{padding-bottom:116px}.device > .pwa:has(> .tabbar) > .composer{margin-bottom:96px}}
 .picker.empty{display:flex;flex-direction:row;align-items:center;text-align:left;padding:0 7px 0 18px}
+
+/* 17 Nov: a minimal, text-only login. No illustration, no background shapes, no card. */
+.login.login-min::before,.login.login-min::after{display:none}
+.login-min .login-sheet{flex:1;margin:0;padding:28px 24px 32px;gap:16px;background:none;border:0;border-radius:0;box-shadow:none}
+.lm-brand{font:800 1.15rem/1 var(--f-display);color:var(--sage-dark);letter-spacing:.01em;margin-bottom:18px}
+.login-min .login-sheet h1{font-size:1.9rem;line-height:1.15;letter-spacing:-.01em}
+.login-min .authtabs{display:flex;gap:22px;padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+.login-min .authtabs button{flex:none;padding:4px 0;border:0;border-radius:0;background:none!important;box-shadow:none!important;color:var(--ink-3);font-weight:800;font-size:1rem;border-bottom:2px solid transparent}
+.login-min .authtabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.login-min .btn.primary{margin-top:6px}
 /* proof sheet (photo from camera or gallery + today's code) */
 .sheet.proof{background:var(--surface);width:100%;max-width:480px;max-height:92%;overflow:auto;border-radius:24px 24px 0 0;padding:20px 18px 22px;display:flex;flex-direction:column;gap:10px}
 .sheet.proof h2{margin:0}

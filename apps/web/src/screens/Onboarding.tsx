@@ -64,13 +64,10 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
 
   if (step === 'intro') return <Intro onDone={m => { setMode(m); setStep('phone'); }} />;
 
-  if (step === 'phone') return <div className="login">
+  if (step === 'phone') return <div className="login login-min">
     <div className="login-lang"><LangSwitch compact /></div>
-    <div className="login-hero">
-      <img className="login-mascot" src={`${import.meta.env.BASE_URL}assets/mascot-family.png`} width={178} height={173} alt="" />
-      <div className="brandmark"><div><div className="login-word">Pawsure</div><p className="login-tag">{tr('Be sure, whoever’s caring.')}</p></div></div>
-    </div>
     <div className="login-sheet">
+      <div className="lm-brand">Pawsure</div>
       <div className="authtabs" role="group" aria-label="Log in or sign up">
         <button type="button" aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setErr(null); }}>{tr('Log in')}</button>
         <button type="button" aria-pressed={mode === 'signup'} onClick={() => { setMode('signup'); setErr(null); }}>{tr('Sign up')}</button>
