@@ -20,6 +20,40 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Confirmed');
   });
 
+  test('E1b Arrival and exit calls each send a fresh random code; photos of both confirm the visit and show on the task', async ({ page }) => {
+    await clockTo(page, '12:50');
+    await openPhone(page);
+    await phone(page).getByRole('button', { name: '☎ Arrival call' }).click();
+    await expect(phone(page)).toContainText('सुरुवातीचा कोड'); // “Start code: …” in Marathi
+    await phone(page).getByRole('button', { name: '📷 Photo with the start code' }).click();
+    await expect(phone(page)).toContainText('कोड बरोबर आहे'); // “Code matches”
+    await page.getByRole('button', { name: '+15m' }).click();
+    await phone(page).getByRole('button', { name: '☎ Exit call' }).click();
+    await expect(phone(page)).toContainText('शेवटचा कोड'); // “End code: …”
+    await phone(page).getByRole('button', { name: '📷 Photo with the end code' }).click();
+    await expect(phone(page).locator('.bub').last()).toContainText('कोड बरोबर आहे');
+    await page.getByRole('button', { name: 'Hide Sunita’s phone' }).click();
+    await expect(page.locator('.visitline').first()).toContainText('Visit confirmed');
+    await taskCard(page, 'Lunch + fresh water').click();
+    await expect(page.getByRole('dialog')).toContainText('Start code: photo matched ✓');
+    await expect(page.getByRole('dialog')).toContainText('End code: photo matched ✓');
+    await expect(page.getByRole('dialog')).toContainText('R-START-CODE-OK');
+  });
+
+  test('E1c A photo with the wrong visit code is flagged: the visit is Not confirmed', async ({ page }) => {
+    await clockTo(page, '12:50');
+    await openPhone(page);
+    await phone(page).getByRole('button', { name: '☎ Arrival call' }).click();
+    await phone(page).getByRole('button', { name: '📷 Photo with a wrong visit code' }).click();
+    await expect(phone(page)).toContainText('जुळत नाही'); // “doesn’t match”
+    await page.getByRole('button', { name: '+15m' }).click();
+    await phone(page).getByRole('button', { name: '☎ Exit call' }).click();
+    await page.getByRole('button', { name: 'Hide Sunita’s phone' }).click();
+    await expect(page.locator('.visitline').first()).toContainText('Visit not confirmed');
+    await taskCard(page, 'Lunch + fresh water').click();
+    await expect(page.getByRole('dialog')).toContainText('Start code: code didn’t match');
+  });
+
   test('E2 A wrong code is flagged and does not confirm the task', async ({ page }) => {
     await clockTo(page, '12:50');
     await openPhone(page);

@@ -24,7 +24,8 @@ export type TaskSignal =
   | (SignalBase & { kind: 'ivr'; codeOk: boolean; afterPrompt: boolean })
   | (SignalBase & { kind: 'friend_photo'; imageHash: string; duplicate?: boolean });
 
-export type VisitSignal = SignalBase & { kind: 'call_arrive' | 'call_exit' | 'gate'; registeredNumber?: boolean; ownerProvided?: boolean };
+/** code_start / code_end: a photo showing the random code sent when the helper's arrival / exit call came in. */
+export type VisitSignal = SignalBase & { kind: 'call_arrive' | 'call_exit' | 'gate' | 'code_start' | 'code_end'; registeredNumber?: boolean; ownerProvided?: boolean; codeOk?: boolean; duplicate?: boolean };
 
 export interface LifecycleEvent { at: Minutes; state: LifecycleState; actor: string; note?: string }
 
@@ -48,6 +49,7 @@ export interface CareTask {
   reassignedToTaskId?: string;
 }
 
-export interface CareVisit { id: string; who: string; signals: VisitSignal[] }
+/** codes: when the random start / end code was sent to the helper (only set once it was sent). */
+export interface CareVisit { id: string; who: string; signals: VisitSignal[]; codes?: { start?: Minutes; end?: Minutes } }
 
 export interface ReasonedResult<S> { state: S; label: string; reasons: string[]; ruleSet: string }

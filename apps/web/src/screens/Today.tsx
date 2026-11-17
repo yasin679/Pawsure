@@ -1,7 +1,7 @@
 /** Today (PS-007, PS-012–016, PS-030–036, PS-103, PS-111, PS-121, PS-122). */
 import { t as tr } from '../i18n';
 import { useEffect, useState } from 'react';
-import { api, ApiError, fmt, hm, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem } from '../api';
+import { api, ApiError, fmt, hm, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem, type Visit, type VisitCodeState } from '../api';
 import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
 
@@ -97,7 +97,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
       {task.cover && <div className="card"><span className="eyebrow">Cover (who is expected) · separate from evidence</span><div className="row"><b className="grow">{task.cover.label}</b></div><CoverLineView line={ov?.lines[task.id]} /><div className="xs muted">{tr('A Yes is a plan, not proof the task was done.')}</div></div>}
       <TaskProof hh={hh} taskId={task.id} />
-      {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span>{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
+      {task.visitId && day.visits[task.visitId]?.status && <div className="card flat"><span className="eyebrow">Visit evidence (separate from the task)</span><VisitTime v={day.visits[task.visitId]!} />{day.visits[task.visitId]!.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>}
       <div className="card flat"><span className="eyebrow">Why this label</span>{task.ev.reasons.map(r => <div key={r} className="xs mono">{r}</div>)}</div>
       {task.esc && <div className="card"><span className="eyebrow">Escalation ladder</span>{task.esc.steps.map(s => <div key={s.n} className="row small"><span className="mono" style={{ minWidth: 60 }}>{fmt(s.at)}</span><span className="grow">{s.kind.replace(/_/g, ' ')}</span><span className={`tag ${s.fired ? 'flag-on' : s.stoppedByAck || s.notRepeated ? 'owner' : ''}`}>{s.fired ? 'Sent' : s.stoppedByAck ? 'Stopped' : s.notRepeated ? 'Not repeated (asked before the task)' : 'Pending'}</span></div>)}</div>}
       <div className="card"><span className="eyebrow">Lifecycle (append-only)</span>{task.lifecycle.map((l, i) => <div key={i} className="row small"><span className="mono muted" style={{ minWidth: 48 }}>{hm(l.at)}</span><span className="grow"><b>{l.state}</b> · {l.actor}{l.note ? ', ' + l.note : ''}</span></div>)}</div>
@@ -191,6 +191,19 @@ export function Sheet({ children, onClose }: { children: React.ReactNode; onClos
 interface ProofRow { photo: string | null; code: string; by: string; channel: string; at: string }
 const CODE_TEXT: Record<string, string> = { today: '✓ today’s code', old: '✕ an old code', wrong: '✕ wrong code', none: 'no code' };
 /** The owner sees every proof photo for the task: who sent it, when, and whether today's code matched. */
+/** When the helper's visit started and ended (arrival and exit calls) and how long it lasted, against the minimum for its tasks. */
+function VisitTime({ v }: { v: Visit }) {
+  const min = `${tr('minimum')} ${v.minimum} min`;
+  const text = v.arrive != null && v.exit != null ? `${hm(v.arrive)}–${hm(v.exit)} · ${v.duration} min (${min})`
+    : v.arrive != null ? `${tr('Started')} ${hm(v.arrive)} · ${tr('no exit call yet')} (${min})`
+    : v.exit != null ? `${tr('Ended')} ${hm(v.exit)} · ${tr('no arrival call')} (${min})` : null;
+  if (!text) return null;
+  const codes = v.codes && (v.codes.start || v.codes.end) ? <div className="visit-codes xs">{(['start', 'end'] as const).map(p => { const s = v.codes![p]; return s ? <span key={p} className={`vc ${s}`}>{tr(p === 'start' ? 'Start code' : 'End code')}: {tr(CODE_WORD[s])}</span> : null; })}</div> : null;
+  return <><div className={`visit-time small${v.duration != null && v.duration < v.minimum ? ' short' : ''}`}><b>{tr('Visit')}</b> {text}</div>{codes}</>;
+}
+/** The random code sent at the arrival / exit call, and whether her photo of it came back in time. */
+const CODE_WORD: Record<VisitCodeState, string> = { ok: 'photo matched ✓', late: 'photo came late', wrong: 'code didn’t match', waiting: 'waiting for photo', missing: 'no photo sent' };
+
 function TaskProof({ hh, taskId }: { hh: string; taskId: string }) {
   const [rows, setRows] = useState<ProofRow[] | null>(null);
   useEffect(() => { api<ProofRow[]>(`/v1/households/${hh}/tasks/${taskId}/proof`).then(setRows).catch(() => setRows([])); }, [hh, taskId]);

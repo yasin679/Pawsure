@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { api, API, type DayView } from '../api';
 
-interface Msg { gloss?: string | null; direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
+interface Msg { template?: string | null; gloss?: string | null; direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
 const HELPER = { mid: 'm_sunita', phone: '+919000000035' };
 
 export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | null; onChange: () => void }) {
@@ -18,10 +18,14 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
   };
   useEffect(() => { load(); }, [day?.now]);
   const send = async (body: Record<string, unknown>) => { await api('/webhooks/whatsapp', { body: { messageId: 'sim-' + Date.now(), from: HELPER.phone, ...body }, auth: false }); await api('/jobs/tick', { body: {}, auth: false }); await load(); onChange(); };
-  const ivr = async (event: string, extra: Record<string, unknown>) => { await api('/webhooks/ivr', { body: { callId: 'sim-' + Date.now(), from: HELPER.phone, event, ...extra }, auth: false }); await api('/jobs/tick', { body: {}, auth: false }); onChange(); };
+  const ivr = async (event: string, extra: Record<string, unknown>) => { await api('/webhooks/ivr', { body: { callId: 'sim-' + Date.now(), from: HELPER.phone, event, ...extra }, auth: false }); await api('/jobs/tick', { body: {}, auth: false }); await load(); onChange(); };
   const prompted = day?.tasks.filter(t => thread.some(m => m.task_id === t.id && m.direction === 'out')) ?? [];
   const [taskId, setTaskId] = useState('');
   const t = prompted.find(x => x.id === taskId) ?? prompted.find(x => !['Confirmed', 'Likely'].includes(x.ev.state)) ?? prompted[0];
+  // The latest random start / end code Pawsure sent after an arrival or exit call (read back from her chat).
+  const lastCode = [...thread].reverse().find(m => m.direction === 'out' && (m.template === 'W_VISIT_CODE_START' || m.template === 'W_VISIT_CODE_END'));
+  const visitCode = lastCode?.body.match(/\b(\d{3})\b/)?.[1] ?? null;
+  const codeVisit = t?.visitId ?? day?.tasks.find(x => x.visitId)?.visitId ?? null;
   return <div className="sheet" style={{ maxHeight: 'none', borderRadius: 0, background: 'var(--wa-bg)', color: 'var(--wa-ink)' }}>
     <div className="banner sim"><span className="bi">⚙</span><div>Sunita’s phone (simulated). Nothing reaches a real phone.</div></div>
     <div className="wa-body" style={{ maxHeight: 280, overflow: 'auto', background: 'var(--wa-bg)', borderRadius: 12 }}>
@@ -38,6 +42,8 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
         <button className="btn sm" onClick={() => send({ type: 'voice', taskId: t.id })}>🎤 Voice note</button>
         <button className="btn sm" onClick={() => ivr('code', { taskId: t.id, digits: code })}>☎ IVR code</button></>}
       {t?.visitId && <><button className="btn sm" onClick={() => ivr('arrive', { visitId: t.visitId })}>☎ Arrival call</button><button className="btn sm" onClick={() => ivr('exit', { visitId: t.visitId })}>☎ Exit call</button></>}
+      {visitCode && codeVisit && <><button className="btn sm" onClick={() => send({ type: 'photo', visitId: codeVisit, mediaRef: 'sim-' + Date.now(), caption: visitCode })}>📷 Photo with the {lastCode!.template === 'W_VISIT_CODE_START' ? 'start' : 'end'} code</button>
+        <button className="btn sm" onClick={() => send({ type: 'photo', visitId: codeVisit, mediaRef: 'sim-' + Date.now(), caption: visitCode === '999' ? '998' : '999' })}>📷 Photo with a wrong visit code</button></>}
       <button className="btn sm" onClick={() => send({ type: 'button', payload: 'problem_pet_hurt:' + hh })}>⚠ Pet hurt</button>
       <button className="btn sm" onClick={() => send({ type: 'button', payload: 'problem_water_out:' + hh })}>⚠ Water ran out</button>
       <button className="btn sm" onClick={() => send({ type: 'text', text: 'येऊ शकत नाही' })}>✕ “येऊ शकत नाही” (can’t come)</button>

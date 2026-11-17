@@ -107,7 +107,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
       if (t.escalation.ackAt != null) ev.push({ at: t.escalation.ackAt, kind: 'owner', text: `“I’m on it” for ${t.title}` });
     }
     const vs = await db.query<{ kind: string; event_time: string; registered_number: boolean | null; owner_provided: boolean }>(`select s.* from checkin_signals s join care_visits v on v.id=s.visit_id where v.household_id=$1 and v.care_date=$2`, [hh, date]);
-    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (s.kind === 'call_arrive' ? 'Arrival missed call' : s.kind === 'call_exit' ? 'Exit missed call' : 'Gate entry (owner-provided)') + (s.registered_number === false ? ', rejected (unregistered number)' : '') }));
+    const VS: Record<string, string> = { call_arrive: 'Arrival missed call', call_exit: 'Exit missed call', gate: 'Gate entry (owner-provided)', code_start: 'Start code photo', code_end: 'End code photo' };
+    vs.forEach(s => ev.push({ at: m(s.event_time), kind: 'signal', text: (VS[s.kind] ?? s.kind) + (s.registered_number === false ? ', rejected (unregistered number)' : '') + ((s as { code_ok?: boolean | null }).code_ok === false ? ', code did not match' : '') + ((s as { duplicate?: boolean }).duplicate ? ', not counted (reused image)' : '') }));
     const inc = await db.query<{ severity: string; category: string; reported_at: string }>(`select * from incidents where household_id=$1 and reported_at >= $2 and reported_at < $3`, [hh, atMinute(date, 0).toISOString(), atMinute(date, 1440).toISOString()]);
     inc.forEach(i => ev.push({ at: m(i.reported_at), kind: 'alert', text: `${i.severity} report: ${i.category.replace(/_/g, ' ')}` }));
     if (day.day.leftAt != null) ev.push({ at: day.day.leftAt, kind: 'owner', text: 'You left' });
@@ -280,7 +281,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   /* Inbound WhatsApp (BSP webhook): buttons, text, photo, voice. Idempotent; consent-gated; tenant from the template context. */
   app.post('/webhooks/whatsapp', async (c) => {
     if (!webhookOk(c)) return c.json({ error: 'unauthorized_webhook' }, 401);
-    const b = z.object({ messageId: z.string(), from: z.string(), type: z.enum(['button', 'text', 'photo', 'voice']), payload: z.string().optional(), text: z.string().max(500).optional(), taskId: z.string().optional(), mediaRef: z.string().optional(), caption: z.string().max(200).optional(), sentAt: z.string().optional() }).parse(await c.req.json());
+    const b = z.object({ messageId: z.string(), from: z.string(), type: z.enum(['button', 'text', 'photo', 'voice']), payload: z.string().optional(), text: z.string().max(500).optional(), taskId: z.string().optional(), visitId: z.string().optional(), mediaRef: z.string().optional(), caption: z.string().max(200).optional(), sentAt: z.string().optional() }).parse(await c.req.json());
     const seen = await db.query(`insert into inbound_messages(message_id, channel, payload) values ($1,'whatsapp',$2) on conflict do nothing returning message_id`, ['wa:' + b.messageId, JSON.stringify({ type: b.type })]);
     if (!seen.length) return c.json({ status: 'duplicate_event' });
     const memberships = await db.query<{ id: string; household_id: string; status: string; paused: boolean; method: string | null }>(`select m.id, m.household_id, m.status, m.paused, m.method from memberships m join users u on u.id=m.user_id where u.phone_e164=$1 and m.role='helper' and m.status in ('active','invited')`, [b.from]);
@@ -289,7 +290,8 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     if (x.ff && (b.payload?.startsWith('ff_') || !memberships.length)) { const r = await x.ff.inbound({ ...b, messageId: b.messageId }); return c.json(r.body, r.status as 200); }
     if (!memberships.length) return c.json({ error: 'unknown_sender' }, 404);
     const hhFromPayload = b.payload?.split(':')[1];
-    const taskHh = b.taskId ? (await db.query<{ household_id: string }>(`select household_id from care_tasks where id=$1`, [b.taskId]))[0]?.household_id : undefined;
+    const taskHh = b.taskId ? (await db.query<{ household_id: string }>(`select household_id from care_tasks where id=$1`, [b.taskId]))[0]?.household_id
+      : b.visitId ? (await db.query<{ household_id: string }>(`select household_id from care_visits where id=$1`, [b.visitId]))[0]?.household_id : undefined;
     const mem = memberships.find(m => m.household_id === (hhFromPayload ?? taskHh)) ?? (memberships.length === 1 ? memberships[0] : undefined);
     if (!mem) return c.json({ error: 'ambiguous_household', note: 'Reply to a specific message so we know which home it is for (PS-029).' }, 409);
     const hh = mem.household_id, mid = mem.id, lang = await helperLang(mid);
@@ -374,6 +376,7 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     // photo / voice evidence
     const cst = await consentOf(mid);
     if (!cst || !cst.granted || cst.kind === 'helper_withdrawal' || mem.paused) return c.json({ error: 'no_helper_consent', note: 'Nothing is collected before consent (PS-021)' }, 409);
+    if (b.type === 'photo' && b.visitId && !b.taskId) return c.json(await visitCodePhoto(hh, mid, b.visitId, b.caption, b.mediaRef, 'wa:' + b.messageId, b.sentAt ? new Date(b.sentAt) : now(), say));
     if (!b.taskId) return c.json({ error: 'reply_to_a_task_prompt' }, 400);
     const task = (await db.query<{ id: string; assignee_membership_id: string; care_date: string }>(`select id, assignee_membership_id, care_date::text as care_date from care_tasks where id=$1 and household_id=$2`, [b.taskId, hh]))[0];
     if (!task || task.assignee_membership_id !== mid) return c.json({ error: 'unknown_task' }, 404);
@@ -410,8 +413,45 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     // PAW-021 / PAW-025: a code typed from an unregistered phone never counts, even if it is today's code.
     if (b.event === 'code') codeOk = !!mem && !!b.digits && checkCode(await cards(target.household_id), Number(target.care_date.slice(8, 10)), b.digits) === 'today';
     const r = await ingestSignal(db, { householdId: target.household_id, idempotencyKey: `ivr:${b.callId}:${b.event}`, kind: b.event === 'code' ? 'ivr' : b.event === 'arrive' ? 'call_arrive' : 'call_exit', visitId: b.visitId, taskId: b.taskId, channel: 'ivr', codeOk, registeredNumber: !!mem, eventTime: b.at ? new Date(b.at) : now(), receivedTime: now(), actor: mem ? 'helper:ivr' : 'unregistered' });
-    return c.json({ ...r, registered: !!mem, codeOk });
+    const codeSent = mem && b.visitId && r.status === 'stored' && (b.event === 'arrive' || b.event === 'exit') ? await sendVisitCode(target.household_id, mem.id, b.visitId, b.event === 'arrive' ? 'start' : 'end') : false;
+    return c.json({ ...r, registered: !!mem, codeOk, codeSent });
   });
+
+  /* ================= Random start / end codes for a visit (17 Nov 2026) =================
+     The arrival and exit calls only prove a call came from her phone, not where she was. Right after each call we send a
+     fresh 3-digit code; she writes it on paper and sends a photo of it next to the pet or bowl within 10 minutes. Nobody
+     knew the code before the call, so an old or pre-taken photo can't match, and a copied code card doesn't help.
+     Only for helpers who check in with photos, on tracked days, once per visit per phase. */
+  const randomCode = () => { const n = new Uint32Array(1); randomFillSync(n); return String(100 + (n[0]! % 900)); };
+  async function sendVisitCode(hh: string, mid: string, visitId: string, phase: 'start' | 'end'): Promise<boolean> {
+    const m = (await db.query<{ method: string | null }>(`select method from memberships where id=$1`, [mid]))[0];
+    if (!m || (m.method ?? 'photo') !== 'photo') return false;
+    const v = (await db.query<{ care_date: string }>(`select care_date::text as care_date from care_visits where id=$1 and household_id=$2`, [visitId, hh]))[0];
+    if (!v) return false;
+    const mode = (await db.query<{ mode: string }>(`select mode from day_states where household_id=$1 and care_date=$2`, [hh, v.care_date]))[0]?.mode;
+    if (mode === 'trusted') return false;
+    const code = randomCode(), col = phase === 'start' ? 'start' : 'end';
+    const set = await db.query(`update care_visits set ${col}_code_sealed=$3, ${col}_code_at=$4 where id=$1 and household_id=$2 and ${col}_code_at is null and (helper_membership_id is null or helper_membership_id=$5) returning id`, [visitId, hh, seal(code), now().toISOString(), mid]);
+    if (!set.length) return false;
+    const pets = (await db.query<{ name: string }>(`select distinct p.name from care_tasks t join pets p on p.id=t.pet_id where t.visit_id=$1 order by p.name`, [visitId])).map(p => p.name).join(' & ');
+    await helperSay(hh, mid, phase === 'start' ? 'W_VISIT_CODE_START' : 'W_VISIT_CODE_END', { code, pets: pets || 'the pet' });
+    await audit(db, 'system', hh, 'visit.code.sent', { visit: visitId, phase }); // the code itself is never written to the audit log
+    return true;
+  }
+  /** A photo replying to a start / end code. Grades it against the codes sent for that visit (the latest one first). */
+  async function visitCodePhoto(hh: string, mid: string, visitId: string, caption: string | undefined, mediaRef: string | undefined, key: string, at: Date, say: (role: 'in', body: string) => Promise<unknown>) {
+    const v = (await db.query<{ helper_membership_id: string | null; start_code_sealed: string | null; end_code_sealed: string | null }>(`select helper_membership_id, start_code_sealed, end_code_sealed from care_visits where id=$1 and household_id=$2`, [visitId, hh]))[0];
+    if (!v || (v.helper_membership_id && v.helper_membership_id !== mid)) return { error: 'unknown_visit' };
+    const start = v.start_code_sealed ? open<string>(v.start_code_sealed) : null, end = v.end_code_sealed ? open<string>(v.end_code_sealed) : null;
+    if (!start && !end) return { error: 'no_code_sent' };
+    const typed = caption?.match(/\b(\d{3})\b/)?.[1];
+    const phase: 'start' | 'end' = typed && typed === end ? 'end' : typed && typed === start ? 'start' : end ? 'end' : 'start';
+    const codeOk = !!typed && typed === (phase === 'end' ? end : start);
+    const r = await ingestSignal(db, { householdId: hh, idempotencyKey: key, kind: phase === 'start' ? 'code_start' : 'code_end', visitId, channel: 'whatsapp', codeOk, registeredNumber: true, imageHash: mediaRef ? hashImage(mediaRef) : undefined, eventTime: at, receivedTime: now(), actor: 'helper:' + mid });
+    await say('in', `[photo]${caption ? ' ' + caption.replace(/\d{3}/, '•••') : ''}`);
+    await helperSay(hh, mid, r.duplicateImage ? 'W_REUSED' : codeOk ? 'W_VISIT_CODE_OK' : 'W_VISIT_CODE_WRONG');
+    return { ...r, phase, codeOk };
+  }
 
   /* ================= Code cards (PS-024, PS-109). Values never logged or sent in notifications. ================= */
   async function cards(hh: string): Promise<CodeCard[]> {
