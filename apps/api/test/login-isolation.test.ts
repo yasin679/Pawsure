@@ -20,7 +20,7 @@ const WHO = { owner: '+919800000021', coowner: '+919800000022', backup: '+919700
 const HH_ROUTES = ['today', 'pets', 'circle', 'code-cards/current', 'day/timeline', 'day/report', 'friends', 'friends/u_priya', 'health', 'helpers', 'incidents', 'privacy', 'requests', 'routine', 'wallet'];
 const ALLOWED: Record<keyof typeof WHO, string[]> = {
   owner: HH_ROUTES,
-  coowner: HH_ROUTES.filter(r => !['code-cards/current', 'helpers'].includes(r)),
+  coowner: HH_ROUTES.filter(r => !['code-cards/current'].includes(r)), // co-owners see the helper list (names and consent, no phone numbers)
   backup: ['today', 'day/timeline', 'day/report', 'incidents'],
   helper: ['helpers'],
   friend: [], stranger: [], ops: []

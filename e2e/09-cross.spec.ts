@@ -44,8 +44,12 @@ test.describe('L. Cross-cutting', () => {
     await page.reload();
     await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
-    await headOut(page);
-    await expect(page.locator('.petchip', { hasText: 'Coco' })).toBeVisible();
+    // No helper yet: Home asks for one first; Heading out and the tasks come after (17 Nov)
+    await expect(page.getByRole('button', { name: 'Add helper' })).toBeVisible();
+    await expect(page.getByText('Add helper to start tasks.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'I’m leaving' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Add helper' }).click();
+    await expect(page.getByRole('heading', { name: 'Invite a helper' })).toBeVisible();
   });
 
   test('L4 Old “coming in phase 3” placeholders are gone everywhere', async ({ page }) => {

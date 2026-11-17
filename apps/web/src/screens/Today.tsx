@@ -20,10 +20,16 @@ type SheetKind = null | 'plan' | 'caring' | 'cantcome' | 'leaving' | 'return' | 
 const TASK_ICON: Record<string, string> = { feeding: 'food', water: 'water', walk: 'walk', toilet: 'pad', litter: 'litter', medicine: 'pill', other: 'paw' };
 /** The carer's avatar: an illustrated portrait (no photos are stored in the demo). */
 function HelperAvatar({ who }: { who: 'sunita' | 'helper' | 'friend' | 'none' }) {
-  if (who === 'none') return <span className="helper-av none" aria-hidden="true">?</span>;
+  // No helper yet: an empty seat waiting for someone, in the sky and coral accents.
+  if (who === 'none') return <span className="helper-av none" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56">
+    <circle cx="32" cy="32" r="32" fill="var(--sky-soft)" />
+    <path d="M12 64c2-11 10-17 20-17s18 6 20 17Z" fill="var(--sky)" opacity=".35" />
+    <circle cx="32" cy="29" r="11" fill="var(--sky)" opacity=".35" />
+    <circle cx="48" cy="46" r="10" fill="var(--coral)" /><path d="M48 41v10M43 46h10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+  </svg></span>;
   const [skin, hair, top, accent] = who === 'sunita' ? ['#B97A56', '#2B1B14', '#1F8A7A', '#F2C14E'] : who === 'helper' ? ['#A86F4C', '#231610', '#6B4A9C', '#F2C14E'] : ['#D9A47E', '#3A2A20', '#CC7655', '#FBF8EF'];
   return <span className="helper-av" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56">
-    <circle cx="32" cy="32" r="32" fill="#E5ECD9" />
+    <circle cx="32" cy="32" r="32" fill={who === 'sunita' ? 'var(--sun-soft)' : who === 'helper' ? 'var(--plum-soft)' : 'var(--coral-soft)'} />
     <path d="M10 64c2-12 11-18 22-18s20 6 22 18Z" fill={top} />
     <path d="M22 50c4 4 16 4 20 0l-2 14H24Z" fill={accent} opacity=".9" />
     <rect x="27" y="38" width="10" height="10" rx="4" fill={skin} />
@@ -43,7 +49,8 @@ function StatusPill({ t }: { t: DayTask }) {
 }
 const VERB: Record<string, string> = { feeding: 'feed', walk: 'walk', medicine: 'give medicine to', litter: 'clean the litter tray for', toilet: 'change the toilet pad for', water: 'top up water for' };
 
-export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void }) {
+const d0Tracked = (day: DayView | null) => day?.day.mode === 'tracked';
+export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet, onAddHelper }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void; onAddHelper?: () => void }) {
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [task, setTask] = useState<DayTask | null>(null);
   const [inc, setInc] = useState<Incident | null>(null);
@@ -79,6 +86,8 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const helperName = helperRow?.name ?? (helpers ? '' : 'Sunita');
   const helperFirst = helperName.split(' ')[0] || tr('Your help');
   const invite = helperRow?.consent;
+  /** No helper added yet: Home asks for one first. Heading out, and then the day's tasks, come after. */
+  const noHelper = d0Tracked(day) && !!helpers && !helperRow;
   const [cs, cl] = COVER_LABEL[day.covered.household] ?? ['Pending', day.covered.household];
   const alerts = day.tasks.filter(t => t.esc?.open && !t.esc.resolved);
   const openInc = incidents.filter(i => !i.resolved_at);
@@ -154,11 +163,13 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         {d.mode === 'trusted' && <><div className="small muted">No check-ins or alerts today. Tap Covered when it’s done.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>{tr('Covered')}</button>}</>}
         {d.helperUnavailable && <Banner kind="warn" icon="!">{helperFirst} can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
         {needsCover && <div className="btnrow">{d.helperUnavailable && ov?.preDeparture.warn && !ov.jobs.some(j => j.active) && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/pre-departure`, { body: { option: 'ask_circle_now' } }))}><Icon name="friends" size={18} />{tr('Ask my backups')}</button>}<button className="btn sm" onClick={() => onFindCover(d.helperUnavailable ? coverDraft : undefined)}><Icon name="search" size={18} />{tr('Ask a friend to cover')}</button></div>}
-        <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
-          {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>
+        {noHelper ? <button className="btn primary block" onClick={onAddHelper}><Icon name="plus" size={18} />{tr('Add helper')}</button>
+          : <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
+          {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
       </section>
-      {d.leftAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div>
-        : d.backAt == null ? <div className="card flat"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
+      {noHelper && <p className="add-helper-note">{tr('Add helper to start tasks.')}</p>}
+      {noHelper ? null : d.leftAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div>
+        : d.backAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">{tr('Quick return check (10 s)')}</b><button className="btn primary sm" onClick={() => setSheet('return')}>{tr('Start')}</button></div></div> : null}
       {msg && <Banner kind="info" icon="ℹ">{msg} <button className="btn ghost sm" onClick={() => setMsg(null)}>{tr('Dismiss')}</button></Banner>}
       {/* Alerts appear only when something needs you: cover at risk, an incident, or a missed task. */}
@@ -173,7 +184,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </div>)}
 
       {/* The day's tasks appear once the owner has headed out and set the options (Heading out → I'm leaving). */}
-      {d.leftAt != null ? <>
+      {d.leftAt != null && !noHelper ? <>
       <div className="pet-tabs" role="tablist" aria-label="Whose schedule">
         {pets.map((p, i) => <button key={p.id} role="tab" aria-selected={p.id === petId} className={`petchip pet-tab tone-${i % 4}`} onClick={() => setPetTab(p.id)}>
           <PetAvatar species={p.species} size={40} /><b>{p.name}</b></button>)}
@@ -186,7 +197,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <div className="sec-head"><h2>{tr('Completed')} <span className="sec-n">{completed.length}</span></h2></div>
         {completed.length ? completed.map(taskCard) : <div className="task-empty">{tr('Nothing done yet today.')}</div>}
       </section>
-      </> : <div className="tasks-locked"><Icon name="list" size={20} /><span>{tr('Your pets’ tasks for today show here once you tap “I’m leaving” and set the options.')}</span></div>}
+      </> : noHelper ? null : <div className="tasks-locked"><Icon name="list" size={20} /><span>{tr('Your pets’ tasks for today show here once you tap “I’m leaving” and set the options.')}</span></div>}
     </main>
 
     {sheet === 'plan' && <Sheet onClose={close}>

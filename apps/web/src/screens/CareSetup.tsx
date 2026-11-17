@@ -86,6 +86,7 @@ export function HelperScreen({ hh, onBack }: { hh: string; onBack: () => void })
   const [card, reloadCard] = useLoad<CodeCardView>(`/v1/households/${hh}/code-cards/current`);
   const [inv, setInv] = useState({ name: '', phone: '', language: 'mr' }); const [showInvite, setShowInvite] = useState(false);
   const [rotate, setRotate] = useState(false); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => { if (helpers && !helpers.length) setShowInvite(true); }, [helpers]);
   const C: Record<string, [string, string]> = { yes: ['Consent given', 'flag-on'], pending: ['Waiting for a reply', ''], notnow: ['Said “Not now”', 'sim'], withdrawn: ['Stopped check-ins', 'sim'] };
   const M: Record<string, string> = { photo: 'WhatsApp photo', voice: 'WhatsApp voice note', ivr: 'Missed call + IVR code' };
   return <><AppBar title="Helper and check-ins" onBack={onBack} /><main className="body">

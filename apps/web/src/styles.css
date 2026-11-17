@@ -907,3 +907,30 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .visit-codes .vc{padding:2px 8px;border-radius:999px;background:var(--alert-soft);color:var(--ink)}
 .visit-codes .vc.ok{background:var(--ok-soft,var(--sage-soft,#E3ECD6))}
 .visit-codes .vc.waiting{background:transparent;border:1px dashed var(--ink-3)}
+
+/* 17 Nov: flat Home. The header takes no colour (it's the page), cards are flat solid fills with no shadows,
+   and a few contrasting accents (sky, coral, sun, plum) sit beside the sage green. */
+:root{--sky:#3F7FC1;--sky-soft:#E0ECF8;--coral:#E2674A;--coral-soft:#FBE3DA;--sun:#E9A912;--sun-soft:#FCF0CC;--plum:#8A63C4;--plum-soft:#ECE3F8}
+:root[data-theme="dark"]{--sky:#7FB1E6;--sky-soft:#1F2C3A;--coral:#F08A70;--coral-soft:#3A251F;--sun:#F2C14E;--sun-soft:#363020;--plum:#B597E6;--plum-soft:#2D2539}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--sky:#7FB1E6;--sky-soft:#1F2C3A;--coral:#F08A70;--coral-soft:#3A251F;--sun:#F2C14E;--sun-soft:#363020;--plum:#B597E6;--plum-soft:#2D2539}}
+/* header: no colour, no shadow, no rounded panel; scrolling stays seamless */
+.today .today-hero{color:var(--ink);background:var(--bg);border-radius:0;box-shadow:none;padding:8px 4px 6px;margin:-4px 0 2px}
+.th-bg{display:none}
+.today .today-hero .th-round{background:var(--surface-2);color:var(--ink);box-shadow:none}
+.today .today-hero .th-sos{background:var(--coral-soft);color:#B3261E;box-shadow:none}
+:root[data-theme="dark"] .today .today-hero .th-sos{color:var(--coral)}
+@media (min-width:600px) and (min-height:480px){.device > .pwa:has(.today-hero):not(:has(> .demobar)) .sbar{background:var(--bg);color:var(--ink)}}
+/* flat cards with contrasting fills */
+.today .card:not(.warn):not(.danger):not(.info):not(.flat),.today .task{box-shadow:none;border:0}
+.today .card.help-card{background:var(--sky-soft);color:var(--ink)}
+.today .card.help-card .eyebrow{color:var(--sky)}
+.today .card.help-card .btn:not(.primary){background:var(--surface);border-color:transparent}
+.today .card.help-card .btn.primary{background:var(--sky);border-color:var(--sky);color:#fff}
+.today .card.flat.out-card{background:var(--sun-soft);color:var(--ink)}
+.today .card.flat.out-card .muted{color:var(--ink-2)}
+.today .card.flat.out-card .btn:not(.primary){background:var(--surface);border-color:transparent}
+.today .task{background:var(--surface)}
+.helper-av.none{background:none;border:0;padding:0;box-shadow:none}
+.add-helper-note{margin:-4px 4px 0;text-align:center;color:var(--ink-2);font-weight:700;font-size:var(--fs-s)}
+/* floating tab bar: nothing behind it, the page runs to the bottom edge */
+.pwa:has(> .tabbar) > .tabbar{box-shadow:0 10px 24px -12px rgba(20,24,20,.55)}
