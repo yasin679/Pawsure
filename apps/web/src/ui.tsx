@@ -48,9 +48,11 @@ export function Art({ name, width }: { name: keyof typeof ART | string; width: n
 /** The pet's cartoon avatar (assets/avatars, from the brand sheet): dog, cat, or a bunny for other pets. */
 /** People (owners, helpers, friends) get an illustrated portrait, chosen steadily from their id or name. */
 const PEOPLE = ['beard-glasses', 'bun-hoops', 'yellow-cap', 'sunglasses-waves', 'curls-headphones', 'beanie', 'beard-shades', 'bob-glasses', 'bucket-hat', 'teal-cap'];
-export const personSrc = (seed: string) => `${import.meta.env.BASE_URL}assets/people/${PEOPLE[[...(seed || '?')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % PEOPLE.length]}.webp`;
-export function PersonAvatar({ seed, lg, className = '' }: { seed: string; lg?: boolean; className?: string }) {
-  return <span className={`avatar person${lg ? ' lg' : ''} ${className}`} aria-hidden="true"><img src={personSrc(seed)} alt="" width={lg ? 60 : 40} height={lg ? 60 : 40} /></span>;
+/** The demo's people, each with the portrait that suits them; anyone else gets one chosen steadily from their id. */
+const CAST: Record<string, string> = { sunita: 'bun-hoops', neha: 'sunglasses-waves', priya: 'bob-glasses', kavya: 'beanie', meera: 'teal-cap', ankita: 'bob-glasses', arjun: 'yellow-cap', farhan: 'beard-shades', rahul: 'beard-glasses', rohan: 'bucket-hat', dev: 'curls-headphones', owner: 'curls-headphones' };
+export const personSrc = (seed: string, name = '') => `${import.meta.env.BASE_URL}assets/people/${CAST[(name || seed).trim().split(/\s+/)[0]!.toLowerCase()] ?? PEOPLE[[...(seed || '?')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % PEOPLE.length]}.webp`;
+export function PersonAvatar({ seed, name = '', lg, className = '' }: { seed: string; name?: string; lg?: boolean; className?: string }) {
+  return <span className={`avatar person${lg ? ' lg' : ''} ${className}`} aria-hidden="true"><img src={personSrc(seed, name)} alt="" width={lg ? 60 : 40} height={lg ? 60 : 40} /></span>;
 }
 export function PetAvatar({ species, size = 40 }: { species: string; size?: number }) {
   const a = species === 'Cat' ? 'cat' : species === 'Dog' ? 'dog' : 'bunny';

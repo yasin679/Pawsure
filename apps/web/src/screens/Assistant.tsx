@@ -11,7 +11,7 @@ import { AppBar, Icon, personSrc } from '../ui';
 import { useVoice } from '../voice';
 import { StepForm } from './Intake';
 
-const avatarSrc = personSrc; // friends are people: the people portraits
+const avatarSrc = (f: { id: string; name: string }) => personSrc(f.id, f.name); // friends are people: the people portraits
 const STEPS = ['Understanding what you need', 'Checking who is free', 'Finding friends nearby'];
 const TASKS: [FFTask, string][] = [['feed', 'Feed'], ['walk', 'Short walk'], ['meds', 'Medicine'], ['water', 'Water'], ['litter', 'Litter tray'], ['toilet', 'Toilet pad']];
 const ACCESS = ['Key handover', 'Someone at home', 'Friend has key'];
@@ -47,7 +47,7 @@ function Bot({ children }: { children: ReactNode }) {
   return <div className="cb-row bot"><span className="ai-av" aria-hidden="true"><Sparkle size={20} /></span><div className="cb bot">{children}</div></div>;
 }
 
-export function CoverAssistant({ hh, pets, me = '', onForm, onInvite }: { hh: string; pets: Pet[]; me?: string; onForm: () => void; onInvite?: () => void }) {
+export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvite }: { hh: string; pets: Pet[]; me?: string; meName?: string; onForm: () => void; onInvite?: () => void }) {
   const pet = pets[0]?.name ?? 'my pet';
   const H = `/v1/households/${hh}`;
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: tr('How can I help?') }]);
@@ -117,7 +117,7 @@ export function CoverAssistant({ hh, pets, me = '', onForm, onInvite }: { hh: st
     <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true"><Sparkle size={16} /></span>{tr('Pawly, your cover assistant')}<button type="button" className="linkbtn ai-form" onClick={onForm}>{tr('Your requests')}</button></div>
     <div className="body ai-chat" aria-live="polite">
       {msgs.map((m, i) => {
-        if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div><img className="me-av" src={personSrc(me)} alt="" width={30} height={30} /></div>;
+        if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div><img className="me-av" src={personSrc(me, meName)} alt="" width={30} height={30} /></div>;
         if (m.role === 'bot') return <Bot key={i}>{i === 0 ? <><h2 className="ai-hello">{m.text}</h2><span className="cb-note">{tr('Tell me what you need, by typing or speaking. For example:')} “{tr('Can someone feed')} {pet} {tr('at 6 PM today?')}”</span></> : <>{m.text}{m.note && <span className="cb-note">{m.note}</span>}</>}</Bot>;
         if (m.role === 'thinking') return <div key={i} className="ai-think" role="status" aria-label="Pawly is thinking">
           <div className="ai-orb"><span /><span /><span /><i /></div>
@@ -126,7 +126,7 @@ export function CoverAssistant({ hh, pets, me = '', onForm, onInvite }: { hh: st
         if (m.role === 'friends') return <div key={i} className="ai-results">
           {!m.reqId && <Bot>{tr('Here are friends who can help.')} <span className="cb-note">{tr('Nothing is sent until you approve the message.')}</span></Bot>}
           {m.friends.map(f => <div key={f.id} className="friend-card">
-            <img className="friend-av" src={avatarSrc(f.id)} alt="" width={52} height={52} />
+            <img className="friend-av" src={avatarSrc(f)} alt="" width={52} height={52} />
             <div className="grow"><b>{f.name}</b><div className="small muted">{f.distance}</div>{f.availability && <div className="xs fc-free">● {f.availability}</div>}</div>
             {m === live && <button type="button" className="btn primary sm" disabled={busy} onClick={() => ask(m, f)}>{tr('Ask')} {first(f.name)}</button>}</div>)}
         </div>;
@@ -143,7 +143,7 @@ export function CoverAssistant({ hh, pets, me = '', onForm, onInvite }: { hh: st
         }
         if (m.role === 'preview') return <div key={i} className="ai-preview">
           <Bot>{tr('Here’s the WhatsApp message for')} {first(m.friend.name)}. <span className="cb-note">{m.summary}</span></Bot>
-          <div className="wa-preview"><img src={avatarSrc(m.friend.id)} alt="" width={32} height={32} /><div className="wa-bub">{m.message}</div></div>
+          <div className="wa-preview"><img src={avatarSrc(m.friend)} alt="" width={32} height={32} /><div className="wa-bub">{m.message}</div></div>
           {!m.sent && m === live && <div className="btnrow even ai-actions"><button type="button" className="btn sm" disabled={busy} onClick={() => setMsgs(x => [...x, { role: 'form', ask: m.summary, friend: m.friend }])}>{tr('Change details')}</button>
             <button type="button" className="btn primary sm" disabled={busy} onClick={() => approve(m)}><Icon name="send" size={16} />{tr('Send on WhatsApp')}</button></div>}
         </div>;

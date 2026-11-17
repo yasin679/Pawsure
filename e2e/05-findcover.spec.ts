@@ -32,7 +32,8 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
     await clockTo(page, '11:00');
     await page.getByRole('button', { name: 'My help can’t come' }).click();
     await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
-    await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
+    await findCoverForm(page);
+    await page.locator('#ask').fill('Sunita can’t come today. Can someone feed Bruno at 1:00 pm?');
     await page.getByRole('button', { name: 'Understand my request' }).click();
     await page.getByRole('button', { name: 'Search my friends' }).click();
     await expect(page.locator('.card', { hasText: '1. Meera Joshi' })).toBeVisible();

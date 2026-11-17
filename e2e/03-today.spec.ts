@@ -89,8 +89,7 @@ test.describe('D. Today: daily care', () => {
     await expect(page.getByText(/Alone-window warning/)).toBeVisible();
     await expect(page.getByText(/phase 3/i)).toHaveCount(0);
     await closePlan(page);
-    await page.getByRole('button', { name: 'Ask a friend to cover' }).click();
-    await expect(page.locator('#ask')).toHaveValue('Sunita can’t come today. Can someone feed Bruno at 1:00 pm?');
+    await expect(page.getByRole('button', { name: 'Ask a friend to cover' })).toHaveCount(0); // friends are asked from Find cover (17 Nov)
   });
 
   test('D9 Day close at 11:59 PM stores the covered-day result', async ({ page }) => {
