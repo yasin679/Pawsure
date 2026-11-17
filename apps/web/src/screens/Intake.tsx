@@ -77,7 +77,7 @@ function Picker({ id, label, placeholder, options, value, onPick, loading }: { i
 }
 
 /** One field of an in-conversation form. A `choice` field answers with a tap; `quick` chips fill a text field and move on. */
-interface FField { id: string; label: string; kind?: 'text' | 'choice' | 'pick'; placeholder?: string; hint?: string; options?: string[]; quick?: string[]; optional?: boolean; validate?: (v: string, all: Record<string, string>) => string | null; mono?: boolean; numeric?: boolean; prefix?: string; max?: number; voice?: boolean; initial?: string
+export interface FField { id: string; label: string; kind?: 'text' | 'choice' | 'pick' | 'multi'; placeholder?: string; hint?: string; options?: string[]; quick?: string[]; optional?: boolean; validate?: (v: string, all: Record<string, string>) => string | null; mono?: boolean; numeric?: boolean; prefix?: string; max?: number; voice?: boolean; initial?: string
   /** `pick`: choose from a list in a sheet; `other` offers typing it instead (the typed box gets `typedId`). */
   choices?: { value: string; label: string }[]; loading?: boolean; other?: string; typedId?: string; typedPlaceholder?: string; initialTyped?: boolean; forceTyped?: boolean
   /** Called when the form moves past this field, so later fields can load their lists; `resets` clears fields that depend on it. */
@@ -87,7 +87,7 @@ type Mic = ReturnType<typeof useVoice>;
  * A small progressive form that opens in the conversation: one field at a time ("1 of 3"), Back / Skip / Next,
  * Done on the last. Its answers come back together, and the conversation shows them as one reply.
  */
-function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, top }: { title: string; fields: FField[]; submit?: string; onSubmit: (v: Record<string, string>) => void; busy?: boolean; err?: string | null; mic: Mic; top?: ReactNode }) {
+export function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, top }: { title: string; fields: FField[]; submit?: string; onSubmit: (v: Record<string, string>) => void; busy?: boolean; err?: string | null; mic: Mic; top?: ReactNode }) {
   const [i, setI] = useState(0);
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.id, f.initial ?? ''])));
   const [typedMap, setTyped] = useState<Record<string, boolean>>(() => Object.fromEntries(fields.map(f => [f.id, !!f.initialTyped])));
@@ -113,7 +113,9 @@ function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, to
     <div className="sf-bar" aria-hidden="true">{fields.map((x, n) => <span key={x.id} className={n < i ? 'done' : n === i ? 'now' : ''} />)}</div>
     <label className="sf-label" htmlFor={f.kind === 'choice' || (f.kind === 'pick' && !typed) ? undefined : typed ? f.typedId ?? f.id : f.id}>{f.label}{f.optional && <span className="sf-opt"> · {tr('optional')}</span>}</label>
     {f.hint && <div className="sf-hint">{f.hint}</div>}
-    {f.kind === 'pick' && !typed
+    {f.kind === 'multi'
+      ? <div className="cb-chips">{f.options!.map(o => { const on = v.split('|').includes(o); return <button key={o} type="button" className="chip" aria-pressed={on} disabled={busy} onClick={() => set(on ? v.split('|').filter(x => x && x !== o).join('|') : [...v.split('|').filter(Boolean), o].join('|'))}>{on ? '✓ ' : ''}{tr(o)}</button>; })}</div>
+      : f.kind === 'pick' && !typed
       ? <><Picker id={f.id} label={f.label} placeholder={f.placeholder ?? f.label} value={v} loading={f.loading} options={f.choices ?? []} onPick={pick} />
         {f.other && <div className="cb-chips"><button type="button" className="chip" onClick={() => toggleTyped(true)}>{tr(f.other)}</button></div>}</>
       : f.kind === 'choice'
@@ -135,7 +137,7 @@ function StepForm({ title, fields, submit = 'Done', onSubmit, busy, err, mic, to
       {i > 0 && <button type="button" className="btn ghost sm" onClick={() => setI(i - 1)}>{tr('Back')}</button>}
       <span className="grow" />
       {f.optional && <button type="button" className="btn sm" disabled={busy} onClick={() => pick('')}>{tr('Skip')}</button>}
-      {f.kind !== 'choice' && (f.kind !== 'pick' || typed) && <button type="button" className="btn primary sm" disabled={!ok || busy} onClick={() => go(vals)}>{last ? tr(submit) : tr('Next')}</button>}
+      {f.kind !== 'choice' && (f.kind !== 'pick' || typed || !!v) && <button type="button" className="btn primary sm" disabled={!ok || busy} onClick={() => go(vals)}>{last ? tr(submit) : tr('Next')}</button>}
     </div>
   </div>;
 }

@@ -171,27 +171,42 @@ test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
     expect(await page.locator('.friend-card').count()).toBeGreaterThan(0);
     await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/avatars\//);
     await page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }).click();
-    // Pawly can't read this one, so the simple form opens with the reason, not a blank text box
-    await expect(page.getByRole('heading', { name: 'Simple request form' })).toBeVisible();
+    // Asking stays in the chat: a small progressive form, never the old filter screen
+    await expect(page.getByRole('group', { name: /^Ask / })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Check the details' })).toHaveCount(0);
+    await expect(page.locator('#ask')).toHaveCount(0);
   });
 
-  test('G9b Asking the second friend from the assistant goes straight through: details → Pawly → that friend’s message → Sent (co-owner can answer questions)', async ({ page }) => {
+  test('G9b Ask the second friend in the chat: form (what, pet, time, access) → message preview → Send → their Yes → Confirm, all in the chat', async ({ page }) => {
     await boot(page); await signInOwner(page);
     await tab(page, 'Find cover');
-    await page.getByRole('button', { name: /Walk Bruno this evening/ }).click();
+    await page.getByRole('button', { name: /Walk Bruno at|Walk Bruno this evening/ }).click();
     const second = page.locator('.friend-card').nth(1);
     await expect(second).toBeVisible();
     const first = (await second.locator('b').innerText()).split(' ')[0]!;
     await second.getByRole('button', { name: /^Ask / }).click();
-    await expect(page.getByRole('heading', { name: 'Check the details' })).toBeVisible();
-    await page.getByRole('alert').getByRole('button', { name: '6:00 PM' }).click();
-    await expect(page.getByText('forbidden')).toHaveCount(0);
-    await page.getByRole('button', { name: /Find with Pawly/ }).click();
-    await expect(page.getByRole('heading', { name: `Ask ${first}?` })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('checkbox', { name: /I approve/ }).check();
+    const form = page.getByRole('group', { name: `Ask ${first}` });
+    await expect(form.getByRole('button', { name: '✓ Short walk' })).toBeVisible(); // guessed from “Walk Bruno this evening”
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(form.getByRole('button', { name: '✓ Bruno' })).toBeVisible();
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(form.locator('#when')).toContainText('6:00 PM'); // “evening”
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await form.getByRole('button', { name: 'Key handover', exact: true }).click();
+    await expect(page.getByText(`Here’s the WhatsApp message for ${first}.`)).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.wa-bub')).toBeVisible();
     await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
-    await expect(page.locator('.conf', { hasText: 'Sent' })).toBeVisible();
-    await expect(page.locator('.li', { hasText: first })).toBeVisible();
+    await expect(page.getByRole('status', { name: `Sent to ${first} on WhatsApp.` })).toBeVisible();
+    // the friend says Yes on their (simulated) phone, in their own language
+    await page.getByRole('button', { name: 'Show friends’ phones' }).click();
+    await friendsPhone(page).locator('.seg').getByRole('button', { name: first, exact: true }).click();
+    await friendsPhone(page).locator('.qr').getByRole('button', { name: /^(Yes|हाँ|हो)$/ }).last().click();
+    await page.waitForTimeout(500);
+    await page.getByRole('button', { name: 'Hide friends’ phones' }).click();
+    await expect(page.getByRole('status', { name: `${first} said yes!` })).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: `Confirm ${first}` }).click();
+    await expect(page.getByRole('status', { name: `Confirmed. ${first} is covering this.` })).toBeVisible();
+    await expect(page.getByText('forbidden')).toHaveCount(0);
   });
 });
 

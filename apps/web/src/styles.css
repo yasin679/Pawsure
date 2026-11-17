@@ -938,3 +938,16 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .today-hero .th-date{opacity:1;color:var(--ink-2);font-size:.95rem;font-weight:600;margin-top:4px}
 .plan-link{font-weight:800;font-size:var(--fs-s);color:var(--sky);text-decoration:underline;text-underline-offset:3px;padding:2px 0;background:none;border:0}
 .out-card .plan-link{display:inline-block;margin-top:4px}
+
+/* Find cover chat: the WhatsApp message preview and the friend's live reply (17 Nov) */
+.ai-form-wrap,.ai-preview{display:flex;flex-direction:column;gap:10px}
+.wa-preview{display:flex;gap:8px;align-items:flex-end;margin-left:42px}
+.wa-preview img{border-radius:50%;flex:none}
+.wa-bub{background:#DCF3CB;color:#1E231C;border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:.88rem;line-height:1.4;white-space:pre-line;max-width:100%}
+:root[data-theme="dark"] .wa-bub{background:#2F4A2A;color:#EEF0E8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wa-bub{background:#2F4A2A;color:#EEF0E8}}
+.ai-actions{margin-left:42px}
+.ai-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.ai-status.wait .geo-dot{display:inline-block;margin-right:6px}
+.ai-status.ok{background:var(--sage-soft,#E3ECD6)}
+.ai-status.no{background:var(--coral-soft)}
