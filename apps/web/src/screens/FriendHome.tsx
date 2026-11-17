@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, fmt, type FriendSelf } from '../api';
 import { LanguageOptions, AppBar, Art, Banner } from '../ui';
+import { ProofSheet } from './Proof';
 
 const CAP: [string, string, string?][] = [['feed', 'Feeding / water'], ['walk', 'Short walks'], ['meds', 'Medicines', 'Only with the owner’s written instructions'], ['large', 'Large / anxious dogs']];
 interface Access { flat: string; tower: string; access: string; pet: Record<string, string>; notice: string }
@@ -13,6 +14,7 @@ const HALF_HOURS = Array.from({ length: 48 }, (_, i) => i * 30);
 export function FriendHome({ name, onSignOut }: { name: string; onSignOut: () => void }) {
   const [me, setMe] = useState<FriendSelf | null>(null); const [tab, setTab] = useState<'requests' | 'settings'>('requests');
   const [text, setText] = useState(''); const [access, setAccess] = useState<Record<string, Access | string>>({}); const [msg, setMsg] = useState<string | null>(null); const [live, setLive] = useState(false);
+  const [proofFor, setProofFor] = useState<{ id: string; hh?: string } | null>(null);
   const [late, setLate] = useState(15); const [sos, setSos] = useState<string | null>(null); const [doneNow, setDoneNow] = useState<string[]>([]);
   const load = () => api<FriendSelf>('/v1/me/friend').then(setMe);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
@@ -49,7 +51,7 @@ export function FriendHome({ name, onSignOut }: { name: string; onSignOut: () =>
           {r.lateMin ? <div className="small"><b>You said you’d be about {r.lateMin} min late.</b> The owner knows.</div> : null}
           {!r.arrived && <div className="row"><select className="input" aria-label="How late" value={late} onChange={e => setLate(Number(e.target.value))}>{[10, 15, 20, 30, 45, 60].map(m => <option key={m} value={m}>{m} min</option>)}</select><button className="btn sm" onClick={() => api(`/v1/me/requests/${r.id}/late`, { body: { minutes: late } }).then(() => { setMsg(`The owner has been told you’ll be about ${late} min late.`); load(); }).catch(e => setMsg(e instanceof ApiError ? String(e.body.message) : 'Can’t reach Pawsure.'))}>I’m running late</button></div>}
           <div className="btnrow"><button className="btn" onClick={() => api(`/v1/me/requests/${r.id}/arrived`, { body: {} }).then(() => { setMsg('The owner has been told you arrived.'); load(); })}>I’ve arrived</button>
-            <button className="btn primary" onClick={() => api(`/v1/me/requests/${r.id}/done`, { body: {} }).then(() => { setMsg('Done, thank you! Access details have been removed.'); load(); })}>Done</button>
+            <button className="btn primary" onClick={() => setProofFor({ id: r.id, hh: (r as { householdId?: string }).householdId })}>Done: send proof</button>
             <button className="btn" onClick={() => api(`/v1/me/requests/${r.id}/cancel`, { body: {} }).then(() => { setMsg('Cancelled. The owner was told and the details were removed.'); load(); })}>Can’t make it</button></div>
           {sos !== r.id ? <button className="btn ghost sm" onClick={() => { setSos(r.id); setDoneNow([]); }}>Emergency: I have to leave</button>
             : <div className="card warn small"><b>Tick what you already finished</b>
@@ -79,6 +81,7 @@ export function FriendHome({ name, onSignOut }: { name: string; onSignOut: () =>
         <div className="card"><span className="eyebrow">Location</span><label className="switch"><span className="grow"><b>Live location only during an accepted visit</b><br /><span className="xs muted">Off by default. Deleted 24 h after the visit.</span></span><input type="checkbox" role="switch" checked={!!p?.live_location_allowed} onChange={e => save({ liveLocationAllowed: e.target.checked })} /></label></div>
         <div className="card"><label className="switch"><span className="grow"><b>Also help nearby Pawsure members</b><br /><span className="xs muted">Not active yet. Needs ID checks first.</span></span><input type="checkbox" role="switch" checked={!!p?.nearby_opt_in} onChange={e => save({ nearbyOptIn: e.target.checked })} /></label></div>
       </>}
+      {proofFor && <ProofSheet title="Send proof" householdId={proofFor.hh} allowNoProof onClose={() => { setProofFor(null); load(); }} onSend={b => api<{ message?: string }>(`/v1/me/requests/${proofFor.id}/done`, { body: b })} />}
       <p className="xs muted">Signed in as {name}. Reply “help” on WhatsApp to reach a person.</p>
       <button className="btn ghost block" onClick={onSignOut}>Sign out</button>
     </main>

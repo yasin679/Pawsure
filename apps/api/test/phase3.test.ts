@@ -69,7 +69,10 @@ describe('F4/F5: parse, search, approve (PS-055–059)', () => {
     expect(today.tasks.some(t => t.id === 'cover_' + id)).toBe(true);
     clock.set(at('17:02'));
     await call('POST', `/v1/me/requests/${id}/arrived`, {}, priya);
-    await call('POST', `/v1/me/requests/${id}/done`, {}, priya);
+    // Proof (16 Nov): a photo of the bowl plus today's code from the food-box card.
+    const code = (await call<{ codes: Record<number, string>; today: number }>('GET', `${HH}/code-cards/current`, undefined, owner)).body;
+    const done = await call<{ proof: { grade: string } }>('POST', `/v1/me/requests/${id}/done`, { photo: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==', code: code.codes[code.today] }, priya);
+    expect(done.body.proof.grade).toBe('strong');
     expect((await call<View>('GET', `${HH}/requests/${id}`, undefined, owner)).body.state).toBe('Completed');
     expect((await call('GET', `/v1/me/requests/${id}/access`, undefined, priya)).status).toBe(403);
     const t2 = (await call<{ tasks: { id: string; ev: { state: string } }[] }>('GET', `${HH}/today`, undefined, owner)).body;

@@ -18,6 +18,7 @@ import { audit, loadDay, ingestSignal, materialiseDay, ensureCover, type DayView
 import { istDate, minutesOnDay, atMinute } from './clock.js';
 import { renderCover, renderReply, REMINDER_BUTTONS, YES_NO, EXT_BUTTONS, DAY_WORD, inScript } from './coverTemplates.js';
 import type { Lang } from './templates.js';
+import { recordProof, proofMessage, type Proof, type ProofResult } from './proof.js';
 
 type Task = DayView['tasks'][number];
 export type JobState = 'await-owner' | 'asking' | 'hold' | 'ff' | 'notfound' | 'adhoc' | 'stopped' | 'covered' | 'owner' | 'moved' | 'skipped' | 'nocover' | 'closed';
@@ -538,7 +539,7 @@ export function makeCover(d: Deps) {
     const j = jobs.find(x => x.id === jobId); if (!j) return null;
     pid = mineIds.find(id => j.asks.some(a => a.personId === id) || j.covered.some(c => c.personId === id)); if (!pid) return null;
     if (p === 'cb_yes' || p === 'cb_no' || p === 'cb_read') return coverReply(j.id, pid, p === 'cb_yes' ? 'yes' : p === 'cb_no' ? 'no' : 'read', 'WhatsApp');
-    if (p === 'cb_done' || b.type === 'photo') return replacementDone(j.householdId, pid, b.messageId);
+    if (p === 'cb_done' || b.type === 'photo') return replacementDone(j.householdId, pid, b.messageId, b.type === 'photo' ? { mediaRef: (b as { mediaRef?: string }).mediaRef ?? b.messageId, code: (b as { caption?: string }).caption?.match(/\b(\d{4})\b/)?.[1] ?? null } : {});
     if (p === 'cb_cant' || (b.type === 'text' && isCantCome(b.text ?? ''))) return replacementCant(j.householdId, pid);
     const t = (b.text ?? '').trim();
     if (/^(yes|haan|ha|ho|हाँ|हो|ok|sure)\b/i.test(t) && !/\d/.test(t)) return coverReply(j.id, pid, 'yes', 'WhatsApp');
@@ -552,13 +553,15 @@ export function makeCover(d: Deps) {
     for (const date of [today(), tomorrowOf(today())]) out.push(...(await dayTasks(hh, date)).filter(t => t.cover?.personId === pid && t.cover.state === 'CoveredByReplacement' && !done(t) && t.ev.state !== 'Cancelled'));
     return out;
   }
-  async function replacementDone(hh: string, pid: string, messageId: string) {
+  async function replacementDone(hh: string, pid: string, messageId: string, proof: Proof = {}) {
     const ts = await replacementTasks(hh, pid); if (!ts.length) return { status: 'nothing_to_do' };
-    for (const t of ts) await ingestSignal(db, { householdId: hh, idempotencyKey: `cover-done:${messageId}:${t.id}`, kind: 'friend_photo', taskId: t.id, channel: 'whatsapp', eventTime: now(), receivedTime: now(), actor: 'cover:' + pid });
+    // The same photo and code proof as helpers and friends; "done" with neither is recorded as said-done, not evidence.
+    let res: ProofResult | null = null;
+    for (const t of ts) res = await recordProof(db, { householdId: hh, taskId: t.id, actor: 'cover:' + pid, channel: messageId.startsWith('link-') ? 'link' : 'whatsapp', proof, now: now(), key: `cover-done:${messageId}:${t.id}` });
     const p = await person(hh, pid); if (p) await reply(hh, p, 'done_thanks');
     await db.query(`update backup_contact set cared_before=true where id=$1`, [pid]);
-    await ownerPush(hh, 'Done', `${p?.first ?? 'Your cover'} finished ${titles(ts)}. One photo shows the task as Likely.`);
-    return { status: 'stored' };
+    await ownerPush(hh, 'Done', res?.grade === 'strong' ? `${p?.first ?? 'Your cover'} finished ${titles(ts)} and sent a photo with today’s code.` : res?.grade === 'none' ? `${p?.first ?? 'Your cover'} says ${titles(ts)} is done, with no photo or code.` : `${p?.first ?? 'Your cover'} finished ${titles(ts)}. The proof is incomplete: open Today to see it.`);
+    return { status: 'stored', proof: res, message: res ? proofMessage(res) : undefined };
   }
   async function replacementCant(hh: string, pid: string) {
     const ts = await replacementTasks(hh, pid); if (!ts.length) return { status: 'nothing_to_do' };
@@ -586,13 +589,13 @@ export function makeCover(d: Deps) {
     const details = can(role, 'access_details', 'read', ctx);
     const checklist = details ? (await db.query<{ gate_approved: boolean; key_plan: string | null; key_note: string | null }>(`select gate_approved, key_plan, key_note from visit_access_checklist where task_id = any($1) limit 1`, [l.task_ids]))[0] : null;
     return { status: 200, body: {
-      kind: l.kind, name: l.name, owner: first(o.name), tower: h.tower, pet: pet.name, handlingNote: pet.handling_note, tasks: ts.map(t => ({ id: t.id, title: t.title, due: t.due, time: clock(t.due), state: t.ev.state, label: t.ev.label })),
+      kind: l.kind, householdId: l.household_id, name: l.name, owner: first(o.name), tower: h.tower, pet: pet.name, handlingNote: pet.handling_note, tasks: ts.map(t => ({ id: t.id, title: t.title, due: t.due, time: clock(t.due), state: t.ev.state, label: t.ev.label })),
       accepted: !!l.accepted_at, approved: !!l.approved_at, expiresAt: l.expires_at, canAccept: !l.accepted_at && (l.kind === 'substitute' ? !!l.approved_at : true),
       details: details ? { flat: h.flat_private, tower: h.tower, gate: checklist?.gate_approved ? 'Approved at the society gate' : `${first(o.name)} will approve you in the gate app`, key: checklist?.key_plan ? (checklist.key_note || KEY_TEXT[checklist.key_plan]) : 'The owner will tell you the key plan', instructions: (await db.query<{ i: string | null }>(`select r.instructions as i from care_tasks t left join routine_tasks r on r.id=t.routine_task_id where t.id = any($1)`, [l.task_ids])).map(x => x.i).filter(Boolean).join(' ') } : null,
       notice: details ? 'For this task only. The link stops working after the visit.' : 'Address, gate and key details are shared only after you accept and the owner approves.'
     } };
   }
-  async function linkAction(token: string, action: 'accept' | 'decline' | 'done' | 'cant', noteRead?: boolean) {
+  async function linkAction(token: string, action: 'accept' | 'decline' | 'done' | 'cant', noteRead?: boolean, proof: Proof = {}) {
     const l = await linkByToken(token); if (!l || l.revoked_at || new Date(l.expires_at) <= now()) return { status: 410, body: { error: 'expired' } };
     if (action === 'accept') {
       const pet = await petName((await db.query<{ pet_id: string }>(`select pet_id from care_tasks where id=$1`, [l.task_ids[0]]))[0]!.pet_id);
@@ -604,7 +607,7 @@ export function makeCover(d: Deps) {
     }
     if (action === 'decline') { if (l.job_id) return { status: 200, body: await coverReply(l.job_id, l.id, 'no', 'task link') }; await db.query(`update task_links set revoked_at=$2 where id=$1`, [l.id, now().toISOString()]); return { status: 200, body: { ok: true } }; }
     if (!l.approved_at || !l.accepted_at) return { status: 403, body: { error: 'not_confirmed' } };
-    if (action === 'done') return { status: 200, body: await replacementDone(l.household_id, l.id, 'link-' + l.id + '-' + now().getTime()) };
+    if (action === 'done') return { status: 200, body: await replacementDone(l.household_id, l.id, 'link-' + l.id, proof) };
     return { status: 200, body: await replacementCant(l.household_id, l.id) };
   }
 

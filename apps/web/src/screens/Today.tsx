@@ -1,7 +1,7 @@
 /** Today (PS-007, PS-012–016, PS-030–036, PS-103, PS-111, PS-121, PS-122). */
 import { t as tr } from '../i18n';
-import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, fmt, hm, type Helper, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem } from '../api';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { api, ApiError, fmt, hm, type Helper, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem, type Visit, type VisitCodeState } from '../api';
 import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
 
@@ -207,15 +207,16 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="row"><h2 className="grow">{task.title}</h2><StatusPill t={task} /></div>
       <div className="small muted">{petName(task.petId)} · {fmt(task.due)}{helperRow ? ` · ${helperFirst}` : ''}</div>
       {isDone(task) && task.ev.state !== 'Cancelled'
-        ? <figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>
+        ? <TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
         : task.ev.state === 'Cancelled' ? <div className="task-desc">{tr('Cancelled for today.')}</div>
         : <>
           <div className="task-desc">{taskDescription(task)}</div>
-          <div className="ev-placeholder"><Icon name="camera" size={28} /><span>{helperRow && invite === 'yes' ? `${helperFirst}${tr('’s photo will appear here after she checks in.')}` : tr('A photo will appear here once the task is done.')}</span></div>
+          <TaskProof hh={hh} taskId={task.id} fallback={<div className="ev-placeholder"><Icon name="camera" size={28} /><span>{helperRow && invite === 'yes' ? `${helperFirst}${tr('’s photo will appear here after she checks in.')}` : tr('A photo will appear here once the task is done.')}</span></div>} />
           <div className="btnrow even"><button className="btn" onClick={() => run(async () => { const r = await api<{ note?: string }>(`${H}/tasks/${task.id}/remind`, { body: {} }); setMsg(r.note ?? 'Reminder sent.'); })}>{tr('Send reminder')}</button>
             <button className="btn primary" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`Marked “${task.title}” completed.`); })}>{tr('Mark completed')}</button></div>
           {err && <span className="errtext" role="alert">{err}</span>}
         </>}
+      {task.visitId && day.visits[task.visitId]?.status && <VisitTime v={day.visits[task.visitId]!} />}
       <details className="task-more"><summary>{tr('Task details')}</summary>
       <div className="row"><span className="eyebrow grow">{tr('Evidence')}</span><Conf state={task.ev.state} label={task.ev.label} /></div>
       <div className="small muted">{petName(task.petId)} · due {fmt(task.due)}{task.movedFrom != null ? ` (moved from ${fmt(task.movedFrom)})` : ''} · {task.profile} escalation{task.profile === 'medicine' ? ' (never to backup)' : ''} <UrgencyTag u={task.urgency} /></div>
@@ -311,4 +312,30 @@ function escText(t: DayTask, now: number) {
 
 export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return <div className="sheet-backdrop" onClick={onClose}><div className="sheet" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>{children}<button className="btn block" onClick={onClose}>{tr('Close')}</button></div></div>;
+}
+
+interface ProofRow { photo: string | null; code: string; by: string; channel: string; at: string }
+const CODE_TEXT: Record<string, string> = { today: '✓ today’s code', old: '✕ an old code', wrong: '✕ wrong code', none: 'no code' };
+/** The owner sees every proof photo for the task: who sent it, when, and whether today's code matched. */
+/** When the helper's visit started and ended (arrival and exit calls) and how long it lasted, against the minimum for its tasks. */
+function VisitTime({ v }: { v: Visit }) {
+  const min = `${tr('minimum')} ${v.minimum} min`;
+  const text = v.arrive != null && v.exit != null ? `${hm(v.arrive)}–${hm(v.exit)} · ${v.duration} min (${min})`
+    : v.arrive != null ? `${tr('Started')} ${hm(v.arrive)} · ${tr('no exit call yet')} (${min})`
+    : v.exit != null ? `${tr('Ended')} ${hm(v.exit)} · ${tr('no arrival call')} (${min})` : null;
+  if (!text) return null;
+  const codes = v.codes && (v.codes.start || v.codes.end) ? <div className="visit-codes xs">{(['start', 'end'] as const).map(p => { const s = v.codes![p]; return s ? <span key={p} className={`vc ${s}`}>{tr(p === 'start' ? 'Start code' : 'End code')}: {tr(CODE_WORD[s])}</span> : null; })}</div> : null;
+  return <><div className={`visit-time small${v.duration != null && v.duration < v.minimum ? ' short' : ''}`}><b>{tr('Visit')}</b> {text}{v.status && <b className="vt-status"> · {tr(v.status === 'In progress' ? 'Visit in progress' : 'Visit ' + v.status.toLowerCase())}</b>}</div>{codes}</>;
+}
+/** The random code sent at the arrival / exit call, and whether her photo of it came back in time. */
+const CODE_WORD: Record<VisitCodeState, string> = { ok: 'photo matched ✓', late: 'photo came late', wrong: 'code didn’t match', waiting: 'waiting for photo', missing: 'no photo sent' };
+
+function TaskProof({ hh, taskId, fallback }: { hh: string; taskId: string; fallback?: ReactNode }) {
+  const [rows, setRows] = useState<ProofRow[] | null>(null);
+  useEffect(() => { api<ProofRow[]>(`/v1/households/${hh}/tasks/${taskId}/proof`).then(setRows).catch(() => setRows([])); }, [hh, taskId]);
+  if (!rows?.length) return <>{fallback ?? null}</>;
+  return <div className="card flat"><span className="eyebrow">Proof photos</span><div className="proofs">
+    {rows.map((r, i) => <figure key={i}>{r.photo ? <img src={r.photo} alt={`Proof from ${r.by}`} /> : <div className="proof-photo" style={{ height: 100 }}>Deleted after 90 days</div>}
+      <figcaption><b>{r.by.split(' ')[0]}</b> · {new Date(r.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}<br /><span className={r.code === 'today' ? 'ok' : r.code === 'none' ? 'muted' : 'errtext'}>{CODE_TEXT[r.code] ?? r.code}</span></figcaption></figure>)}
+  </div></div>;
 }
