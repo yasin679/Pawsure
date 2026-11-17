@@ -50,7 +50,12 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const [petTab, setPetTab] = useState<string | null>(null);
   // The household's helper (name and whether she has accepted the WhatsApp invite) for "Your help today".
   const [helpers, setHelpers] = useState<Helper[] | null>(null);
-  useEffect(() => { api<Helper[]>(`/v1/households/${hh}/helpers`).then(setHelpers).catch(() => setHelpers([])); }, [hh, day?.now]);
+  // The helper's invite status follows every refresh of the day (not only when the clock moves),
+  // and while an invite is pending it is checked every few seconds, so an accepted invite shows without a reload.
+  const loadHelpers = () => api<Helper[]>(`/v1/households/${hh}/helpers`).then(setHelpers).catch(() => setHelpers([]));
+  useEffect(() => { loadHelpers(); }, [hh, day]);
+  const pendingInvite = !!helpers?.some(h => h.consent === 'pending');
+  useEffect(() => { if (!pendingInvite) return; const t = setInterval(loadHelpers, 4000); return () => clearInterval(t); }, [hh, pendingInvite]);
   // The header turns into a compact bar as Home scrolls: --hp goes 0 → 1 over the first 110 px (styles.css).
   const mainRef = useRef<HTMLElement>(null);
   const onScroll = () => { const m = mainRef.current; if (!m) return; (m.closest('.pwa') as HTMLElement | null)?.style.setProperty('--hp', Math.min(1, m.scrollTop / Math.max(1, Math.min(110, m.scrollHeight - m.clientHeight))).toFixed(3)); };

@@ -145,6 +145,9 @@ export function App() {
 function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView | null; onChange: () => void; friendOnly?: boolean }) {
   const resetDemo = (window as unknown as { pawsureResetDemo?: () => Promise<void> }).pawsureResetDemo;
   const [busy, setBusy] = useState(false); const [phone, setPhone] = useState(false); const [friends, setFriends] = useState(false); const [cover, setCover] = useState(false); const [hint, setHint] = useState<string | null>(null);
+  // whose phone the simulated helper phone plays: Sunita in the seeded demo, or the helper this owner invited
+  const [helperFirst, setHelperFirst] = useState('Sunita');
+  useEffect(() => { if (!hh) return; api<{ name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(h => setHelperFirst(h.name.split(' ')[0] || 'Sunita')).catch(() => setHelperFirst('Sunita')); }, [hh, day?.now]);
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await api('/jobs/tick', { body: {}, auth: false }); await onChange(); } finally { setBusy(false); } };
   useEffect(() => {
     if (friendOnly || !hh) return;
@@ -154,7 +157,7 @@ function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView |
     <div className="demobar" role="region" aria-label="Demo controls">
       <span>DEMO</span><span className="t">{day ? fmt(day.now) : '—'}</span>
       {[5, 15, 60].map(m => <button key={m} disabled={busy} onClick={() => act(() => api('/demo/clock', { body: { advance: m }, auth: false }))}>+{m === 60 ? '1h' : m + 'm'}</button>)}
-      {!friendOnly && <button aria-pressed={phone} onClick={() => { setPhone(!phone); setFriends(false); setCover(false); }}>{phone ? 'Hide' : 'Show'} Sunita’s phone</button>}
+      {!friendOnly && <button aria-pressed={phone} onClick={() => { setPhone(!phone); setFriends(false); setCover(false); }}>{phone ? 'Hide' : 'Show'} {helperFirst}’s phone</button>}
       {!friendOnly && <button aria-pressed={friends} onClick={() => { setFriends(!friends); setPhone(false); setCover(false); }}>{friends ? 'Hide' : 'Show'} friends’ phones</button>}
       {!friendOnly && <button aria-pressed={cover} onClick={() => { setCover(!cover); setPhone(false); setFriends(false); }}>{cover ? 'Hide' : 'Show'} backups’ phones</button>}
       <button onClick={() => { location.hash = 'admin'; }}>Ops console</button>

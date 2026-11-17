@@ -292,6 +292,12 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     return c.json({ code: card?.codes[Number(istDate(now()).slice(8, 10))] ?? null });
   });
 
+  /** DEMO ONLY: the home's newest helper, so the simulated phone plays whoever the owner invited. */
+  app.get('/demo/helper-of/:hh', async (c) => {
+    if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
+    const r = (await db.query<{ mid: string; phone: string; name: string }>(`select m.id as mid, u.phone_e164 as phone, coalesce(m.display_label, u.display_name) as name from memberships m join users u on u.id=m.user_id where m.household_id=$1 and m.role='helper' and m.status in ('invited','active') order by (m.status='active') desc, m.invited_at desc limit 1`, [c.req.param('hh')]))[0];
+    return r ? c.json(r) : c.json({ error: 'not_found' }, 404);
+  });
   app.get('/demo/helper-thread/:mid', async (c) => {
     if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
     return c.json(await db.query(`select direction, template, body, gloss, task_id, buttons, at from helper_messages where membership_id=$1 order by at, id`, [c.req.param('mid')]));

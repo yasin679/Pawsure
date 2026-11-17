@@ -6,9 +6,12 @@ import { useEffect, useState } from 'react';
 import { api, API, type DayView } from '../api';
 
 interface Msg { template?: string | null; gloss?: string | null; direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
-const HELPER = { mid: 'm_sunita', phone: '+919000000035' };
+/** Sunita in the seeded demo; in a new home, whoever the owner invited (looked up below). */
+const SUNITA = { mid: 'm_sunita', phone: '+919000000035' };
 
 export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | null; onChange: () => void }) {
+  const [HELPER, setHelper] = useState({ ...SUNITA, name: 'Sunita' });
+  useEffect(() => { api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(h => setHelper({ mid: h.mid, phone: h.phone, name: h.name.split(' ')[0] || 'Sunita' })).catch(() => setHelper({ ...SUNITA, name: 'Sunita' })); }, [hh]);
   const [thread, setThread] = useState<Msg[]>([]); const [code, setCode] = useState<string>(''); const [lookin, setLookin] = useState<string | null>(null);
   /** Today's code from the owner's card (the simulated helper reads it off the card on the food box). */
   const todayCode = async () => { try { const c = await api<{ codes: Record<string, string>; today: number }>(`/v1/households/${hh}/code-cards/current`); return c.codes[c.today] ?? ''; } catch { return ''; } };
@@ -18,7 +21,7 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
     const out = await fetch(API + '/demo/outbox').then(r => r.json()) as { template: string; body: string }[];
     const l = out.find(o => o.template.startsWith('LOOKIN-15')); setLookin(l ? (JSON.parse(l.body) as { link: string }).link : null);
   };
-  useEffect(() => { load(); }, [day?.now]);
+  useEffect(() => { load(); }, [day?.now, HELPER.mid]);
   const send = async (body: Record<string, unknown>) => { await api('/webhooks/whatsapp', { body: { messageId: 'sim-' + Date.now(), from: HELPER.phone, ...body }, auth: false }); await api('/jobs/tick', { body: {}, auth: false }); await load(); onChange(); };
   const ivr = async (event: string, extra: Record<string, unknown>) => { await api('/webhooks/ivr', { body: { callId: 'sim-' + Date.now(), from: HELPER.phone, event, ...extra }, auth: false }); await api('/jobs/tick', { body: {}, auth: false }); await load(); onChange(); };
   const prompted = day?.tasks.filter(t => thread.some(m => m.task_id === t.id && m.direction === 'out')) ?? [];
@@ -29,7 +32,7 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
   const visitCode = lastCode?.body.match(/\b(\d{3})\b/)?.[1] ?? null;
   const codeVisit = t?.visitId ?? day?.tasks.find(x => x.visitId)?.visitId ?? null;
   return <div className="sheet" style={{ maxHeight: 'none', borderRadius: 0, background: 'var(--wa-bg)', color: 'var(--wa-ink)' }}>
-    <div className="banner sim"><span className="bi">⚙</span><div>Sunita’s phone (simulated). Nothing reaches a real phone.</div></div>
+    <div className="banner sim"><span className="bi">⚙</span><div>{HELPER.name}’s phone (simulated). Nothing reaches a real phone.</div></div>
     <div className="wa-body" style={{ maxHeight: 280, overflow: 'auto', background: 'var(--wa-bg)', borderRadius: 12 }}>
       {thread.slice(-12).map((m, i) => <div key={i} className={`bub ${m.direction === 'out' ? 'in' : 'out'}`}>{m.body}{m.gloss && <div className="gloss">EN: {m.gloss}</div>}
         {m.buttons && <div className="qr">{m.buttons.map(b => <button key={b.id} onClick={() => send({ type: 'button', payload: b.id })}>{b.label}</button>)}</div>}</div>)}

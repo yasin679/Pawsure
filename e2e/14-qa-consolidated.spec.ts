@@ -274,10 +274,23 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(card.locator('.help-track')).toHaveCount(0);
     const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
     await webhook(page, { from: '+919876500011', type: 'button', payload: `consent_yes:${hh}` });
-    await tab(page, 'Me'); await tab(page, 'Today');
-    await expect(card).not.toContainText('Invite pending');
+    // no reload or tab switch: Home picks up the accepted invite by itself (17 Nov)
+    await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
     await expect(card.locator('.help-track')).toContainText('Accepted');
     await expect(card.getByRole('button', { name: 'My help can’t come' })).toBeVisible();
+  });
+  test('U2b The invited helper accepts on the simulated phone, and Home changes from Invite pending to Accepted at once', async ({ page }) => {
+    await toCare(page, '9822200203');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500012' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    const card = page.locator('.help-card');
+    await expect(card).toContainText('Invite pending');
+    await page.getByRole('button', { name: 'Show Lata’s phone' }).click(); // the phone plays the helper this owner invited, not Sunita
+    const sim = page.locator('.sheet', { hasText: 'Lata’s phone (simulated)' });
+    await expect(sim).toBeVisible();
+    await sim.getByRole('button', { name: /^(हो|हाँ|Yes)$/ }).last().click();
+    await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
+    await expect(card.locator('.help-track')).toContainText('Accepted');
   });
 });
 
