@@ -849,8 +849,8 @@
     "G9b": {
       "role": "Owner, co-owner",
       "pre": "Find cover",
-      "steps": "1. Tap “Walk Bruno this evening”\n2. Ask on the second friend\n3. Answer the time question\n4. Find with Pawly, approve, Send",
-      "expected": "Goes straight to that friend’s message and is Sent; a co-owner can answer questions"
+      "steps": "1. Tap “Walk Bruno this evening”\n2. Ask on the second friend\n3. Next through what, pet and time (already filled in), tap Key handover\n4. Send on WhatsApp\n5. The friend says Yes on their phone\n6. Confirm",
+      "expected": "Everything stays in the chat: the form, the WhatsApp message preview, Sent, the friend’s Yes and Confirmed"
     },
     "L3b": {
       "role": "New owner",
@@ -898,7 +898,7 @@
       "role": "Owner",
       "pre": "Find cover",
       "steps": "1. Open Find cover\n2. Tap a suggestion or type a request\n3. Ask on a friend card",
-      "expected": "Opens on “How can I help?”; shows the thinking animation, then friends who can help; Ask goes to the request form"
+      "expected": "Opens on “How can I help?”; shows the thinking animation, then friends who can help; Ask opens a small form in the chat, not the old request screen"
     }
   },
   "defects": [

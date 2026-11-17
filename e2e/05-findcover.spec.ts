@@ -159,7 +159,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 });
 
 test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
-  test('G9a Find cover opens on “How can I help?”; any request shows the thinking animation, then friends who can help; Ask goes to the request form', async ({ page }) => {
+  test('G9a Find cover opens on “How can I help?”; any request shows the thinking animation, then friends who can help; Ask opens a small form in the chat', async ({ page }) => {
     await boot(page); await signInOwner(page);
     await tab(page, 'Find cover');
     await expect(page.getByRole('heading', { name: 'How can I help?' })).toBeVisible();
