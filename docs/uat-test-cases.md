@@ -13,7 +13,7 @@ Each case below is also an automated end-to-end test (Playwright, in Chrome) tha
 
 | Item | Value |
 |---|---|
-| Latest run | 17 Nov 2026, 15:41 IST |
+| Latest run | 17 Nov 2026, 16:20 IST |
 | Result | **146 of 146 passed** |
 | Build | Demo build (the real app, API and database in the browser), Chrome, 390 px phone width; console at 1280 px |
 | Demo numbers | Owner 98000 00021 · Co-owner 98000 00022 · Backup 97000 00008 · Helper 90000 00035 · Friends 99000 00012, 98000 00077, 97000 00090 · Staff 98110 00001–4 |
@@ -226,7 +226,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 | P2 | M | Alert text uses the past tense once the backup step has happened | 1. Advance to 4:30 PM | Alert says “Your backup was alerted at 2:00 PM.” | Pass |
 | P3 | M | A task card shows Pending (no “Planned”) and its cover only in the task sheet | 1. Look at a task card | “Planned” shows once; the cover line shows “Sunita · assigned” | Pass |
 | P4 | M | The request label says rules (no AI connected); the demo bar has no parser or scenario menus | 1. Look at the demo parser switch<br>2. Ask Pawsure for cover | Switch and request both say “rules (no AI connected)” | Pass |
-| P5 | M | The welcome mascot is a transparent image, not a crop on a beige box | 1. Open the app (Log in or create an account) | The mascot is a transparent image with no beige box | Pass |
+| P5 | M | The login page is text only: no illustration, no background shapes (17 Nov) | 1. Open the app at Log in | Text only: brand name, Log in / Sign up, “Welcome back”, number and Send code; no illustration or background shapes | Pass |
 | P6 | M | On a wide screen the simulated phones sit beside the owner app, with no developer wording | 1. Show Sunita’s phone | The phone sits beside the owner app; no developer wording | Pass |
 | P7 | M | Demo presets set up each of the 14 v1.4 scenarios | 1. Demo bar → v1.4 scenario… → pick each of O1 to O14 | Each preset loads without an error and shows what to tap next; O5, O7, O9 and O11 show their starting state | Pass |
 

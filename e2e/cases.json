@@ -680,9 +680,9 @@
     },
     "P5": {
       "role": "Visitor",
-      "pre": "Fresh demo",
-      "steps": "1. Open the app (Log in or create an account)",
-      "expected": "The mascot is a transparent image with no beige box"
+      "pre": "Log in page",
+      "steps": "1. Open the app at Log in",
+      "expected": "Text only: brand name, Log in / Sign up, “Welcome back”, number and Send code; no illustration or background shapes"
     },
     "P6": {
       "role": "Presenter",
