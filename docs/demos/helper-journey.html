@@ -1,6 +1,6 @@
 <title>Pawsure Helper Journey</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
 <style>
 /* Layout: reviewer notes on the left, Sunita's phone on the right; stacks on a narrow screen. */
 :root{
@@ -126,6 +126,73 @@ h1{font:800 clamp(1.7rem,3.4vw,2.3rem)/1.1 var(--f-display);margin:0;text-wrap:b
 .card-tip{position:absolute;left:10px;right:10px;bottom:70px;background:var(--panel);color:var(--ink);border-radius:16px;padding:10px 12px;font-size:.78rem;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);display:flex;gap:10px;align-items:center;z-index:3}
 .card-tip .grid{display:grid;grid-template-columns:repeat(4,auto);gap:2px 8px;font-variant-numeric:tabular-nums;font-size:.72rem}
 .card-tip .grid b{background:var(--sun-soft);border-radius:4px;padding:0 3px}
+
+/* ---------- the messaging app on her phone: familiar layout, wallpaper, bubbles with tails ---------- */
+:root{--wa-green:#008069;--wa-accent:#00A884;--wa-badge:#25D366;--wa-wall:#EFEAE2;--wa-in:#FFFFFF;--wa-out:#D9FDD3;--wa-ink:#111B21;--wa-sub:#667781;--wa-tick:#53BDEB;--wa-line:#E9EDEF;--wa-list:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--wa-green:#1F2C34;--wa-accent:#00A884;--wa-wall:#0B141A;--wa-in:#202C33;--wa-out:#005C4B;--wa-ink:#E9EDEF;--wa-sub:#8696A0;--wa-line:#222D34;--wa-list:#111B21}}
+:root[data-theme="dark"]{--wa-green:#1F2C34;--wa-accent:#00A884;--wa-wall:#0B141A;--wa-in:#202C33;--wa-out:#005C4B;--wa-ink:#E9EDEF;--wa-sub:#8696A0;--wa-line:#222D34;--wa-list:#111B21}
+.list,.chat{font-family:Roboto,'Noto Sans Devanagari',system-ui,sans-serif;--sb:#fff}
+.list{background:var(--wa-list);color:var(--wa-ink)}
+.wa-top{background:var(--wa-green);color:#fff;flex:none}
+.wa-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px 10px 18px}
+.wa-title{font:500 1.3rem/1 Roboto,system-ui,sans-serif}
+.wa-icons{display:flex;gap:18px;align-items:center;color:#fff}
+.wa-icons svg{width:20px;height:20px}
+.wa-tabs{display:grid;grid-template-columns:34px 1fr 1fr 1fr;align-items:end;padding:0 4px;font:500 .8rem/1 Roboto,system-ui,sans-serif;letter-spacing:.02em}
+.wa-tabs .t{text-align:center;padding:10px 0 11px;color:rgba(255,255,255,.72);border-bottom:3px solid transparent}
+.wa-tabs .t.on{color:#fff;border-bottom-color:#fff}
+.wa-tabs .t i{display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.72);margin-left:4px;vertical-align:middle}
+.wa-tabs .ic svg{width:20px;height:20px}
+.wa-list{flex:1;overflow:hidden;position:relative}
+.wa-arch{display:flex;align-items:center;gap:22px;padding:14px 18px 10px 22px;color:var(--wa-ink);font-size:.95rem}
+.wa-arch .ai{color:var(--wa-accent)}
+.list .chatrow{border:0;border-bottom:0;background:none;padding:10px 14px;gap:14px;color:var(--wa-ink);opacity:1}
+.list .chatrow .av{width:48px;height:48px;font:500 1.05rem/1 Roboto,system-ui,sans-serif}
+.list .chatrow .meta{border-bottom:1px solid var(--wa-line);padding-bottom:12px}
+.list .chatrow .nm{font-weight:400}
+.list .chatrow .nm b{font-weight:500;font-size:1rem}
+.list .chatrow .nm time{font-weight:400;font-size:.72rem;color:var(--wa-sub)}
+.list .chatrow .nm time.new{color:var(--wa-badge);font-weight:500}
+.list .chatrow .pv{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--wa-sub);font-size:.86rem;margin-top:3px}
+.list .chatrow .pv>span:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list .chatrow .un{background:var(--wa-badge);color:#fff;min-width:20px;height:20px;border-radius:10px;font-size:.7rem;font-weight:700;flex:none}
+.list .chatrow .tk{color:var(--wa-tick);letter-spacing:-2px;margin-right:2px}
+.wa-fab{position:absolute;right:16px;bottom:22px;width:52px;height:52px;border-radius:16px;background:var(--wa-accent);color:#fff;display:grid;place-items:center;box-shadow:0 6px 14px -6px rgba(0,0,0,.45)}
+/* chat */
+.chat{background:var(--wa-wall) url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22120%22%20height%3D%22120%22%20viewBox%3D%220%200%20120%20120%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23C9BFAE%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20opacity%3D%22.55%22%3E%3Ccircle%20cx%3D%2218%22%20cy%3D%2220%22%20r%3D%226%22/%3E%3Cpath%20d%3D%22M50%2012l6%2010h-12z%22/%3E%3Cpath%20d%3D%22M88%2018c4-6%2012-6%2014%200s-6%2010-7%2014c-1-4-9-8-7-14z%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2262%22%20width%3D%2214%22%20height%3D%2210%22%20rx%3D%223%22/%3E%3Cpath%20d%3D%22M48%2066c6-8%2014%208%2020%200%22/%3E%3Ccircle%20cx%3D%2296%22%20cy%3D%2270%22%20r%3D%223%22/%3E%3Ccircle%20cx%3D%22104%22%20cy%3D%2262%22%20r%3D%223%22/%3E%3Cpath%20d%3D%22M20%20100l8%208M28%20100l-8%208%22/%3E%3Cpath%20d%3D%22M60%2098a8%208%200%201%200%2012%206%22/%3E%3Cpath%20d%3D%22M92%20102h14M99%2095v14%22/%3E%3C/g%3E%3C/svg%3E") repeat;background-size:120px 120px}
+.wa-sb{background:var(--wa-green);flex:none}
+.wa-chathead{flex:none;background:var(--wa-green);color:#fff;display:flex;align-items:center;gap:8px;padding:2px 12px 10px 6px}
+.wa-chathead .bk svg{width:20px;height:20px}
+.wa-chathead .av{width:36px;height:36px;font-size:.95rem}
+.wa-chathead .who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.wa-chathead .who b{font:500 1rem/1.2 Roboto,system-ui,sans-serif}
+.wa-chathead .sub{font-size:.7rem;opacity:.8}
+.wa-chathead .wa-icons{gap:16px}
+.wa-chathead .wa-icons svg{width:19px;height:19px}
+.chat .msgs{padding:10px 12px 8px;gap:4px}
+.chat .day{background:var(--wa-in);color:var(--wa-sub);font:500 .68rem/1 Roboto,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em;border-radius:7px;padding:6px 10px;box-shadow:0 1px .5px rgba(11,20,26,.13)}
+.chat .bub{position:relative;background:var(--wa-in);color:var(--wa-ink);border-radius:0 8px 8px 8px;padding:6px 8px 4px 9px;font-size:.86rem;box-shadow:0 1px .5px rgba(11,20,26,.13);margin-left:8px;max-width:82%}
+.chat .bub::before{content:'';position:absolute;top:0;left:-8px;border-style:solid;border-width:0 8px 10px 0;border-color:transparent var(--wa-in) transparent transparent}
+.chat .bub.me{background:var(--wa-out);border-radius:8px 0 8px 8px;margin-left:0;margin-right:8px}
+.chat .bub.me::before{left:auto;right:-8px;border-width:0 0 10px 8px;border-color:transparent transparent transparent var(--wa-out)}
+.chat .bub .tm{font-size:.64rem;color:var(--wa-sub);margin-top:1px}
+.chat .bub.me .tm::after{content:' ✓✓';color:var(--wa-tick);letter-spacing:-2px;font-weight:700}
+.chat .bub .mean{color:var(--wa-sub);border-top-color:var(--wa-line)}
+.chat .bub img{border-radius:6px}
+.chat .qr{margin-left:8px;width:82%;max-width:82%;gap:2px}
+.chat .qr button{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--wa-in);color:var(--wa-accent);font:500 .85rem/1.2 Roboto,'Noto Sans Devanagari',system-ui,sans-serif;border-radius:8px;padding:10px;box-shadow:0 1px .5px rgba(11,20,26,.13)}
+.chat .qr button svg{width:16px;height:16px;flex:none}
+.chat .qr button:disabled{color:var(--wa-sub)}
+.chat .compose{padding:6px 6px 12px;gap:6px}
+.chat .compose .box{background:var(--wa-in);color:var(--wa-sub);border-radius:24px;padding:8px 10px;gap:10px;box-shadow:0 1px .5px rgba(11,20,26,.13);font-size:.92rem}
+.chat .compose .box .txt{flex:1;min-width:0}
+.chat .compose .box.typed .txt{color:var(--wa-ink);font-weight:500;letter-spacing:.08em}
+.chat .compose .em,.chat .compose .cam{color:var(--wa-sub);display:grid;place-items:center}
+.chat .compose .em svg,.chat .compose .cam svg{width:21px;height:21px}
+.chat .compose .cam{border-radius:50%}
+.chat .send{background:var(--wa-accent);width:44px;height:44px}
+.chat .send svg{width:20px;height:20px}
+.lock .notif .app{background:var(--wa-badge);border-radius:50%}
 </style>
 
 <div class="wrap">
@@ -199,6 +266,22 @@ const CHAT = [
 const SHOW = { 2: 1, 3: 4, 4: 6, 5: 8, 7: 10, 8: 11, 9: 13 };
 let i = 0;
 const $ = s => document.querySelector(s);
+const I = (d, f = 'currentColor') => `<svg viewBox="0 0 24 24" width="22" height="22" fill="${f}" aria-hidden="true">${d}</svg>`;
+const IC = {
+  cam: I('<path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>'),
+  search: I('<path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/>'),
+  more: I('<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>'),
+  group: I('<path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 18c0-2.8 2.7-5 6-5s6 2.2 6 5v1H2v-1zm13.5-5c3 .2 6.5 1.9 6.5 5v1h-6v-1c0-1.9-.2-3.4-.5-5z"/>'),
+  archive: I('<path d="M4 4h16v4H4zM5 9h14v11H5zm4 3v2h6v-2z" fill-rule="evenodd"/>'),
+  chat: I('<path d="M4 5h16v11H8l-4 4V5zm3 4v2h10V9H7z"/>'),
+  back: I('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>'),
+  video: I('<path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2.5l5-3.5v12l-5-3.5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+  call: I('<path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/>'),
+  emoji: I('<path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM7.5 14h9a4.6 4.6 0 0 1-9 0z"/>'),
+  clip: I('<path d="M16.5 6v11.5a4.5 4.5 0 0 1-9 0V5a3 3 0 0 1 6 0v10.5a1.5 1.5 0 0 1-3 0V6H9v9.5a3 3 0 0 0 6 0V5a4.5 4.5 0 0 0-9 0v12.5a6 6 0 0 0 12 0V6z"/>'),
+  mic: I('<path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V22h2v-3.1a7 7 0 0 0 6-6.9z"/>'),
+  reply: I('<path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/>')
+};
 const sendIc = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/></svg>';
 const statusBar = time => `<div class="sbar"><span>${time}</span><span>▲ ▮▮▮ 72%</span></div>`;
 
@@ -213,10 +296,15 @@ function render() {
       <div class="swipe">${first ? 'Tap the message to open it' : 'Tap the reminder to open it'}</div>`;
   } else if (s.screen === 'list') {
     v.classList.add('list');
-    v.innerHTML = `<div style="background:var(--chat-head)">${statusBar('6:43')}</div><div class="apphead">Chats</div>
-      <button type="button" class="chatrow hot" data-go><span class="av paw">🐾</span><span class="meta"><span class="nm">Pawsure <time>6:42 PM</time></span><span class="pv">${esc(t('consent').split('\n')[0])}</span></span><span class="un">1</span></button>
-      <div class="chatrow dim"><span class="av" style="background:#A86F4C">N</span><span class="meta"><span class="nm">Neha didi <time>5:10 PM</time></span><span class="pv">${LANG === 'mr' ? 'उद्या ११ वाजता या.' : 'Come at 11 tomorrow.'}</span></span></div>
-      <div class="chatrow dim"><span class="av" style="background:#6B4A9C">R</span><span class="meta"><span class="nm">Ranjana <time>Yesterday</time></span><span class="pv">🎤 0:24</span></span></div>`;
+    v.innerHTML = `<div class="wa-top">${statusBar('6:43')}<div class="wa-bar"><span class="wa-title">Chats</span><span class="wa-icons">${IC.cam}${IC.search}${IC.more}</span></div>
+        <div class="wa-tabs"><span class="t ic">${IC.group}</span><span class="t on">${LANG === 'mr' ? 'चॅट्स' : 'CHATS'}</span><span class="t">${LANG === 'mr' ? 'स्टेटस' : 'STATUS'}<i></i></span><span class="t">${LANG === 'mr' ? 'कॉल्स' : 'CALLS'}</span></div></div>
+      <div class="wa-list"><div class="wa-arch"><span class="ai">${IC.archive}</span><b>${LANG === 'mr' ? 'संग्रहित' : 'Archived'}</b></div>
+      <button type="button" class="chatrow hot" data-go><span class="av paw">🐾</span><span class="meta"><span class="nm"><b>Pawsure</b><time class="new">6:42 PM</time></span><span class="pv"><span>${esc(t('consent').split('\n')[0])}</span><span class="un">1</span></span></span></button>
+      <div class="chatrow"><span class="av" style="background:#C77D57">N</span><span class="meta"><span class="nm"><b>Neha didi</b><time>5:10 PM</time></span><span class="pv"><span><span class="tk">✓✓</span> ${LANG === 'mr' ? 'हो, उद्या ११ वाजता येते.' : 'Yes, I’ll come at 11 tomorrow.'}</span></span></span></div>
+      <div class="chatrow"><span class="av" style="background:#7B5EA7">R</span><span class="meta"><span class="nm"><b>Ranjana</b><time>${LANG === 'mr' ? 'काल' : 'Yesterday'}</time></span><span class="pv"><span>🎤 0:24</span></span></span></div>
+      <div class="chatrow"><span class="av" style="background:#3E8E7E">S</span><span class="meta"><span class="nm"><b>${LANG === 'mr' ? 'सोसायटी मदतनीस' : 'Society helpers'}</b><time>${LANG === 'mr' ? 'काल' : 'Yesterday'}</time></span><span class="pv"><span>Asha: ${LANG === 'mr' ? 'उद्या पाणी बंद आहे' : 'No water tomorrow'}</span></span></span></div>
+      <div class="chatrow"><span class="av" style="background:#B8863B">A</span><span class="meta"><span class="nm"><b>Aai</b><time>14/11/26</time></span><span class="pv"><span>📷 ${LANG === 'mr' ? 'फोटो' : 'Photo'}</span></span></span></div></div>
+      <span class="wa-fab">${IC.chat}</span>`;
   } else {
     v.classList.add('chat');
     const upto = SHOW[i]; let html = ''; let next = null;
@@ -224,7 +312,7 @@ function render() {
       if (m.day) html += `<div class="day">${t(k === 0 && i < 6 ? 'today' : m.day)}</div>`;
       else if (m.bot) {
         html += `<div class="bub">${esc(t(m.bot))}${mean(m.bot)}<span class="tm">${m.at}</span></div>`;
-        if (m.qr) { const answered = CHAT[k + 1] && k + 1 <= upto; html += `<div class="qr">${m.qr.map(q => `<button type="button" ${answered ? 'disabled' : ''} ${!answered && q === m.qr[0] ? 'class="hot" data-go' : ''}>${esc(t(q))}</button>`).join('')}</div>`; }
+        if (m.qr) { const answered = CHAT[k + 1] && k + 1 <= upto; html += `<div class="qr">${m.qr.map(q => `<button type="button" ${answered ? 'disabled' : ''} ${!answered && q === m.qr[0] ? 'class="hot" data-go' : ''}>${IC.reply}<span>${esc(t(q))}</span></button>`).join('')}</div>`; }
       } else if (m.me) html += `<div class="bub me">${esc(t(m.me))}<span class="tm">${m.at}</span></div>`;
       else if (m.mePhoto === 'id') html += `<div class="bub me"><span class="tag">${t('idTag')}</span><img src="${IDCARD}" alt="Photo of an ID card, details hidden" width="190" height="120"><span class="tm">${m.at}</span></div>`;
       else if (m.mePhoto) html += `<div class="bub me">${m.practice ? `<span class="tag">${t('practiceTag')}</span>` : ''}<img src="${BOWL}" alt="Photo of a dog's food bowl, no people in it" width="190" height="113"><span class="tm">${m.at}</span></div>`;
@@ -232,12 +320,12 @@ function render() {
     });
     // the composer: camera when a photo is next, the code when the code is next
     const wantsPhoto = i === 4 || i === 7, wantsCode = i === 8;
-    const box = wantsCode ? `<span class="box typed">${CODE}</span>` : `<span class="box">${LANG === 'mr' ? 'संदेश' : 'Message'}<button type="button" class="cam ${wantsPhoto ? 'hot' : ''}" ${wantsPhoto ? 'data-go' : ''} aria-label="Take a photo of the bowl">📷</button></span>`;
-    v.innerHTML = `<div style="background:var(--chat-head)">${statusBar(i >= 7 ? '1:03' : '6:46')}</div>
-      <div class="apphead"><span class="av paw">🐾</span><span>Pawsure<br><span class="sub">${LANG === 'mr' ? 'व्यवसाय खाते' : 'Business account'}</span></span></div>
+    const box = `<span class="box${wantsCode ? ' typed' : ''}"><span class="em">${IC.emoji}</span><span class="txt">${wantsCode ? CODE : LANG === 'mr' ? 'संदेश' : 'Message'}</span><span class="em">${IC.clip}</span>${wantsCode ? '' : `<button type="button" class="cam ${wantsPhoto ? 'hot' : ''}" ${wantsPhoto ? 'data-go' : ''} aria-label="Take a photo of the bowl">${IC.cam}</button>`}</span>`;
+    v.innerHTML = `<div class="wa-sb">${statusBar(i >= 7 ? '1:03' : '6:46')}</div>
+      <div class="wa-chathead"><span class="bk">${IC.back}</span><span class="av paw">🐾</span><span class="who"><b>Pawsure</b><span class="sub">${LANG === 'mr' ? 'व्यवसाय खाते' : 'Business account'}</span></span><span class="wa-icons">${IC.video}${IC.call}${IC.more}</span></div>
       <div class="msgs" id="msgs">${html}</div>
       ${s.tip ? `<div class="card-tip"><span style="font-size:1.4rem">🗂️</span><span><b>${LANG === 'mr' ? 'फूड-बॉक्समधील कोड कार्ड' : 'Code card in the food box'}</b><span class="grid"><span>15 · 3170</span><span>16 · 9052</span><span>17 · <b>${CODE}</b></span><span>18 · 6604</span></span></span></div>` : ''}
-      <div class="compose">${box}<button type="button" class="send ${wantsCode ? 'hot' : ''}" ${wantsCode ? 'data-go' : ''} aria-label="Send">${sendIc}</button></div>`;
+      <div class="compose">${box}<button type="button" class="send ${wantsCode ? 'hot' : ''}" ${wantsCode ? 'data-go' : ''} aria-label="${wantsCode ? 'Send' : 'Record a voice message'}">${wantsCode ? sendIc : IC.mic}</button></div>`;
   }
   scr.appendChild(v);
   const msgs = v.querySelector('#msgs'); if (msgs) msgs.scrollTop = msgs.scrollHeight;
