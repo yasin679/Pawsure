@@ -12,7 +12,7 @@ status, titles = {}, {}
 def walk(s):
     for x in s.get('suites', []): walk(x)
     for sp in s.get('specs', []):
-        m = re.match(r'^([A-Z]\d+)\s+(.*)$', sp['title'])
+        m = re.match(r'^([A-Z]\d+[a-z]?)\s+(.*)$', sp['title'])
         if m:
             titles[m.group(1)] = m.group(2)
             status[m.group(1)] = 'Pass' if sp['tests'][0]['results'][-1]['status'] == 'passed' else 'Fail'
@@ -20,7 +20,7 @@ for s in pw['suites']: walk(s)
 run = datetime.datetime.fromisoformat(pw['stats']['startTime'].replace('Z', '+00:00')).astimezone(datetime.timezone(datetime.timedelta(hours=5, minutes=30)))
 HIGH = set('ADEGMNO')
 cell = lambda t: t.replace('|', '\\|').replace('\n', '<br>')
-key = lambda i: (i[0], int(i[1:]))
+key = lambda i: (i[0], int(re.match(r'\d+', i[1:]).group()), i[1:])
 ids = sorted(cat['cases'], key=key)
 passed = sum(1 for i in ids if status.get(i) == 'Pass')
 
@@ -52,7 +52,7 @@ Priority: **H** high (sign-in, daily care, helper check-ins, Find cover, securit
 """]
 n = 2
 for area, name in cat['areas'].items():
-    rows = [i for i in ids if i.startswith(area) and re.match(rf'^{area}\d+$', i)]
+    rows = [i for i in ids if i.startswith(area) and re.match(rf'^{area}\d+[a-z]?$', i)]
     if not rows: continue
     out.append(f"\n## {n} {name}\n\n| ID | Pri | Test | Steps | Expected result | P/F |\n|---|---|---|---|---|---|")
     for i in rows:

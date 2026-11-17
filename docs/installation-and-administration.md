@@ -252,6 +252,7 @@ Start a rehearsal before the pilot and keep the seven readiness items ticked. Fo
 
 **1.0.1 → 1.1.0:** deploy as in section 4. Migration `006_cover_continuity.sql` runs at start-up and only adds tables and columns, so an app-only rollback to 1.0.1 is safe (the new tables are ignored). To remove the 1.1.0 data as well, take a backup and run `packages/db/rollback/006_cover_continuity.down.sql` by hand, in one transaction. Per-household cover timings can be set in `households.cover_config` (JSON, for example `{"reminderLeadMin": 120}`); unknown keys and negative numbers are ignored.
 
+**Updates of 15–17 Nov 2026:** migrations `008_languages.sql`, `009_proof_photos.sql`, `009_society_location.sql`, `010_pet_sex.sql` and `010_visit_codes.sql` run at start-up, in name order. Two numbers are used twice (separate branches); each is tracked by its full file name, so never rename them. `010_visit_codes.sql` widens the allowed signal kinds and adds columns, so an app-only rollback is still safe. Each has a rollback in `packages/db/rollback/` to run by hand after a backup; rolling back `010_visit_codes` deletes the start and end code records.
 
 Deploy the new version as in section 4. Because migrations only add, an app-only rollback is safe: redeploy the previous build. For a bad migration or data problem, restore the pre-deploy snapshot and redeploy the previous build; vendors re-send events on retry and duplicate events are ignored.
 

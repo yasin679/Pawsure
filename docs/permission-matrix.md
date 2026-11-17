@@ -25,7 +25,7 @@ Roles across, resources down. Server-side and object-level: every check also req
 | evidence | Rea | Rea | — | — | — | Cre | — | — | Cre | Cre | — | — | — | — | — |
 | feature_flag | — | — | — | — | — | — | — | — | — | — | — | Rea Upd | Rea | Rea Upd | — |
 | friend_profile | Rea | Rea | — | — | — | — | Rea Upd Del | — | — | — | — | Rea Upd | — | — | — |
-| friend_request | Rea Cre Upd Del Ack App | Rea Cre App | — | — | — | — | Rea Upd | — | — | — | Rea | Rea | — | Rea | — |
+| friend_request | Rea Cre Upd Del Ack App | Rea Cre Upd App | — | — | — | — | Rea Upd | — | — | — | Rea | Rea | — | Rea | — |
 | helper_consent | Rea | — | — | — | — | Rea Upd | — | — | — | — | Rea | Rea | — | — | — |
 | household | Rea Cre Upd Del Ack App | Rea | — | — | — | — | — | — | — | — | Rea | Rea | Rea | — | — |
 | incident | Rea Cre Upd Ack | Rea Cre Upd Ack | Rea Ack Upd | — | — | Cre | — | — | Cre | Cre | Rea Upd | Rea Upd | — | — | — |

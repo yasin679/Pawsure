@@ -65,6 +65,15 @@ Task messages for your home only. They never see your other data, and owners nev
 **My helper said *Not now*. What can I do?**
 Nothing is recorded about them. Use Trusted Helper mode, your own return check, or invite them again later. Their tasks show *Not confirmed*, never *failed*.
 
+**My helper got a message with a “start code”. What is it?**
+Right after her arrival missed call, and again after her exit call, Pawsure sends her a new 3-digit code on WhatsApp. She writes it on paper, puts it next to your pet or the bowl and sends a photo within 10 minutes. Because nobody knew the code before the call, the photo must have been taken during the visit. You see *Start code: photo matched ✓* (or *waiting*, *no photo sent*, *came late*, *didn't match*) on the task.
+
+**The calls were long enough, so why is the visit *Not confirmed*?**
+A start or end code photo came back with a code that doesn't match. The visit stays *Not confirmed* until the right code arrives within 10 minutes of being sent. If the codes simply never came back, the visit is *Likely*, not *Confirmed*.
+
+**Where do I see when my helper came and left?**
+Tap a task: under the photo, the visit line shows the arrival and exit times, how long the visit lasted and the minimum its tasks need, for example *Visit 12:50–1:02 · 12 min (minimum 11 min)*. It's red when the visit was too short.
+
 **How do points work?**
 5 points per *Confirmed* or *Likely* task, up to 125 a month from your home; 500 points = a ₹20 coupon; no cash; points expire after 6 months. Points are on in half of the pilot homes.
 

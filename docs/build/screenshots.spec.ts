@@ -3,7 +3,7 @@
  * Run: npx playwright test -c docs/build/shots.config.ts   → docs/images/*.jpg
  */
 import { test, type Page, type Locator } from '@playwright/test';
-import { boot, signIn, signInOwner, signOut, clockTo, tab, meItem, dialog, staff, consoleSection, api, webhook, tick, fillSociety, PHONE, SUNITA, DAY } from '../../e2e/helpers';
+import { boot, signIn, signInOwner, signOut, clockTo, tab, meItem, dialog, staff, consoleSection, api, webhook, tick, fillSociety, aboutYou, pick, openPlan, closePlan, PHONE, SUNITA, DAY } from '../../e2e/helpers';
 
 const OUT = 'docs/images/';
 const MARK = '#A84C08'; // Pawsure marigold
@@ -13,7 +13,7 @@ async function hideDemoBar(page: Page, hide = true) {
 }
 async function mark(page: Page, items: [Locator, number][]) {
   const boxes: { x: number; y: number; width: number; height: number; n: number }[] = [];
-  for (const [l, n] of items) { const b = await l.first().boundingBox(); if (b) boxes.push({ ...b, n }); }
+  for (const [l, n] of items) { const b = await l.first().boundingBox({ timeout: 4000 }).catch(() => null); if (b) boxes.push({ ...b, n }); }
   await page.evaluate(([bs, color]) => {
     document.querySelectorAll('.doc-mark').forEach(e => e.remove());
     for (const b of bs as { x: number; y: number; width: number; height: number; n: number }[]) {
@@ -30,7 +30,10 @@ const shot = async (page: Page, name: string) => { await page.waitForTimeout(350
 const top = (page: Page) => page.evaluate(() => { document.querySelector('main.body')?.scrollTo(0, 0); window.scrollTo(0, 0); });
 
 test('sign-in and onboarding', async ({ page }) => {
-  await boot(page); await hideDemoBar(page);
+  await boot(page, '', { intro: true }); await hideDemoBar(page);
+  await page.getByRole('button', { name: 'Next', exact: true }).waitFor();
+  await mark(page, [[page.locator('img').first(), 1], [page.getByRole('button', { name: 'Next', exact: true }), 2], [page.getByRole('button', { name: 'Get started' }), 3], [page.getByRole('button', { name: 'Log in', exact: true }), 4]]); await shot(page, '00-intro');
+  await page.getByRole('button', { name: 'Log in', exact: true }).click(); await hideDemoBar(page);
   await mark(page, [[page.locator('.login-hero'), 1]]); await shot(page, '01-welcome');
   await page.getByRole('button', { name: 'Sign up', exact: true }).click();
   await page.locator('#ph').fill('9811222333');
@@ -42,36 +45,37 @@ test('sign-in and onboarding', async ({ page }) => {
   await mark(page, [[page.getByText('I accept the Terms of Use'), 1], [page.getByText('I have read the Privacy Notice'), 2], [page.locator('.card', { hasText: 'Optional' }), 3]]); await shot(page, '04-consent');
   await page.getByText('I accept the Terms of Use').click(); await page.getByText('I have read the Privacy Notice').click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  const send = () => page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.locator('#nm').fill('Asha Rao'); await send(); await page.getByRole('button', { name: 'English', exact: true }).click();
+  await aboutYou(page, 'Asha Rao');
   await page.getByRole('button', { name: 'Choose manually' }).click();
-  await page.locator('#stt').click(); await page.getByRole('option', { name: 'Maharashtra', exact: true }).click();
-  await page.locator('#cty').click(); await page.getByRole('option', { name: 'Mumbai', exact: true }).click();
-  await page.getByRole('button', { name: 'My society isn’t listed' }).click(); await page.locator('#sct').fill('Raheja Vihar, Powai'); await send();
+  await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
+  await page.getByRole('button', { name: 'My society isn’t listed' }).click(); await page.locator('#sct').fill('Raheja Vihar, Powai');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
   await page.locator('#tw').fill('C'); await page.getByRole('button', { name: 'Next', exact: true }).click(); await page.locator('#fl').fill('C-702'); await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await mark(page, [[page.locator('.cb-sum'), 1], [page.getByRole('button', { name: 'Create my home' }), 2]]); await shot(page, '05-profile');
+  await mark(page, [[page.locator('.cb-sum').last(), 1], [page.getByRole('button', { name: 'Create my home' }), 2]]); await shot(page, '05-profile');
 });
 
 test('today', async ({ page }) => {
-  await boot(page); await signInOwner(page);
-  await clockTo(page, '13:05');
-  await hideDemoBar(page);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await mark(page, [[page.getByRole('button', { name: 'Report a problem or emergency' }), 1], [page.locator('.conf').first(), 2], [page.locator('.petchips'), 3], [page.locator('.card', { hasText: 'Who’s caring today?' }), 4], [page.locator('.card', { hasText: 'Heading out?' }), 5], [page.locator('nav.tabbar'), 6]]);
-  await shot(page, '10-today');
-  await page.locator('button.task').first().scrollIntoViewIfNeeded();
-  await mark(page, [[page.getByRole('button', { name: 'Timeline' }), 1], [page.getByRole('button', { name: 'Day report' }), 2], [page.locator('button.task').first().locator('.time'), 3], [page.locator('button.task').first().locator('.conf'), 4]]);
-  await shot(page, '11-plan-evidence');
-  await top(page);
-  await page.locator('.card', { hasText: 'Who’s caring today?' }).getByRole('button', { name: 'Change' }).click();
-  await mark(page, [[dialog(page).locator('button.li').nth(0), 1], [dialog(page).locator('button.li').nth(1), 2], [dialog(page).locator('button.li').nth(2), 3], [dialog(page).locator('button.li').nth(3), 4]]);
-  await shot(page, '12-whos-caring');
-  await dialog(page).getByRole('button', { name: 'Close' }).click();
+  await boot(page); await signInOwner(page, { home: true });
+  await hideDemoBar(page, false); await clockTo(page, '09:30'); await hideDemoBar(page); await top(page);
   await page.locator('.card', { hasText: 'Heading out?' }).getByRole('button', { name: 'I’m leaving' }).click();
   await mark(page, [[dialog(page).locator('.card').first(), 1], [dialog(page).locator('#rt'), 2], [dialog(page).getByRole('button', { name: 'Skip' }), 3], [dialog(page).getByRole('button', { name: 'I’m leaving' }), 4]]);
   await shot(page, '13-leaving');
   await dialog(page).getByRole('button', { name: 'I’m leaving' }).click();
-  await hideDemoBar(page, false); await clockTo(page, '18:00'); await hideDemoBar(page);
+  await hideDemoBar(page, false); await clockTo(page, '13:05'); await hideDemoBar(page); await top(page);
+  await mark(page, [[page.getByRole('button', { name: 'Plan for today' }), 1], [page.getByRole('button', { name: 'Report a problem or emergency' }), 2], [page.locator('.help-card'), 3], [page.locator('.card.flat', { hasText: 'Out since' }), 4], [page.locator('nav.tabbar'), 5]]);
+  await shot(page, '10-today');
+  await page.locator('.pet-tabs').scrollIntoViewIfNeeded();
+  await mark(page, [[page.locator('.pet-tabs'), 1], [page.locator('button.task').first(), 2], [page.locator('button.task').first().locator('.st-pill'), 3], [page.locator('.sec-head', { hasText: 'Completed' }), 4]]);
+  await shot(page, '11-tasks');
+  await top(page); await openPlan(page);
+  await mark(page, [[dialog(page).locator('.plan-help'), 1], [dialog(page).locator('.conf').first(), 2], [dialog(page).getByRole('button', { name: 'Edit routine' }), 3], [dialog(page).getByRole('button', { name: 'Timeline' }), 4], [dialog(page).getByRole('button', { name: 'Day report' }), 5]]);
+  await shot(page, '11-plan-evidence');
+  await closePlan(page); await top(page);
+  await page.locator('.help-card').getByRole('button', { name: 'Change' }).click();
+  await mark(page, [[dialog(page).locator('button.li').nth(0), 1], [dialog(page).locator('button.li').nth(1), 2], [dialog(page).locator('button.li').nth(2), 3], [dialog(page).locator('button.li').nth(3), 4]]);
+  await shot(page, '12-whos-caring');
+  await dialog(page).getByRole('button', { name: 'Close' }).click();
+  await hideDemoBar(page, false); await clockTo(page, '18:00'); await hideDemoBar(page); await top(page);
   await page.getByRole('button', { name: 'I’m back' }).click();
   await mark(page, [[dialog(page).getByRole('radiogroup').first(), 1], [dialog(page).getByRole('button', { name: 'Save' }), 2]]);
   await shot(page, '14-return-check');
@@ -84,7 +88,11 @@ test('alerts, task detail, sos, timeline, report', async ({ page }) => {
   await alert.scrollIntoViewIfNeeded();
   await mark(page, [[alert.locator('.conf'), 1], [alert.locator('.small'), 2], [alert.getByRole('button', { name: 'I’m on it' }), 3], [alert.getByRole('button', { name: 'Call Sunita' }), 4]]);
   await shot(page, '15-missed-alert');
-  await page.locator('button.task', { hasText: 'Lunch + fresh water' }).click();
+  await page.locator('button.task', { hasText: 'Joint supplement' }).first().click();
+  await mark(page, [[dialog(page).locator('.st-pill').first(), 1], [dialog(page).locator('.task-desc'), 2], [dialog(page).locator('.ev-placeholder'), 3], [dialog(page).getByRole('button', { name: 'Send reminder' }), 4], [dialog(page).getByRole('button', { name: 'Mark completed' }), 5], [dialog(page).locator('summary', { hasText: 'Task details' }), 6]]);
+  await shot(page, '16-task-sheet');
+  await dialog(page).locator('summary', { hasText: 'Task details' }).click();
+  await dialog(page).locator('.card', { hasText: 'Why this label' }).scrollIntoViewIfNeeded();
   await mark(page, [[dialog(page).locator('.card', { hasText: 'Why this label' }), 1], [dialog(page).locator('.card', { hasText: 'Escalation ladder' }), 2], [dialog(page).locator('.card', { hasText: 'Lifecycle' }), 3], [dialog(page).getByRole('button', { name: 'Change this task' }), 4]]);
   await shot(page, '16-task-detail');
   await dialog(page).getByRole('button', { name: 'Close' }).last().click();
@@ -93,15 +101,36 @@ test('alerts, task detail, sos, timeline, report', async ({ page }) => {
   await mark(page, [[dialog(page).locator('.banner').first(), 1], [dialog(page).locator('.card', { hasText: 'S1 Urgent' }), 2], [dialog(page).locator('.card', { hasText: 'S2 Unwell' }), 3], [dialog(page).locator('.card', { hasText: 'S3 Practical' }), 4]]);
   await shot(page, '17-sos');
   await dialog(page).getByRole('button', { name: 'Pet hurt' }).click();
+  if (await dialog(page).isVisible()) await dialog(page).getByRole('button', { name: 'Close' }).click();
   await top(page);
   const inc = page.locator('.card.danger', { hasText: 'S1 · pet hurt' });
   await inc.getByRole('button', { name: 'Open' }).click();
   await mark(page, [[dialog(page).locator('.card').first(), 1], [dialog(page).locator('.banner'), 2], [dialog(page).locator('#ir'), 3]]);
   await shot(page, '18-incident');
   await dialog(page).getByRole('button', { name: 'Close' }).click();
-  await page.getByRole('button', { name: 'Timeline' }).click(); await shot(page, '19-timeline');
+  await openPlan(page); await page.getByRole('button', { name: 'Timeline' }).click(); await shot(page, '19-timeline');
   await dialog(page).getByRole('button', { name: 'Close' }).click();
-  await page.getByRole('button', { name: 'Day report' }).click(); await shot(page, '20-day-report');
+  await openPlan(page); await page.getByRole('button', { name: 'Day report' }).click(); await shot(page, '20-day-report');
+});
+
+test('visit time and start and end codes', async ({ page }) => {
+  await boot(page); await signInOwner(page);
+  await clockTo(page, '12:50');
+  await page.getByRole('button', { name: 'Show Sunita’s phone' }).click();
+  const ph = page.locator('.sheet', { hasText: 'Sunita’s phone (simulated)' });
+  await ph.getByRole('button', { name: '☎ Arrival call' }).click();
+  await ph.getByRole('button', { name: '📷 Photo with the start code' }).click();
+  await ph.getByText('कोड बरोबर आहे').last().waitFor();
+  await page.getByRole('button', { name: '+15m' }).click();
+  await ph.getByRole('button', { name: '☎ Exit call' }).click();
+  await ph.getByRole('button', { name: '📷 Photo with the end code' }).click();
+  await page.waitForTimeout(800);
+  await ph.locator('.wa-body').evaluate(e => { e.scrollTop = e.scrollHeight; });
+  await shot(page, '42b-helper-codes');
+  await page.getByRole('button', { name: 'Hide Sunita’s phone' }).click(); await hideDemoBar(page); await top(page);
+  await page.locator('button.task', { hasText: 'Lunch + fresh water' }).first().click();
+  await mark(page, [[dialog(page).locator('.visit-time'), 1], [dialog(page).locator('.visit-codes'), 2]]);
+  await shot(page, '16b-visit-codes');
 });
 
 test('pet, routine, health, helper, circle', async ({ page }) => {
@@ -133,6 +162,14 @@ test('pet, routine, health, helper, circle', async ({ page }) => {
 test('find cover', async ({ page }) => {
   await boot(page); await signInOwner(page); await hideDemoBar(page);
   await tab(page, 'Find cover');
+  await mark(page, [[page.locator('.ai-hello'), 1], [page.locator('.ai-suggest'), 2], [page.locator('#ai-in'), 3], [page.getByRole('button', { name: 'Use the request form' }), 4]]);
+  await shot(page, '29-assistant');
+  await page.getByRole('button', { name: /Walk Bruno this evening/ }).click();
+  await page.locator('.friend-card').first().waitFor({ timeout: 20000 });
+  await page.locator('.friend-card').first().scrollIntoViewIfNeeded();
+  await mark(page, [[page.locator('.ai-results .cb.bot').first(), 1], [page.locator('.friend-card').first(), 2], [page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }), 3]]);
+  await shot(page, '29b-assistant-friends');
+  await page.getByRole('button', { name: 'Use the request form' }).click();
   await page.locator('#ask').fill('I am stuck in a meeting until 8. Can someone feed Bruno and take him down at 5?');
   await mark(page, [[page.locator('#ask'), 1], [page.locator('.chips').first(), 2], [page.getByRole('button', { name: 'Understand my request' }), 3], [page.getByRole('button', { name: 'Simple form' }), 4]]);
   await shot(page, '30-ask');

@@ -17,7 +17,7 @@
 
 | Document | What it is |
 |---|---|
-| [api.md](api.md) | API reference, generated from the route table (146 routes) |
+| [api.md](api.md) | API reference, generated from the route table (159 routes) |
 | [permission-matrix.md](permission-matrix.md) | Role × resource × action matrix, generated from the code |
 | [traceability.md](traceability.md) | PRD requirements → code → tests, generated |
 | [test-report.md](test-report.md) | Latest test run and the 24 mandatory P0 scenarios |

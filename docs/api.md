@@ -1,6 +1,6 @@
 # Pawsure API reference
 
-Generated from the route table by `tools/gen-api-docs.mts` (152 routes). Request bodies are validated with zod in the handlers; errors are JSON `{ error, note? }` with 400 invalid input, 401 no session, 403 role or household not allowed (logged), 404 not found, 409 invalid state or no consent, 429 rate limited, 503 vendor unavailable.
+Generated from the route table by `tools/gen-api-docs.mts` (159 routes). Request bodies are validated with zod in the handlers; errors are JSON `{ error, note? }` with 400 invalid input, 401 no session, 403 role or household not allowed (logged), 404 not found, 409 invalid state or no consent, 429 rate limited, 503 vendor unavailable.
 
 Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every inbound event stores event time and received time.
 
@@ -29,9 +29,12 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | POST | `/v1/invitations/:mid/accept` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/me` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/me/export` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/me/helper/tasks` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/me/helper/tasks/:id/proof` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/me/rights` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/me/rights` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/societies` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/societies/near` | Session (owner, circle, helper or friend; checked per household) |
 
 ## Household
 
@@ -101,6 +104,9 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | PUT | `/v1/households/:hh/routine/:id` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/tasks/:id/ack` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/tasks/:id/lifecycle` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/tasks/:id/owner-done` | Session (owner, circle, helper or friend; checked per household) |
+| GET | `/v1/households/:hh/tasks/:id/proof` | Session (owner, circle, helper or friend; checked per household) |
+| POST | `/v1/households/:hh/tasks/:id/remind` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/tasks/:id/resolve` | Session (owner, circle, helper or friend; checked per household) |
 | GET | `/v1/households/:hh/today` | Session (owner, circle, helper or friend; checked per household) |
 | POST | `/v1/households/:hh/visits/:visitId/gate` | Session (owner, circle, helper or friend; checked per household) |
@@ -111,6 +117,7 @@ Base URL: `VITE_API_URL` (local `http://localhost:8787`). Times are IST; every i
 | Method | Path | Access |
 |---|---|---|
 | POST | `/demo/clock` | Demo mode only |
+| GET | `/demo/code-today/:hh` | Demo mode only |
 | GET | `/demo/cover-link/:hh/:pid` | Demo mode only |
 | GET | `/demo/cover-people/:hh` | Demo mode only |
 | GET | `/demo/cover-thread/:hh/:pid` | Demo mode only |
