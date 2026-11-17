@@ -149,7 +149,6 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <div className="th-bg" aria-hidden="true" />
         <div className="th-top">
           <div className="grow"><h2 className="th-greet">{tr('Hi')}, {first}</h2><div className="th-date">{tr('Here’s who’s helping today.')}</div></div>
-          <button className="th-round" onClick={() => setSheet('plan')} aria-label="Plan for today"><Icon name="list" size={20} /></button>
           <button className="th-sos" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency">{tr('SOS')}</button>
         </div>
       </header>
@@ -168,7 +167,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
           {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
       </section>
       {noHelper && <p className="add-helper-note">{tr('Add helper to start tasks.')}</p>}
-      {noHelper ? null : d.leftAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div>
+      {noHelper ? null : d.leftAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div><button type="button" className="linkbtn plan-link" aria-label="Plan for today" onClick={() => setSheet('plan')}>{tr('Today’s plan')}</button></div><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div>
         : d.backAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">{tr('Quick return check (10 s)')}</b><button className="btn primary sm" onClick={() => setSheet('return')}>{tr('Start')}</button></div></div> : null}
       {msg && <Banner kind="info" icon="ℹ">{msg} <button className="btn ghost sm" onClick={() => setMsg(null)}>{tr('Dismiss')}</button></Banner>}
@@ -192,7 +191,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </div>
 
       <section role="tabpanel" aria-label={`${petName(petId ?? '')}’s tasks today`} className="task-panel">
-        <div className="sec-head"><h2>{tr('Tasks')} <span className="sec-n">{pending.length}</span></h2></div>
+        <div className="sec-head"><h2>{tr('Tasks')} <span className="sec-n">{pending.length}</span></h2><button type="button" className="linkbtn plan-link" aria-label="Plan for today" onClick={() => setSheet('plan')}>{tr('Today’s plan')}</button></div>
         {pending.length ? pending.map(taskCard) : <div className="task-empty">{mine.length ? `${tr('Nothing pending for')} ${petName(petId ?? '')} 🎉` : tr('No tasks today.')}</div>}
         <div className="sec-head"><h2>{tr('Completed')} <span className="sec-n">{completed.length}</span></h2></div>
         {completed.length ? completed.map(taskCard) : <div className="task-empty">{tr('Nothing done yet today.')}</div>}

@@ -105,6 +105,7 @@ const HI: Record<string, string> = {
   'A friend (Find cover)': 'एक दोस्त (मदद ढूँढें)',
   'Good morning': 'सुप्रभात',
   'Hi': 'नमस्ते',
+  'Today’s plan': 'आज की योजना',
   'Add helper': 'हेल्पर जोड़ें',
   'Add helper to start tasks.': 'काम शुरू करने के लिए हेल्पर जोड़ें।',
   'Society or building': 'सोसायटी या बिल्डिंग',

@@ -936,3 +936,5 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .pwa:has(> .tabbar) > .tabbar{box-shadow:0 10px 24px -12px rgba(20,24,20,.55)}
 /* the subtitle stays readable: full strength, page ink, also when the header is compact */
 .today .today-hero .th-date{opacity:1;color:var(--ink-2);font-size:.95rem;font-weight:600;margin-top:4px}
+.plan-link{font-weight:800;font-size:var(--fs-s);color:var(--sky);text-decoration:underline;text-underline-offset:3px;padding:2px 0;background:none;border:0}
+.out-card .plan-link{display:inline-block;margin-top:4px}
