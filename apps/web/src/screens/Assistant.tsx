@@ -7,14 +7,11 @@
 import { t as tr } from '../i18n';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, fmt, type FFTask, type FriendSummary, type Pet, type ReqView, type SearchResult } from '../api';
-import { AppBar, Icon } from '../ui';
+import { AppBar, Icon, personSrc } from '../ui';
 import { useVoice } from '../voice';
 import { StepForm } from './Intake';
 
-const POOL = ['golden', 'calico', 'husky', 'boston', 'hedgehog', 'turtle', 'bird'];
-/** A friend's avatar, chosen steadily from their id. */
-export const friendAvatar = (id: string) => POOL[[...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % POOL.length]!;
-const avatarSrc = (id: string) => `${import.meta.env.BASE_URL}assets/avatars/${friendAvatar(id)}.webp`;
+const avatarSrc = personSrc; // friends are people: the people portraits
 const STEPS = ['Understanding what you need', 'Checking who is free', 'Finding friends nearby'];
 const TASKS: [FFTask, string][] = [['feed', 'Feed'], ['walk', 'Short walk'], ['meds', 'Medicine'], ['water', 'Water'], ['litter', 'Litter tray'], ['toilet', 'Toilet pad']];
 const ACCESS = ['Key handover', 'Someone at home', 'Friend has key'];
@@ -50,7 +47,7 @@ function Bot({ children }: { children: ReactNode }) {
   return <div className="cb-row bot"><span className="ai-av" aria-hidden="true"><Sparkle size={20} /></span><div className="cb bot">{children}</div></div>;
 }
 
-export function CoverAssistant({ hh, pets, onForm, onInvite }: { hh: string; pets: Pet[]; onForm: () => void; onInvite?: () => void }) {
+export function CoverAssistant({ hh, pets, me = '', onForm, onInvite }: { hh: string; pets: Pet[]; me?: string; onForm: () => void; onInvite?: () => void }) {
   const pet = pets[0]?.name ?? 'my pet';
   const H = `/v1/households/${hh}`;
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: tr('How can I help?') }]);
@@ -120,7 +117,7 @@ export function CoverAssistant({ hh, pets, onForm, onInvite }: { hh: string; pet
     <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true"><Sparkle size={16} /></span>{tr('Pawly, your cover assistant')}<button type="button" className="linkbtn ai-form" onClick={onForm}>{tr('Your requests')}</button></div>
     <div className="body ai-chat" aria-live="polite">
       {msgs.map((m, i) => {
-        if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div></div>;
+        if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div><img className="me-av" src={personSrc(me)} alt="" width={30} height={30} /></div>;
         if (m.role === 'bot') return <Bot key={i}>{i === 0 ? <><h2 className="ai-hello">{m.text}</h2><span className="cb-note">{tr('Tell me what you need, by typing or speaking. For example:')} “{tr('Can someone feed')} {pet} {tr('at 6 PM today?')}”</span></> : <>{m.text}{m.note && <span className="cb-note">{m.note}</span>}</>}</Bot>;
         if (m.role === 'thinking') return <div key={i} className="ai-think" role="status" aria-label="Pawly is thinking">
           <div className="ai-orb"><span /><span /><span /><i /></div>

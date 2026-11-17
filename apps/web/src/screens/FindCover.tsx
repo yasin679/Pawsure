@@ -2,7 +2,7 @@
 import { t as tr } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api, ApiError, fmt, hm, type FFTask, type Pet, type ReqView, type SearchResult } from '../api';
-import { AppBar, Art, Banner, Icon } from '../ui';
+import { AppBar, Art, Banner, Icon, PersonAvatar } from '../ui';
 
 const TASKS: [FFTask, string][] = [['feed', 'Feed'], ['walk', 'Short walk'], ['meds', 'Medicine'], ['water', 'Water'], ['litter', 'Litter tray'], ['toilet', 'Toilet pad']];
 const EXAMPLES: [string, string][] = [['Clear request', 'I am stuck in a meeting until 8. Can someone feed Bruno and take him down at 5?'], ['Medicine + vague time', 'Can someone give Bruno his medicine this evening and let themselves in?'], ['Urgent', 'Can someone feed Bruno and Misty right now? Spare key with Ankita.']];
@@ -138,7 +138,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
       {byPawly && <div className="pawly-found"><span aria-hidden="true">✦</span> Pawly found {sr.top.length} {sr.top.length === 1 ? 'friend' : 'friends'} who can help</div>}
       <div className="card flat small"><b>{summary(sr.request)}</b> · {sr.request.parsed?.access}<br /><span className="xs muted">{tr('Your own friends only. Nearest first.')}</span></div>
       {sr.request.duplicateOf && <Banner kind="warn" icon="!"><b>You already have a request out to friends for this.</b> Same pet, about the same time. <button className="btn sm" onClick={() => setV({ k: 'request', id: sr.request.duplicateOf! })}>{tr('Open it')}</button></Banner>}
-      {sr.top.map((t, i) => <div key={t.id} className="card"><div className="row"><span className="avatar">{t.name[0]}</span><div className="grow"><b>{i + 1}. {t.name}</b><div className="small muted">{t.distance} · {({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</div></div>
+      {sr.top.map((t, i) => <div key={t.id} className="card"><div className="row"><PersonAvatar seed={t.id} /><div className="grow"><b>{i + 1}. {t.name}</b><div className="small muted">{t.distance} · {({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</div></div>
         <label className="check" style={{ padding: 0 }}><input type="checkbox" aria-label={'Select ' + t.name} checked={sel.includes(t.id)} onChange={e => { const on = e.target.checked; setSel(s => on ? [...s, t.id] : s.filter(x => x !== t.id)); }} /></label></div>
         <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{t.reasons.slice(0, 3).map(r => <li key={r}>{r}</li>)}</ul>
         <button className="btn sm primary" onClick={() => { setApproved(false); setV({ k: 'approve', id: sr.request.id, ids: [t.id], mode: 'one' }); }}>Ask {t.name.split(' ')[0]}</button></div>)}
@@ -151,7 +151,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
     const list = sr.top.filter(t => v.ids.includes(t.id));
     return <><AppBar title={v.mode === 'all3' ? `Ask ${list.length} friends?` : `Ask ${list[0]?.name.split(' ')[0]}?`} onBack={() => setV({ k: 'suggest', id: v.id })} /><main className="body">
       {v.mode === 'all3' && <Banner kind="info" icon="ℹ">The same request goes to {list.map(t => t.name.split(' ')[0]).join(', ')}. <b>The first valid Yes</b> is held for 10 minutes while you confirm.</Banner>}
-      {list.map(t => <div key={t.id} className="card"><div className="row"><span className="avatar">{t.name[0]}</span><b className="grow">{t.name}</b><span className="tag">{({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</span></div>
+      {list.map(t => <div key={t.id} className="card"><div className="row"><PersonAvatar seed={t.id} /><b className="grow">{t.name}</b><span className="tag">{({ en: 'English', hi: 'Hindi', mr: 'Marathi' } as Record<string, string>)[t.language]}</span></div>
         <div className="bub in" style={{ maxWidth: '100%', boxShadow: 'none', border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--ink)' }}>{t.message}</div>
         {t.language !== 'en' && <div className="xs muted">Meaning: {summary(sr.request)}. Access details only after you confirm. Yes / No / another time.</div>}</div>)}
       <div className="card flat small">{tr('Address and key details are shared only after you confirm.')}</div>
@@ -171,7 +171,7 @@ export function FindCover({ hh, pets, draft, onDraft, openRequest, onOpened, onI
         <div className="small muted">{req.mode === 'all3' ? 'Ask all' : 'One friend'} · understood by {req.parsedBy ?? (req.parser === 'manual' ? 'simple form' : 'rules')}{req.correctedFields.length ? ' · you corrected: ' + req.correctedFields.join(', ') : ''}</div>
         {req.state === 'Provisional hold' && req.holdAt != null && <div className="small"><b>Hold ends {fmt(req.holdAt + 10)}.</b> If you don’t confirm, it’s released and others can accept.</div>}
         {req.searchClosesAt != null && ['Sent', 'Provisional hold', 'Accepted - pending owner confirmation'].includes(req.state) && <div className="xs muted">Search closes at {fmt(req.searchClosesAt)} (30 min before the task).</div>}</div>
-      {req.recipients.length > 0 && <div className="list">{req.recipients.map(r => <div key={r.friendId} className="li"><span className="avatar">{r.name?.[0]}</span><div className="grow"><b>{r.name}</b><div className="small muted">{r.state === 'sent' ? `Waiting · expires ${fmt(r.sentAt + 15)}${r.reminded ? ' · reminded' : ''}` : r.state === 'proposed' ? `Suggested ${fmt(r.proposal!)}` : REC[r.state]}</div></div>
+      {req.recipients.length > 0 && <div className="list">{req.recipients.map(r => <div key={r.friendId} className="li"><PersonAvatar seed={r.friendId} /><div className="grow"><b>{r.name}</b><div className="small muted">{r.state === 'sent' ? `Waiting · expires ${fmt(r.sentAt + 15)}${r.reminded ? ' · reminded' : ''}` : r.state === 'proposed' ? `Suggested ${fmt(r.proposal!)}` : REC[r.state]}</div></div>
         {['accepted', 'proposed'].includes(r.state) && !req.confirmedFriendId && <button className="btn sm primary" disabled={busy} onClick={() => act('confirm', { friendId: r.friendId })}>{r.state === 'proposed' ? 'Confirm ' + hm(r.proposal!) : 'Confirm'}</button>}</div>)}</div>}
       {req.state === 'Confirmed' && <div className="card"><span className="eyebrow">Shared with {req.confirmedName?.split(' ')[0]}, minimum needed, this visit only</span><div className="small">Flat, key, pet notes and the emergency card, for this visit only.</div></div>}
       {req.state === 'Confirmed' && req.lateMin ? <Banner kind="warn" icon="⏱">{req.confirmedName?.split(' ')[0]} is running about {req.lateMin} min late. New arrival about {fmt((req.taskTime ?? 0) + req.lateMin)}. Keep the visit, or cancel and ask your backups.</Banner> : null}

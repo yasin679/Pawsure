@@ -2,7 +2,7 @@
 import { t as tr } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api, ApiError, nameError, errMessage, type FriendProfileView, type FriendSummary, type HomeProfile, type Privacy, type Society } from '../api';
-import { LanguageOptions, AppBar, Art, Banner, Icon } from '../ui';
+import { LanguageOptions, AppBar, Art, Banner, Icon, PersonAvatar } from '../ui';
 
 const LANG: Record<string, string> = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
 const KEY: Record<string, string> = { yes: 'Key: yes', handover: 'Key: needs handover', no: 'Key: no' };
@@ -19,7 +19,7 @@ export function Friends({ hh, onAsk }: { hh: string; onAsk: (name: string) => vo
 
   if (open) return <><AppBar title={open.name} onBack={() => { setOpen(null); setReport(null); }} /><main className="body">
     {open.invited ? <div className="empty"><Art name="wave" width={120} /><b>{tr('Invite sent')}</b><span>{open.note} An invitation isn’t the same as opting in.</span></div> : <>
-      <div className="card"><div className="row"><span className="avatar lg">{open.name[0]}</span><div className="grow"><h2>{open.name}</h2><div className="small muted">{open.distance} · speaks {LANG[open.language ?? 'en']}</div></div></div></div>
+      <div className="card"><div className="row"><PersonAvatar lg seed={open.id} /><div className="grow"><h2>{open.name}</h2><div className="small muted">{open.distance} · speaks {LANG[open.language ?? 'en']}</div></div></div></div>
       <div className="card"><span className="eyebrow">Comfortable with (their own choice)</span><div className="chips">{CAP.map(([k, l]) => <span key={k} className={`tag ${open.capabilities?.[k] ? 'flag-on' : 'flag-off'}`}>{open.capabilities?.[k] ? '✓' : '—'} {l}</span>)}</div>
         <dl className="kv"><dt>{tr('Usually free')}</dt><dd>{open.availability}</dd><dt>{tr('Key')}</dt><dd>{KEY[open.key ?? 'handover']}</dd><dt>{tr('Stairs')}</dt><dd>{open.stairsOk ? 'Fine with stairs' : 'Needs the lift'}</dd></dl><span className="xs muted">Profile updated {open.updated}. Availability isn’t a promise.</span></div>
       <div className="card flat"><span className="eyebrow">History in your network (shared with their consent)</span><dl className="kv"><dt>Helps</dt><dd>{open.history}</dd><dt>Usual reply</dt><dd>{open.responseBand}</dd></dl><span className="xs muted">{open.disclaimer}</span></div>
@@ -41,7 +41,7 @@ export function Friends({ hh, onAsk }: { hh: string; onAsk: (name: string) => vo
       <div className="card flat small"><b>Getting an invite isn’t the same as opting in.</b> They choose if and when they help.</div>
       {err && <span className="errtext" role="alert">{err}</span>}
       <button className="btn primary block" onClick={async () => { setErr(null); const ne = nameError(inv.name); if (ne) { setErr(ne); return; } try { await api(`${H}/friends/invite`, { body: { ...inv, phone: '+91' + inv.phone.replace(/\D/g, '') } }); setInvite(false); setMsg('Invitation sent on WhatsApp (simulated).'); load(); } catch (e) { setErr(errMessage(e, 'Check the name and a 10-digit mobile number.')); } }}>{tr('Send WhatsApp invite')}</button></div>}
-    <div className="list">{list.map(f => <button key={f.id} className="li" onClick={() => api<FriendProfileView>(`${H}/friends/${f.id}`).then(setOpen)}><span className="avatar">{f.name[0]}</span><div className="grow"><b>{f.name} {f.invited && <span className="tag">{tr('Invite sent')}</span>}</b><div className="small muted">{f.invited || !f.findable ? 'Not searchable until they opt in' : `${f.distance} · ${f.availability} · ${KEY[f.key]}`}</div></div><span className="chev">›</span></button>)}</div>
+    <div className="list">{list.map(f => <button key={f.id} className="li" onClick={() => api<FriendProfileView>(`${H}/friends/${f.id}`).then(setOpen)}><PersonAvatar seed={f.id} /><div className="grow"><b>{f.name} {f.invited && <span className="tag">{tr('Invite sent')}</span>}</b><div className="small muted">{f.invited || !f.findable ? 'Not searchable until they opt in' : `${f.distance} · ${f.availability} · ${KEY[f.key]}`}</div></div><span className="chev">›</span></button>)}</div>
     <div className="card flat"><div className="row"><div className="grow"><b>{tr('Nearby Pawsure members')}</b><div className="small muted">ID-checked members who opted in, for when no friend is free.</div></div><span className="tag flag-off">{tr('Switch OFF')}</span></div><div className="xs muted">Not available until the identity-check process is approved.</div></div>
   </main></>;
 }

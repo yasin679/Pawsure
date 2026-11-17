@@ -2,7 +2,7 @@
 import { t as tr } from '../i18n';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, fmt, hm, type Helper, type DayTask, type DayView, type DayReport, type Incident, type Pet, type TimelineItem, type Visit, type VisitCodeState } from '../api';
-import { AppBar, Art, Banner, Conf, Icon, PetAvatar } from '../ui';
+import { AppBar, Art, Banner, Conf, Icon, PetAvatar, personSrc } from '../ui';
 import { useCover, CoverAlerts, CoverLineView, TomorrowList, PreDepartureSheet, DelaySheet, CoverHistory, UrgencyTag } from './Cover';
 
 const COVER_LABEL: Record<string, [string, string]> = { Covered: ['Confirmed', 'Covered day'], 'In progress': ['Pending', 'Covered so far'], 'At risk': ['Not confirmed', 'Not covered yet'], 'Not covered': ['Missed', 'Not covered'], Unknown: ['Unknown', 'Unknown, tap Covered'], Excluded: ['Pending', 'No tasks today'] };
@@ -18,8 +18,8 @@ type SheetKind = null | 'plan' | 'caring' | 'cantcome' | 'leaving' | 'return' | 
 
 /** Task type icons and colours follow the prototype (feeding orange, water sky, walk green, toilet teal, medicine lilac). */
 const TASK_ICON: Record<string, string> = { feeding: 'food', water: 'water', walk: 'walk', toilet: 'pad', litter: 'litter', medicine: 'pill', other: 'paw' };
-/** The carer's avatar: an illustrated portrait (no photos are stored in the demo). */
-function HelperAvatar({ who }: { who: 'sunita' | 'helper' | 'friend' | 'none' }) {
+/** The carer's avatar: an illustrated portrait from the people set (no photos are stored); no helper shows an empty seat. */
+function HelperAvatar({ who, seed = '' }: { who: 'sunita' | 'helper' | 'friend' | 'none'; seed?: string }) {
   // No helper yet: an empty seat waiting for someone, in the sky and coral accents.
   if (who === 'none') return <span className="helper-av none" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56">
     <circle cx="32" cy="32" r="32" fill="var(--sky-soft)" />
@@ -27,20 +27,7 @@ function HelperAvatar({ who }: { who: 'sunita' | 'helper' | 'friend' | 'none' })
     <circle cx="32" cy="29" r="11" fill="var(--sky)" opacity=".35" />
     <circle cx="48" cy="46" r="10" fill="var(--coral)" /><path d="M48 41v10M43 46h10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
   </svg></span>;
-  const [skin, hair, top, accent] = who === 'sunita' ? ['#B97A56', '#2B1B14', '#1F8A7A', '#F2C14E'] : who === 'helper' ? ['#A86F4C', '#231610', '#6B4A9C', '#F2C14E'] : ['#D9A47E', '#3A2A20', '#CC7655', '#FBF8EF'];
-  return <span className="helper-av" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56">
-    <circle cx="32" cy="32" r="32" fill={who === 'sunita' ? 'var(--sun-soft)' : who === 'helper' ? 'var(--plum-soft)' : 'var(--coral-soft)'} />
-    <path d="M10 64c2-12 11-18 22-18s20 6 22 18Z" fill={top} />
-    <path d="M22 50c4 4 16 4 20 0l-2 14H24Z" fill={accent} opacity=".9" />
-    <rect x="27" y="38" width="10" height="10" rx="4" fill={skin} />
-    <ellipse cx="32" cy="29" rx="11.5" ry="13" fill={skin} />
-    <path d="M20.5 28c0-9 5-14.5 11.5-14.5S43.5 19 43.5 28c-2-5-6-8-11.5-8.5-5.5.5-9.5 3.5-11.5 8.5Z" fill={hair} />
-    {who !== 'friend' && <circle cx="32" cy="12.5" r="5.2" fill={hair} />}
-    <circle cx="27.6" cy="30" r="1.4" fill="#2B1B14" /><circle cx="36.4" cy="30" r="1.4" fill="#2B1B14" />
-    <path d="M28.5 35.5c2 1.6 5 1.6 7 0" stroke="#7A3B2A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-    {who === 'sunita' && <circle cx="32" cy="24.5" r="1.1" fill="#C0392B" />}
-    {who === 'sunita' && <circle cx="21" cy="33" r="1.4" fill={accent} />}
-  </svg></span>;
+  return <span className="helper-av" aria-hidden="true"><img src={personSrc(seed || who)} alt="" width={56} height={56} /></span>;
 }
 /** Home shows a task as Pending or Completed (or Cancelled); the evidence label is in Task details. */
 function StatusPill({ t }: { t: DayTask }) {
@@ -154,7 +141,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       </header>
 
       <section className="card caring help-card" aria-label="Your help today">
-        <div className="row"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} />
+        <div className="row"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} seed={d.mode === 'friend' ? 'friend' : helperRow?.id ?? helperName} />
           <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><h2>{d.mode === 'uncovered' ? tr('Nobody yet') : d.mode === 'friend' ? tr('A friend (Find cover)') : helperName || tr('No helper added yet')}</h2><div className="small muted">{tr(HELP_SUB[d.mode] ?? MODE[d.mode] ?? d.mode)}</div></div></div>
         {d.mode === 'tracked' && helperRow && invite !== 'yes' && <div className={`invite-pill ${invite}`} role="status">{invite === 'pending' ? <span className="ip-text"><b>⏳ {tr('Invite pending')}</b><span>{tr('WhatsApp message sent. Waiting for her to accept.')}</span></span> : invite === 'notnow' ? <>✋ {tr('She said “not now” to the invite')}</> : <>⏸ {tr('She stopped check-ins')}</>}
           {invite === 'pending' && <button className="btn ghost sm" onClick={() => run(() => api(`${H}/helpers/${helperRow.id}/resend`, { body: {} }), () => setMsg(`Invite sent again to ${helperFirst} on WhatsApp.`))}>{tr('Resend')}</button>}</div>}
@@ -201,7 +188,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
 
     {sheet === 'plan' && <Sheet onClose={close}>
       <div className="row"><h2 className="grow">{tr('Plan for today')}</h2>{ov?.noCoverPlanned && day.covered.household !== 'Covered' ? <Conf state="Missed" label="No cover planned" /> : <Conf state={cs} label={cl} />}</div>
-      <div className="plan-help" aria-label="Your help today"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} />
+      <div className="plan-help" aria-label="Your help today"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} seed={d.mode === 'friend' ? 'friend' : helperRow?.id ?? helperName} />
         <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><b>{d.mode === 'friend' ? tr('A friend (Find cover)') : d.mode === 'uncovered' ? tr('Nobody yet') : helperName || tr('No helper added yet')}</b></div>
         <span className={`st-pill ${helpStatus.tone}`}>{tr(helpStatus.text)}</span></div>
       {d.alone.exceeds && <Banner kind="warn" icon="⏱"><b>Alone-window warning.</b> Your pets would be alone {(d.alone.longestMinutes / 60).toFixed(1)} h ({fmt(d.alone.from)}–{fmt(d.alone.to)}). Your limit is {d.alone.limitHours} h. <span className="xs muted">Your own threshold, not medical guidance.</span></Banner>}

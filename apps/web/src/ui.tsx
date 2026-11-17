@@ -46,6 +46,12 @@ export function Art({ name, width }: { name: keyof typeof ART | string; width: n
   return <span className="art" role={alt ? 'img' : 'presentation'} aria-label={alt || undefined} style={{ width, height: Math.round(h * s), backgroundSize: `${Math.round(1600 * s)}px auto`, backgroundPosition: `-${Math.round(x * s)}px -${Math.round(y * s)}px` }} />;
 }
 /** The pet's cartoon avatar (assets/avatars, from the brand sheet): dog, cat, or a bunny for other pets. */
+/** People (owners, helpers, friends) get an illustrated portrait, chosen steadily from their id or name. */
+const PEOPLE = ['beard-glasses', 'bun-hoops', 'yellow-cap', 'sunglasses-waves', 'curls-headphones', 'beanie', 'beard-shades', 'bob-glasses', 'bucket-hat', 'teal-cap'];
+export const personSrc = (seed: string) => `${import.meta.env.BASE_URL}assets/people/${PEOPLE[[...(seed || '?')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % PEOPLE.length]}.webp`;
+export function PersonAvatar({ seed, lg, className = '' }: { seed: string; lg?: boolean; className?: string }) {
+  return <span className={`avatar person${lg ? ' lg' : ''} ${className}`} aria-hidden="true"><img src={personSrc(seed)} alt="" width={lg ? 60 : 40} height={lg ? 60 : 40} /></span>;
+}
 export function PetAvatar({ species, size = 40 }: { species: string; size?: number }) {
   const a = species === 'Cat' ? 'cat' : species === 'Dog' ? 'dog' : 'bunny';
   return <span className="avatar pet-av" style={{ width: size, height: size }}><img src={`${import.meta.env.BASE_URL}assets/avatars/${a}.webp`} alt="" width={size} height={size} /></span>;

@@ -1,7 +1,7 @@
 /** Owner account screens: helper points wallet (PS-042) and data rights (PS-119). */
 import { useEffect, useState } from 'react';
 import { api, ApiError, type Me } from '../api';
-import { AppBar, Icon } from '../ui';
+import { AppBar, Icon, PersonAvatar } from '../ui';
 
 interface WalletView { rewardsArm: boolean; policy: string; friendThankYouPoints: string; helpers: { name: string; thisMonth: number; cap: number; held: number; history: { points: number; state: string; month: string; created_at: string; reason: string; decision_note: string | null }[] }[] }
 const STATE: Record<string, string> = { earned: 'Earned', held: 'On hold', released: 'Released after review', reversed: 'Not given after review', expired: 'Expired', redeemed: 'Used for a coupon' };
@@ -13,7 +13,7 @@ export function WalletScreen({ hh, onBack }: { hh: string; onBack: () => void })
     {err && <div className="card danger">{err}</div>}
     {w && !w.rewardsArm && <div className="card flat"><b>Points are off for your home</b><div className="small muted">Pawsure is testing points in half of the pilot homes. Your helper’s check-ins work the same either way.</div></div>}
     {w?.helpers.map(h => <div key={h.name} className="card">
-      <div className="row"><span className="avatar">{h.name[0]}</span><div className="grow"><b>{h.name}</b><div className="small muted">Points from your home this month</div></div><b className="mono" style={{ fontSize: 'var(--fs-xl)' }}>{h.thisMonth}<span className="small muted">/{h.cap}</span></b></div>
+      <div className="row"><PersonAvatar seed={h.name} /><div className="grow"><b>{h.name}</b><div className="small muted">Points from your home this month</div></div><b className="mono" style={{ fontSize: 'var(--fs-xl)' }}>{h.thisMonth}<span className="small muted">/{h.cap}</span></b></div>
       <div className="meter" role="meter" aria-valuemin={0} aria-valuemax={h.cap} aria-valuenow={h.thisMonth} aria-label="Points this month"><span style={{ width: `${Math.min(100, (h.thisMonth / h.cap) * 100)}%` }} /></div>
       {h.held > 0 && <div className="card warn small"><b>{h.held} points on hold</b> while a mismatch is reviewed (decided within 7 days, with a reason {h.name.split(' ')[0]} can read).</div>}
       <div className="xs muted">You see points from your home only. Points from other homes they work in are never shown to you.</div>

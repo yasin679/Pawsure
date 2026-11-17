@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { nameError, api, ApiError, fmt, type Pet } from '../api';
-import { AppBar, Banner, Icon } from '../ui';
+import { AppBar, Banner, Icon, PersonAvatar } from '../ui';
 import { Sheet } from './Today';
 
 export interface CoverLine { tone: 'ok' | 'risk' | 'none' | 'plain'; text: string }
@@ -84,7 +84,7 @@ function StatusBody({ j }: { j: JobView }) {
   return <><h2>Cover status</h2>
     <div className="small"><b>{j.pet} · {j.tasks.map(t => t.title).join(', ')}</b> · {j.time}{j.tomorrow ? ' tomorrow' : ''}<br />{j.reason}</div>
     <div className="card flat small"><b>{STATE_TITLE[j.state] ?? j.state}</b>{j.active && <><br />{j.next}</>}</div>
-    {j.asks.length ? <div className="list">{j.asks.map((a, i) => <div key={i} className="li"><span className="avatar">{a.name[0]}</span><div className="grow"><b>{a.name}</b> {a.holdsKey && <span className="tag">Key</span>} {a.ownerArranged && <span className="tag sim">Owner-arranged, not verified by Pawsure</span>}
+    {j.asks.length ? <div className="list">{j.asks.map((a, i) => <div key={i} className="li"><PersonAvatar seed={a.name} /><div className="grow"><b>{a.name}</b> {a.holdsKey && <span className="tag">Key</span>} {a.ownerArranged && <span className="tag sim">Owner-arranged, not verified by Pawsure</span>}
       <div className="small muted">Asked {fmt(a.at)} · {ASK_STATE[a.state] ?? a.state}{a.state === 'asked' && a.until != null ? ` until ${fmt(a.until)}` : ''}</div></div></div>)}</div> : <p className="small muted">Nobody has been asked yet.</p>}
     <div className="card flat"><span className="eyebrow">What happened</span>{j.log.map((l, i) => <div key={i} className="row small top"><span className="mono muted" style={{ minWidth: 58 }}>{fmt(l.at)}</span><span className="grow">{l.text}</span></div>)}</div>
     <p className="xs muted">Only people you approved are asked.</p></>;

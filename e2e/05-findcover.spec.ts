@@ -169,7 +169,7 @@ test.describe('G+. Pawly, the cover assistant (16 Nov)', () => {
     await expect(page.locator('.friend-card').first()).toBeVisible();
     await expect(page.getByRole('status', { name: 'Pawly is thinking' })).toHaveCount(0);
     expect(await page.locator('.friend-card').count()).toBeGreaterThan(0);
-    await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/avatars\//);
+    await expect(page.locator('.friend-card img').first()).toHaveAttribute('src', /assets\/people\//);
     await page.locator('.friend-card').first().getByRole('button', { name: /^Ask / }).click();
     // Asking stays in the chat: a small progressive form, never the old filter screen
     await expect(page.getByRole('group', { name: /^Ask / })).toBeVisible();

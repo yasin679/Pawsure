@@ -3,7 +3,7 @@ import { t as tr, onUiLang } from './i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, API, ApiError, endSession, session, fmt, type DayView, type Incident, type Me, type Pet } from './api';
-import { AppBar, Art, Icon, LangSwitch } from './ui';
+import { AppBar, Art, Icon, LangSwitch, PersonAvatar } from './ui';
 import { Onboarding } from './screens/Onboarding';
 import { resetIntro } from './screens/Intro';
 import { Today } from './screens/Today';
@@ -117,12 +117,12 @@ export function App() {
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
     {!sub && tab === 'today' && hh && <Today onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
-    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
+    {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} me={me?.user.id ?? ''} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'friends' && hh && <Friends hh={hh} onAsk={(n) => { setDraft(`Can ${n.split(' ')[0]} feed ${pets[0]?.name ?? 'my pet'} at 6 pm today?`); go('find'); }} />}
     {!sub && tab === 'me' && <><AppBar title={tr('Me')} /><main className="body">
       {invites.map(i => <div key={i.id} className="card info"><b>You’re invited as {i.role.replace('_', '-')}</b><div className="small">{i.society}</div><button className="btn primary sm" onClick={() => api(`/v1/invitations/${i.id}/accept`, { body: {} }).then(load)}>{tr('Accept')}</button></div>)}
-      <div className="card"><div className="row"><span className="avatar lg">{(me?.user.display_name ?? '?').split(' ').map(s => s[0]).join('').slice(0, 2)}</span><div className="grow"><h2>{me?.user.display_name}</h2><div className="small muted">{me?.memberships[0]?.society} · {me?.memberships[0]?.tower} · {role?.replace('_', '-')}</div></div></div></div>
+      <div className="card"><div className="row"><PersonAvatar lg seed={me?.user.id ?? me?.user.display_name ?? ''} /><div className="grow"><h2>{me?.user.display_name}</h2><div className="small muted">{me?.memberships[0]?.society} · {me?.memberships[0]?.tower} · {role?.replace('_', '-')}</div></div></div></div>
       <ThinCard thin={thin} onOpen={() => setSub('backups')} />
       <div className="list">
         <button className="li" onClick={() => setSub('backups')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Backups')}</b><div className="small muted">{tr('People asked in order if a task is at risk · standing approval')}</div></div><span className="chev">›</span></button>

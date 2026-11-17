@@ -951,3 +951,9 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .ai-status.wait .geo-dot{display:inline-block;margin-right:6px}
 .ai-status.ok{background:var(--sage-soft,#E3ECD6)}
 .ai-status.no{background:var(--coral-soft)}
+/* people portraits (17 Nov) */
+.avatar.person{padding:0;overflow:hidden;border-radius:50%;background:none}
+.avatar.person img{width:100%;height:100%;object-fit:cover;display:block}
+.helper-av img{width:100%;height:100%;object-fit:cover;display:block}
+.cb-row.me{align-items:flex-end;gap:8px}
+.me-av{width:30px;height:30px;border-radius:50%;flex:none}
