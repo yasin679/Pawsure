@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY, openPlan, closePlan } from './helpers';
+import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY, openPlan, closePlan, tab } from './helpers';
 
 test.describe('D. Today: daily care', () => {
   // D2 is about the leaving flow itself, so it starts at home; the others start after heading out (tasks visible).
@@ -66,7 +66,7 @@ test.describe('D. Today: daily care', () => {
   });
 
   test('D7 SOS: report “Pet hurt” → S1 incident → I’m on it → resolved with a note', async ({ page }) => {
-    await page.getByRole('button', { name: 'Report a problem or emergency' }).click();
+    await tab(page, 'Me'); await page.locator('button.li', { hasText: 'Report a problem' }).click(); // SOS moved from Home to Me (18 Nov)
     await dialog(page).getByRole('button', { name: 'Pet hurt' }).click();
     await expect(page.getByText(/Reported\./)).toBeVisible();
     if (await dialog(page).isVisible()) await dialog(page).getByRole('button', { name: 'Close' }).click();

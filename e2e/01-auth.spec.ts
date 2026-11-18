@@ -9,7 +9,7 @@ test.describe('A. Sign-in and onboarding', () => {
     await page.getByText('I accept the Terms of Use').click();
     await page.getByText('I have read the Privacy Notice').click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await intake(page, 'Asha Rao', 'Raheja Vihar, Powai', { tower: 'C' });
+    await intake(page, 'Asha Rao', 'Raheja Vihar, Powai');
     await expect(page.getByRole('heading', { name: /Asha/ })).toBeVisible();
   });
 

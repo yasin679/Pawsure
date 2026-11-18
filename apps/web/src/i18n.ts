@@ -112,6 +112,7 @@ const HI: Record<string, string> = {
   'For which pet?': 'किस पालतू के लिए?',
   'How will they get in?': 'वे अंदर कैसे आएँगे?',
   'Add helper': 'हेल्पर जोड़ें',
+  'Pawly – your assistant': 'Pawly – आपकी सहायक',
   'Add a helper to get check-ins on these tasks.': 'इन कामों पर चेक-इन के लिए हेल्पर जोड़ें।',
   'Society or building': 'सोसायटी या बिल्डिंग',
   'Which language?': 'कौन सी भाषा?',

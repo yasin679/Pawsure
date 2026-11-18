@@ -24,7 +24,7 @@ test.describe('M. Login separation and security (on screen)', () => {
 
   test('M3 Backup can acknowledge an emergency the owner reported', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.getByRole('button', { name: 'Report a problem or emergency' }).click();
+    await tab(page, 'Me'); await page.locator('button.li', { hasText: 'Report a problem' }).click(); // SOS moved from Home to Me (18 Nov)
     await page.getByRole('dialog').getByRole('button', { name: 'Pet hurt' }).click();
     await signOut(page);
     await signIn(page, '9700000008');

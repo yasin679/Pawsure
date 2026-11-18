@@ -140,7 +140,8 @@ export function createApp(input: Deps) {
   app.get('/v1/societies', async (c) => {
     const state = c.req.query('state') ?? '', city = c.req.query('city') ?? '', q = (c.req.query('q') ?? '').trim().toLowerCase();
     const cities = state ? (INDIA[state] ?? []).map(n => ({ city: n, state })) : INDIA_STATES.flatMap(s => INDIA[s]!.map(n => ({ city: n, state: s })));
-    const rows = city ? await db.query<Soc>(`select id, name, area, city, state from societies where city=$1 order by name`, [city]) : [];
+    // ?all=1: every listed society at once (sign-up asks just "which society?", each one knows its city and state)
+    const rows = city ? await db.query<Soc>(`select id, name, area, city, state from societies where city=$1 order by name`, [city]) : c.req.query('all') ? await db.query<Soc>(`select id, name, area, city, state from societies order by city, name`) : [];
     return c.json({ states: INDIA_STATES, cities, societies: rows.filter(r => !q || `${r.name} ${r.area ?? ''}`.toLowerCase().includes(q)) });
   });
   /** From the phone's location: the nearest listed city (and its state) and, within 2 km, the nearest listed society.

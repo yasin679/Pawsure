@@ -85,11 +85,12 @@ function AddTaskSheet({ hh, pets, petId, assignee, now, onClose, onAdded }: { hh
 }
 
 const d0Tracked = (day: DayView | null) => day?.day.mode === 'tracked';
-export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet, onAddHelper, openPlan, onPlanOpened, onWatchHelper }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void; onAddHelper?: () => void; openPlan?: boolean; onPlanOpened?: () => void; onWatchHelper?: () => void }) {
+export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover, onOpenRequest, onEditRoutine, onAddPet, onAddHelper, openPlan, onPlanOpened, onWatchHelper }: { hh: string; day: DayView | null; pets: Pet[]; incidents: Incident[]; ownerName: string; reload: () => void; onFindCover: (draft?: string) => void; onOpenRequest?: (id: string) => void; onEditRoutine?: () => void; onAddPet?: () => void; onAddHelper?: () => void; openPlan?: boolean | 'sos'; onPlanOpened?: () => void; onWatchHelper?: () => void }) {
   // Me → Today’s plan opens the plan here (once you've left, Home no longer shows a link to it)
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [added, setAdded] = useState<string[]>([]);
-  useEffect(() => { if (openPlan) { setSheet('plan'); onPlanOpened?.(); } }, [openPlan]);
+  // Me → Today's plan or Me → Report a problem opens that sheet here on Home.
+  useEffect(() => { if (openPlan) { setSheet(openPlan === 'sos' ? 'sos' : 'plan'); onPlanOpened?.(); } }, [openPlan]);
   const [task, setTask] = useState<DayTask | null>(null);
   const [inc, setInc] = useState<Incident | null>(null);
   const [note, setNote] = useState(''); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
@@ -197,7 +198,6 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <div className="th-bg" aria-hidden="true" />
         <div className="th-top">
           <div className="grow"><h2 className="th-greet">{tr('Hi')}, {first} <span className="wave" aria-hidden="true">👋</span></h2><div className="th-date">{tr('Here’s who’s helping today.')}</div></div>
-          <button className="th-sos" onClick={() => setSheet('sos')} aria-label="Report a problem or emergency"><Icon name="phone" size={18} />{tr('SOS')}</button>
         </div>
       </header>
 
@@ -205,15 +205,14 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         <div className="row"><HelperAvatar who={d.mode === 'uncovered' || d.helperUnavailable || (d.mode === 'tracked' && helpers && !helperRow) ? 'none' : d.mode === 'friend' ? 'friend' : /^sunita/i.test(helperName) ? 'sunita' : 'helper'} seed={d.mode === 'friend' ? 'friend' : helperRow?.id ?? helperName} name={d.mode === 'friend' ? '' : helperName} />
           <div className="grow"><span className="eyebrow">{tr('Your help today')}</span><h2>{d.mode === 'uncovered' ? tr('Nobody yet') : d.mode === 'friend' ? tr('A friend (Find cover)') : helperName || tr('No helper added yet')}</h2><div className="small muted">{tr(HELP_SUB[d.mode] ?? MODE[d.mode] ?? d.mode)}</div></div></div>
         {d.mode === 'tracked' && helperRow && invite !== 'yes' && <div className={`invite-pill ${invite}`} role="status">{invite === 'pending' ? <span className="ip-text"><b>⏳ {tr('Invite pending')}</b><span>{tr('WhatsApp message sent. Waiting for her to accept.')}</span></span> : invite === 'notnow' ? <>✋ {tr('She said “not now” to the invite')}</> : <>⏸ {tr('She stopped check-ins')}</>}
-          {invite === 'pending' && <button className="btn ghost sm" onClick={() => run(() => api(`${H}/helpers/${helperRow.id}/resend`, { body: {} }), () => setMsg(`Invite sent again to ${helperFirst} on WhatsApp.`))}>{tr('Resend')}</button>}
-          {invite === 'pending' && onWatchHelper && <button className="btn ghost sm watch-helper" onClick={onWatchHelper}>{tr('Watch on')} {helperFirst}’s {tr('phone')}</button>}</div>}
+          {invite === 'pending' && <button className="btn ghost sm" onClick={() => run(() => api(`${H}/helpers/${helperRow.id}/resend`, { body: {} }), () => setMsg(`Invite sent again to ${helperFirst} on WhatsApp.`))}>{tr('Resend')}</button>}</div>}
         {carer.steps && (d.mode !== 'tracked' || invite === 'yes') && <ol className="help-track" aria-label="Help status">{(['Accepted', 'Checked in', 'Completed'] as const).map((st, i) => <li key={st} className={i < carer.at ? 'done' : i === carer.at ? 'now' : ''} aria-current={i === carer.at ? 'step' : undefined}><span className="ht-dot">{i < carer.at || (i === carer.at && st === 'Completed') ? '✓' : ''}</span>{tr(st)}</li>)}</ol>}
         {d.mode === 'trusted' && <><div className="small muted">No check-ins or alerts today. Tap Covered when it’s done.</div>{day.covered.household !== 'Covered' && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/trusted-covered`, { body: {} }))}>{tr('Covered')}</button>}</>}
         {d.helperUnavailable && <Banner kind="warn" icon="!">{helperFirst} can’t come today{d.unavailableReason ? ` (${d.unavailableReason})` : ''}. Your original plan is kept.</Banner>}
         {needsCover && <div className="btnrow">{d.helperUnavailable && ov?.preDeparture.warn && !ov.jobs.some(j => j.active) && <button className="btn primary sm" onClick={() => run(() => api(`${H}/day/pre-departure`, { body: { option: 'ask_circle_now' } }))}><Icon name="friends" size={18} />{tr('Ask my backups')}</button>}</div>}
         {noHelper ? <button className="btn primary block" onClick={onAddHelper}><Icon name="plus" size={18} />{tr('Add helper')}</button>
           : <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
-          {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
+          {d.mode === 'tracked' && !d.helperUnavailable && invite !== 'pending' && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
       </section>
       {reviewList.map(t => <div key={t.id} className="review-note" role="status"><span className="rn-ic" aria-hidden="true">🎉</span>
         <div className="grow"><b>{helperFirst} {tr('completed')} {t.title}</b><div className="small">{petName(t.petId)} · {fmt(t.due)} · {tr('photo received')}</div></div>

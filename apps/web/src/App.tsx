@@ -55,7 +55,7 @@ export function App() {
   // One-time task links for a substitute or an ad-hoc number (PS-128, PS-133): /t/<token>, or #task-<token> in the demo.
   const taskToken = location.pathname.startsWith('/t/') ? location.pathname.slice(3) : hash.startsWith('#task-') ? hash.slice(6) : null;
   const [authed, setAuthed] = useState(!!session.get());
-  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [planAsk, setPlanAsk] = useState(false); const [askFriend, setAskFriend] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [planAsk, setPlanAsk] = useState<boolean | 'sos'>(false); const [askFriend, setAskFriend] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [day, setDay] = useState<DayView | null>(null);
@@ -128,6 +128,7 @@ export function App() {
       <ThinCard thin={thin} onOpen={() => setSub('backups')} />
       <div className="list">
         <button className="li" onClick={() => { go('find'); setFindForm(true); }}><span className="avatar icon"><Icon name="search" size={20} /></span><div className="grow"><b>{tr('Cover requests')}</b><div className="small muted">{tr('Requests sent to friends and their replies')}</div></div><span className="chev">›</span></button>
+        <button className="li" onClick={() => { setPlanAsk('sos'); go('today'); }}><span className="avatar icon"><Icon name="alert" size={20} /></span><div className="grow"><b>{tr('Report a problem')}</b><div className="small muted">{tr('Pet hurt or unwell, a lost key, a missed visit')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => { setPlanAsk(true); go('today'); }}><span className="avatar icon"><Icon name="list" size={20} /></span><div className="grow"><b>{tr('Today’s plan')}</b><div className="small muted">{tr('Who’s caring, timeline, day report, routine, tomorrow')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => setSub('backups')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Backups')}</b><div className="small muted">{tr('People asked in order if a task is at risk · standing approval')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => setSub('privacy')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Profile and what friends see')}</b><div className="small muted">{tr('Edit name, city, society, tower and flat; privacy; nearby members (off)')}</div></div><span className="chev">›</span></button>

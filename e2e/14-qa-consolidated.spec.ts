@@ -39,21 +39,23 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
     await expect(page.locator('dl.kv')).toContainText('Tower B');
   });
 
-  test('R2 PAW-018/036 sign-up asks for the state and city first; Pune and Mumbai list their own Lake Vista CHS', async ({ page }) => {
+  test('R2 Sign-up asks one question for home: every listed society in one list, labelled with its city (Pune and Mumbai each have a Lake Vista CHS)', async ({ page }) => {
     await signUp(page, '9822200077');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByRole('heading', { name: 'Your information', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pawly – your assistant', level: 1 })).toBeVisible();
+    await expect(page.locator('.pb-steps li[aria-current="step"]')).toContainText('Your information');
     await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
     await aboutYou(page, 'Isha');
     await page.getByRole('button', { name: 'Choose manually' }).click();
-    await pick(page, 'stt', 'Maharashtra');
-    await pick(page, 'cty', 'Pune');
+    await expect(page.locator('#stt')).toHaveCount(0); // no state or city questions
     await page.locator('#soc').click();
-    await expect(page.getByRole('option', { name: 'Lake Vista CHS · Baner' })).toHaveCount(1);
-    await expect(page.getByRole('option', { name: /Powai/ })).toHaveCount(0);
-    await page.getByRole('option', { name: 'Lake Vista CHS · Baner' }).click();
-    await expect(page.locator('#tw')).toBeVisible(); // the same form moves on to the tower
+    await expect(page.getByRole('option', { name: 'Lake Vista CHS · Baner, Pune' })).toHaveCount(1);
+    await expect(page.getByRole('option', { name: 'Lake Vista CHS · Powai, Mumbai' })).toHaveCount(1);
+    await page.getByRole('option', { name: 'Lake Vista CHS · Baner, Pune' }).click();
+    await expect(page.locator('.cb-sum').last()).toContainText('Pune, Maharashtra'); // city and state come with the society
+    await expect(page.locator('#tw')).toHaveCount(0); // no tower or flat questions
+    await expect(page.getByRole('button', { name: 'Create my home' })).toBeVisible();
   });
 
   test('R3 PAW-029 Priya pauses for 6 days: the switch shows On with the dates; turning it off ends the pause', async ({ page }) => {
@@ -180,26 +182,20 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
 });
 
 test.describe('S. Onboarding conversation (15 Nov)', () => {
-  test('S1 A typed city in another state is caught at the city question, and the home is created after fixing the state', async ({ page }) => {
+  test('S1 A society that isn’t listed is typed as “name, city”; the city is checked, then the home is created', async ({ page }) => {
     await boot(page); await signUp(page, '9822200099');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
-    const next = () => page.getByRole('button', { name: 'Next', exact: true }).click();
     await aboutYou(page, 'Isha');
     await page.getByRole('button', { name: 'Choose manually' }).click();
-    await pick(page, 'stt', 'Karnataka');
-    await page.getByRole('button', { name: 'My city isn’t listed' }).click();
-    await page.locator('#ctt').fill('Mumbai');
-    await expect(page.getByText(/Mumbai is in Maharashtra, not Karnataka/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
-    await page.getByRole('button', { name: 'Back', exact: true }).click(); // back to the state, inside the same form
-    await pick(page, 'stt', 'Maharashtra');
-    await pick(page, 'cty', 'Mumbai');
     await page.getByRole('button', { name: 'My society isn’t listed' }).click();
-    await page.locator('#sct').fill('12345');
-    await expect(page.getByText('Enter your society’s name, not just numbers.')).toBeVisible();
-    await page.locator('#sct').fill('Green Acres CHS'); await next();
-    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await page.locator('#sct').fill('Green Acres CHS');
+    await expect(page.getByText('Type the society name, then a comma and your city.')).toBeVisible();
+    await page.locator('#sct').fill('Green Acres CHS, Atlantis');
+    await expect(page.getByText('Add your city after the comma, e.g. Mumbai.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+    await page.locator('#sct').fill('Green Acres CHS, Mumbai'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.locator('.cb-sum').last()).toContainText('Mumbai, Maharashtra');
     await page.getByRole('button', { name: 'Create my home' }).click();
     await petAndCare(page);
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
@@ -214,7 +210,7 @@ test.describe('T. Home location from the phone (16 Nov)', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await aboutYou(page, 'Isha');
   };
-  test('T1 The society, city and state are found from the location; Yes skips those questions', async ({ page }) => {
+  test('T1 The society, city and state are found from the location; Yes goes straight to Create my home', async ({ page }) => {
     await start(page, '9822200101');
     await expect(page.getByText('Is this home?')).toBeVisible();
     await expect(page.locator('.cb-sum').last()).toContainText('Lake Vista CHS, Powai');
@@ -222,16 +218,15 @@ test.describe('T. Home location from the phone (16 Nov)', () => {
     await expect(page.locator('.cb-sum').last()).toContainText('Maharashtra');
     await page.getByRole('button', { name: 'Yes, that’s home' }).click();
     await expect(page.getByRole('button', { name: /Change: 📍 Lake Vista CHS, Powai/ })).toBeVisible();
-    await expect(page.locator('#tw')).toBeVisible(); // straight to the tower question
-    await expect(page.locator('#stt')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Create my home' })).toBeVisible();
+    await expect(page.locator('#soc')).toHaveCount(0);
   });
-  test('T2 Change keeps the suggestion filled in and lets the owner pick another society', async ({ page }) => {
+  test('T2 Change opens the society list, with the found city first, and the owner picks another society', async ({ page }) => {
     await start(page, '9822200102');
     await page.getByRole('button', { name: 'Change', exact: true }).click();
-    await expect(page.locator('#stt')).toContainText('Maharashtra'); // already filled in
-    await pick(page, 'stt', 'Maharashtra'); await pick(page, 'cty', 'Mumbai');
-    await page.locator('#soc').click(); await page.getByRole('option', { name: 'Hiranandani Gardens · Powai' }).click();
-    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await page.locator('#soc').click();
+    await expect(page.getByRole('option').first()).toContainText('Mumbai'); // the found city's societies come first
+    await page.getByRole('option', { name: 'Hiranandani Gardens · Powai, Mumbai' }).click();
     await expect(page.locator('.cb-sum').last()).toContainText('Hiranandani Gardens, Powai');
   });
 });
@@ -254,12 +249,12 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await intakeInfo(page, 'Isha');
     await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: /Dog/ }).click();
-    await page.getByRole('button', { name: 'Skip', exact: true }).click(); await page.getByRole('button', { name: 'Female', exact: true }).click();
     await page.getByRole('button', { name: '1–3 years' }).click();
     await page.getByRole('button', { name: 'Speak your answer' }).click();
     await expect(page.locator('#pf0')).toHaveValue('Two cups of rice and curd at lunch');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Change: Two cups of rice and curd at lunch' })).toBeVisible();
+    await expect(page.locator('.cb.me', { hasText: 'Two cups of rice and curd at lunch' })).toBeVisible(); // the answer, saved with the pet
+    await expect(page.getByText('Coco’s profile is saved.')).toBeVisible();
   });
   test('U2 “My house help” asks her name and WhatsApp number, sends the invite, and Home shows it pending until she accepts', async ({ page }) => {
     await toCare(page, '9822200202');
@@ -338,7 +333,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await toCare(page, '9822200208');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500016' } });
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
-    await page.getByRole('button', { name: /Watch on Lata/ }).click();
+    await expect(page.locator('.wa-dock')).toBeVisible(); // her WhatsApp opens beside the owner's phone after the invite
     const wa = page.frameLocator('.wa-dock iframe');
     for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click(); // invite → chat → ID → join with photos
     await expect(page.locator('.help-card')).not.toContainText('Invite pending', { timeout: 10000 });
@@ -426,30 +421,22 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
 });
 
 test.describe('V. Breed and sex, and small forms in the conversation (16 Nov)', () => {
-  test('V1 Breed and sex are one question; the answers show as one reply and are saved on the pet', async ({ page }) => {
+  test('V1 Sign-up asks only the pet’s name, type, age and food: no breed, sex, health or vet; those start as “Not added yet”', async ({ page }) => {
     await boot(page); await signUp(page, '9822200301');
     await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await intakeInfo(page, 'Isha');
     await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: /Dog/ }).click();
-    const form = page.getByRole('group', { name: 'Breed and sex' });
-    await expect(form).toContainText('1 of 2');
-    await form.locator('#pb0').fill('Golden Retriever'); await form.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(form).toContainText('2 of 2');
-    await form.getByRole('button', { name: 'Back' }).click();
-    await expect(form.locator('#pb0')).toHaveValue('Golden Retriever');
-    await form.getByRole('button', { name: 'Next', exact: true }).click(); await form.getByRole('button', { name: 'Female', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Change: Golden Retriever · Female' })).toBeVisible();
     await page.getByRole('button', { name: '1–3 years' }).click();
+    await expect(page.getByRole('group', { name: 'Breed and sex' })).toHaveCount(0);
     await page.locator('#pf0').fill('Kibble twice a day'); await page.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: 'None known', exact: true }).click(); await page.getByRole('button', { name: 'None', exact: true }).click();
-    await page.locator('#pv0').fill('Dr. Rao'); await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.locator('#pp0').fill('+91 22 5555 0101'); await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.getByText('Coco’s profile is saved.')).toBeVisible();
+    await expect(page.getByText('Coco’s profile is saved.')).toBeVisible(); // straight after the food question
+    await expect(page.getByRole('group', { name: 'Health' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Vet' })).toHaveCount(0);
     const me = await api(page, 'GET', '/v1/me'); const hh = me.body.memberships[0].household_id;
-    const pets = (await api(page, 'GET', `/v1/households/${hh}/pets`)).body as { name: string; breed: string; sex: string }[];
-    expect(pets.find(p => p.name === 'Coco')).toMatchObject({ breed: 'Golden Retriever', sex: 'Female' });
+    const pets = (await api(page, 'GET', `/v1/households/${hh}/pets`)).body as { name: string; vet_name: string; allergies: string }[];
+    expect(pets.find(p => p.name === 'Coco')).toMatchObject({ vet_name: 'Not added yet', allergies: 'Not added yet' });
   });
 });
 

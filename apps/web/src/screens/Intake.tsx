@@ -18,6 +18,8 @@ interface Near { city: string | null; state: string | null; society: { id: strin
 /** Lake Vista CHS, Powai: the demo's "use a demo location", for browsers (or the shared demo) where location is blocked. */
 const DEMO_SPOT = { lat: 19.1178, lng: 72.9058 };
 type Species = 'Dog' | 'Cat' | 'Other';
+/** Sign-up no longer asks about health or the vet: they start as "Not added yet" and are filled in from the pet's profile. */
+const NOT_YET = { allergies: 'Not added yet', medicines: 'Not added yet', vet_name: 'Not added yet', vet_phone: 'Not added yet' };
 interface PetDraft { name: string; species: Species | ''; breed: string; sex: string; age: string; food: string; allergies: string; medicines: string; vet_name: string; vet_phone: string; sameVet: boolean; id?: string }
 const blankPet = (): PetDraft => ({ name: '', species: '', breed: '', sex: '', age: '', food: '', allergies: '', medicines: '', vet_name: '', vet_phone: '', sameVet: false });
 /** One question in the conversation. `chapter` is the playbook it belongs to (0 info, 1 pet, 2 care). */
@@ -172,6 +174,8 @@ export function Intake({ onDone }: { onDone: () => void }) {
   const mic = useVoice();
 
   useEffect(() => { api<{ states: string[] }>('/v1/societies').then(r => setStates(r.states)).catch(() => setStates([])); }, []);
+  const [allSocs, setAllSocs] = useState<(Society & { city: string; state: string })[] | null>(null);
+  useEffect(() => { api<{ societies: (Society & { city: string; state: string })[] }>('/v1/societies?all=1').then(r => setAllSocs(r.societies)).catch(() => setAllSocs([])); }, []);
   useEffect(() => { if (p.state) api<{ cities: { city: string }[] }>(`/v1/societies?state=${encodeURIComponent(p.state)}`).then(r => setCities(r.cities.map(x => x.city))).catch(() => setCities([])); else setCities([]); }, [p.state]);
   useEffect(() => { setSocs(null); if (p.city) api<{ societies: Society[] }>(`/v1/societies?city=${encodeURIComponent(p.city)}`).then(r => { setSocs(r.societies); if (!r.societies.length) setTypedSoc(true); }).catch(() => { setSocs([]); setTypedSoc(true); }); }, [p.city]);
 
@@ -233,37 +237,17 @@ export function Intake({ onDone }: { onDone: () => void }) {
         ? <div className="cb-chips big"><button type="button" className="chip primary" onClick={() => useFound(true)}>{tr('Yes, that’s home')}</button><button type="button" className="chip" onClick={() => useFound(false)}>{tr('Change')}</button></div>
         : <div className="cb-chips">{geo.status === 'failed' && demoMode && <button type="button" className="chip" onClick={() => lookup(DEMO_SPOT.lat, DEMO_SPOT.lng)}>📍 {tr('Use a demo location (Powai, Mumbai)')}</button>}
             <button type="button" className="chip" onClick={() => { setGeoOk(false); next(); }}>{tr('Choose manually')}</button></div> },
-    { key: 'address', chapter: 0, answer: [p.society, p.tower && `${tr('Tower')} ${p.tower}`, p.city].filter(Boolean).join(' · '),
-      ask: <><b>{tr('Where’s home?')}</b><span className="cb-note">{tr('Friends see your society and tower only.')} 🔒 {tr('The flat stays private until you confirm a friend for a visit.')}</span></>,
-      compose: () => <StepForm key="address" title={tr('Your home')} mic={mic} fields={[
-        { id: 'stt', label: tr('State'), kind: 'pick', placeholder: tr('Choose your state'), choices: states.map(x => ({ value: x, label: x })), loading: !states.length, initial: p.state,
-          resets: ['cty', 'soc'], onValue: v => setP(x => x.state === v ? x : { ...x, state: v, city: '', societyId: '', society: '' }) },
-        { id: 'cty', label: tr('City'), kind: 'pick', placeholder: tr('Choose your city'), choices: cities.map(x => ({ value: x, label: x })), loading: !cities.length, initial: p.city,
-          other: 'My city isn’t listed', typedId: 'ctt', typedPlaceholder: tr('Your city or town'), max: 60, validate: (v, all) => cityProblem(v, all.stt ?? p.state),
-          resets: ['soc'], onValue: v => setP(x => x.city === v ? x : { ...x, city: v, societyId: '', society: '' }) },
-        { id: 'soc', label: tr('Society or building'), kind: 'pick', placeholder: tr('Choose your society'), hint: tr('This is your location anchor.'),
-          choices: (socs ?? []).map(x => ({ value: x.id, label: `${x.name}${x.area ? ' · ' + x.area : ''}` })), loading: !socs, forceTyped: !!socs && !socs.length,
-          initial: p.societyId || p.society, initialTyped: !p.societyId && !!p.society,
-          other: 'My society isn’t listed', typedId: 'sct', typedPlaceholder: 'e.g. Green Acres CHS, Andheri East', max: 120, validate: v => socProblem(v) },
-        { id: 'tw', label: tr('Tower / wing'), placeholder: tr('e.g. C or Wing 2'), optional: true, max: 40, initial: p.tower },
-        { id: 'fl', label: tr('Flat (private)'), placeholder: tr('e.g. C-702'), optional: true, mono: true, max: 20, initial: p.flat }]}
-        onSubmit={v => { const so = v['soc$typed'] ? undefined : socs?.find(y => y.id === v.soc);
-          setP(x => ({ ...x, state: v.stt!, city: v.cty!, societyId: so?.id ?? '', society: so ? `${so.name}${so.area ? ', ' + so.area : ''}` : v.soc!, tower: v.tw ?? '', flat: v.fl ?? '' })); next(); }} /> },
-    { key: 'society', chapter: 0, answer: p.society, draft: typedSoc ? p.society : '',
-      ask: <><b>{tr('Which society or building do you live in?')}</b><span className="cb-note">{tr('This is your location anchor. Friends see your society and tower only.')}</span></>,
-      compose: () => typedSoc || (socs && !socs.length)
-        ? <>{text('sct', tr('Society name'), 'e.g. Green Acres CHS, Andheri East', v => { setP({ ...p, societyId: '', society: v }); next(); }, { max: 120, validate: v => v.trim().length < 2 ? tr('Enter at least 2 letters.') : !hasLetter(v) ? tr('Enter your society’s name, not just numbers.') : null })}
+    { key: 'society', chapter: 0, answer: [p.society, p.city].filter(Boolean).join(' · '), draft: typedSoc ? (p.society ? `${p.society}, ${p.city}` : '') : '',
+      ask: <><b>{tr('Which society or building do you live in?')}</b><span className="cb-note">{tr('Friends see your society only.')}</span></>,
+      compose: () => typedSoc
+        ? <>{text('sct', tr('Society name and city'), 'e.g. Green Acres CHS, Mumbai', v => { const i = v.lastIndexOf(','); const city = v.slice(i + 1).trim(); const st = stateOfCity(city);
+            setP({ ...p, societyId: '', society: v.slice(0, i).trim(), city: city.replace(/^./, c => c.toUpperCase()), state: st ?? '' }); next(); },
+          { max: 140, validate: v => { const i = v.lastIndexOf(','); if (i < 2 || !hasLetter(v.slice(0, i))) return tr('Type the society name, then a comma and your city.'); return stateOfCity(v.slice(i + 1).trim()) ? null : tr('Add your city after the comma, e.g. Mumbai.'); } })}
           <div className="cb-note small">{tr('Pawsure support checks new societies.')}</div>
-          {!!socs?.length && <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedSoc(false); setDraft(''); }}>{tr('Choose from the list')}</button></div>}</>
-        : <><Picker id="soc" label={tr('Society')} placeholder={tr('Choose your society')} value={p.societyId} loading={!socs} options={(socs ?? []).map(x => ({ value: x.id, label: `${x.name}${x.area ? ' · ' + x.area : ''}` }))}
-          onPick={v => { const x = socs?.find(y => y.id === v); if (!x) return; setP({ ...p, societyId: x.id, society: `${x.name}${x.area ? ', ' + x.area : ''}` }); next(); }} />
+          <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedSoc(false); setDraft(''); }}>{tr('Choose from the list')}</button></div></>
+        : <><Picker id="soc" label={tr('Society')} placeholder={tr('Choose your society')} value={p.societyId} loading={!allSocs} options={(allSocs ?? []).slice().sort((x, y) => (y.city === p.city ? 1 : 0) - (x.city === p.city ? 1 : 0)).map(x => ({ value: x.id, label: `${x.name}${x.area ? ' · ' + x.area : ''}, ${x.city}` }))}
+          onPick={v => { const x = allSocs?.find(y => y.id === v); if (!x) return; setP({ ...p, societyId: x.id, society: `${x.name}${x.area ? ', ' + x.area : ''}`, city: x.city, state: x.state }); next(); }} />
           <div className="cb-chips"><button type="button" className="chip" onClick={() => { setTypedSoc(true); setDraft(''); }}>{tr('My society isn’t listed')}</button></div></> },
-    { key: 'unit', chapter: 0, answer: [p.tower && `${tr('Tower')} ${p.tower}`, p.flat && '•••• ' + tr('(private)')].filter(Boolean).join(' · ') || tr('Skip'),
-      ask: <><b>{tr('Which tower and flat?')}</b><span className="cb-note">{tr('Friends see your tower so they can find you.')} 🔒 {tr('The flat stays private until you confirm a friend for a visit.')}</span></>,
-      compose: () => <StepForm key="unit" title={tr('Your home')} mic={mic} fields={[
-        { id: 'tw', label: tr('Tower / wing'), placeholder: tr('e.g. C or Wing 2'), optional: true, max: 40, initial: p.tower },
-        { id: 'fl', label: tr('Flat (private)'), placeholder: tr('e.g. C-702'), optional: true, mono: true, max: 20, initial: p.flat }]}
-        onSubmit={v => { setP(x => ({ ...x, tower: v.tw ?? '', flat: v.fl ?? '' })); next(); }} /> },
     { key: 'home', chapter: 0, answer: tr('Create my home'),
       ask: <>{tr('Here’s your home. Tap any answer above to change it.')}
         <dl className="cb-sum"><dt>{tr('Name')}</dt><dd>{p.displayName}</dd><dt>{tr('Language')}</dt><dd>{langLabel(p.language)}</dd>
@@ -281,31 +265,11 @@ export function Intake({ onDone }: { onDone: () => void }) {
         compose: () => text(`pn${i}`, tr('Pet’s name'), tr('e.g. Bruno'), v => { setPet(i, { name: v }); next(); }, { max: 40, validate: v => hasLetter(v) ? null : tr('Give your pet a name with letters.') }) },
       { key: `p${i}.species`, chapter: 1, pet: i, answer: x.species, ask: <><b>{tr('Is')} {nm} {tr('a dog, a cat or something else?')}</b></>,
         compose: () => <div className="cb-chips big">{(['Dog', 'Cat', 'Other'] as Species[]).map(sp => <button key={sp} type="button" className="chip" aria-pressed={x.species === sp} onClick={() => { setPet(i, { species: sp }); next(); }}>{sp === 'Dog' ? '🐶 ' : sp === 'Cat' ? '🐱 ' : '🐾 '}{tr(sp)}</button>)}</div> },
-      { key: `p${i}.breed`, chapter: 1, pet: i, answer: [x.breed, x.sex].filter(Boolean).join(' · ') || tr('Not sure'),
-        ask: <><b>{tr('What breed is')} {nm}? {tr('And male or female?')}</b></>,
-        compose: () => <StepForm key={`b${i}`} title={tr('Breed and sex')} mic={mic} fields={[
-          { id: `pb${i}`, label: tr('Breed'), placeholder: tr('Type the breed or pick one'), optional: true, max: 60, initial: x.breed, voice: true, quick: x.species === 'Dog' ? ['Indie', 'Labrador', 'Golden Retriever', 'Beagle'] : x.species === 'Cat' ? ['Indian shorthair', 'Persian', 'Siamese'] : undefined },
-          { id: `ps${i}`, label: tr('Sex'), kind: 'choice', options: ['Male', 'Female', 'Not sure'] }]}
-          onSubmit={v => { setPet(i, { breed: v[`pb${i}`] ?? '', sex: v[`ps${i}`] === 'Not sure' ? '' : (v[`ps${i}`] ?? '') }); next(); }} /> },
       { key: `p${i}.age`, chapter: 1, pet: i, answer: x.age || tr('Skip'), draft: x.age, ask: <><b>{tr('How old is')} {nm}?</b></>,
         compose: () => text(`pa${i}`, tr('Age'), tr('Or type it, e.g. 3 years'), v => { setPet(i, { age: v }); next(); }, { optional: true, max: 30, chips: AGES }) },
       { key: `p${i}.food`, chapter: 1, pet: i, answer: x.food, draft: x.food,
         ask: <><b>{tr('What does')} {nm} {tr('eat, and how much?')}</b><span className="cb-note">{tr('Your helper and any friend who covers will see this.')}</span></>,
-        compose: () => text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => { setPet(i, { food: v }); next(); }, { max: 300 , voice: true }) },
-      { key: `p${i}.health`, chapter: 1, pet: i, answer: `${tr('Allergies')}: ${x.allergies} · ${tr('Medicines')}: ${x.medicines}`,
-        ask: <><b>{tr('A couple of health questions about')} {nm}.</b><span className="cb-note">{tr('Write medicines as on the vet’s card. A medicine is never handed to a backup.')}</span></>,
-        compose: () => <StepForm key={`h${i}`} title={tr('Health')} mic={mic} fields={[
-          { id: `pl${i}`, label: `${tr('Any allergies?')}`, placeholder: tr('e.g. Chicken'), max: 200, quick: ['None known'], voice: true, initial: x.allergies === 'None known' ? '' : x.allergies },
-          { id: `pm${i}`, label: `${tr('Does')} ${nm} ${tr('take any medicines?')}`, placeholder: tr('e.g. Joint supplement, 1 chewable with lunch'), max: 300, quick: ['None'], voice: true, initial: x.medicines === 'None' ? '' : x.medicines }]}
-          onSubmit={v => { setPet(i, { allergies: v[`pl${i}`]!, medicines: v[`pm${i}`]! }); next(); }} /> },
-      { key: `p${i}.vet`, chapter: 1, pet: i, answer: x.sameVet ? `${tr('Same as')} ${pets[0]!.name}` : `${x.vet_name} · ${x.vet_phone}`,
-        ask: <><b>{tr('Who is')} {nm}{tr('’s vet?')}</b> {tr('Shown on the emergency card.')}</>,
-        compose: () => <StepForm key={`v${i}`} title={tr('Vet')} mic={mic} busy={busy} err={err} submit="Save"
-          top={i > 0 && pets[0]!.vet_name ? <div className="cb-chips"><button type="button" className="chip" disabled={busy} onClick={() => finishPet(i, { sameVet: true, vet_name: pets[0]!.vet_name, vet_phone: pets[0]!.vet_phone })}>{tr('Same as')} {pets[0]!.name}</button></div> : undefined}
-          fields={[
-            { id: `pv${i}`, label: tr('Vet’s name and clinic'), placeholder: tr('e.g. Dr. Rao, Powai Pet Clinic'), max: 120, validate: q => hasLetter(q) ? null : tr('Enter your vet’s name.'), initial: x.sameVet ? '' : x.vet_name },
-            { id: `pp${i}`, label: tr('Vet’s phone'), placeholder: '+91 22 5555 0101', max: 30, mono: true, numeric: true, validate: q => q.replace(/\D/g, '').length < 8 ? tr('Enter the full phone number.') : null, initial: x.vet_phone }]}
-          onSubmit={v => finishPet(i, { sameVet: false, vet_name: v[`pv${i}`]!, vet_phone: v[`pp${i}`]! })} /> }
+        compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}{text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => finishPet(i, { food: v, ...NOT_YET }), { max: 300 , voice: true })}</> }
     );
     all.push({ key: `p${i}.more`, chapter: 1, pet: i, answer: more[i] ? tr('Add another pet') : tr('No, that’s all'),
       ask: <>✓ {x.name}{tr('’s profile is saved.')} <b>{tr('Do you have another pet?')}</b></>,
@@ -337,7 +301,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
 
   // A confirmed location answers state and city (and society when one was found nearby).
   // A confirmed location answers the address form; only the society (if none was found nearby) and the tower/flat are asked then.
-  const steps = all.filter(x => geoOk ? !(x.key === 'address' || (x.key === 'society' && !!p.societyId)) : !(x.key === 'society' || x.key === 'unit'));
+  const steps = all.filter(x => !(geoOk && x.key === 'society' && !!p.societyId));
 
   /* ---------- moving through the steps ---------- */
   const cur = steps[Math.min(pos, steps.length - 1)]!;
@@ -389,7 +353,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
       const r = await api<{ id: string }>('/v1/households', { body: { displayName: p.displayName.trim(), language: p.language, state: p.state, city: p.city, ...(p.societyId ? { societyId: p.societyId } : { society: p.society.trim() }), tower: p.tower.trim() || undefined, flat: p.flat.trim() || undefined } });
       setHh(r.id); setLock(here + 1); setPos(here + 1);
     } catch (e) {
-      failed(e, here, (f) => f === 'displayName' ? 'about' : f === 'language' ? (langOther ? 'lang' : 'about') : !geoOk ? 'address' : f === 'tower' || f === 'flat' ? 'unit' : 'society');
+      failed(e, here, (f) => f === 'displayName' ? 'about' : f === 'language' ? (langOther ? 'lang' : 'about') : 'society');
     } finally { setBusy(false); }
   }
   async function finishPet(i: number, last: Partial<PetDraft>) {
@@ -401,7 +365,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
       else { const r = await api<{ id: string }>(`/v1/households/${hh}/pets`, { body }); setPet(i, { id: r.id }); }
       setFix(null); setLock(here + 1); setPos(here + 1);
     } catch (e) {
-      failed(e, here, f => `p${i}.${f === 'vet_phone' || f === 'vet_name' ? 'vet' : f === 'allergies' || f === 'medicines' ? 'health' : f === 'breed' || f === 'sex' ? 'breed' : f || 'name'}`);
+      failed(e, here, f => `p${i}.${f === 'food' ? 'food' : 'name'}`);
     } finally { setBusy(false); }
   }
   async function saveCare(who: string, h = helper) {
@@ -436,7 +400,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
 
   const shown = steps.slice(0, Math.min(pos, steps.length));
   return <>
-    <AppBar title={tr(CHAPTERS[chapter])} />
+    <AppBar title={tr('Pawly – your assistant')} />
     <ol className="pb-steps" aria-label="Setup progress">{CHAPTERS.map((c, i) => <li key={c} className={i < chapter ? 'done' : i === chapter ? 'now' : ''} aria-current={i === chapter ? 'step' : undefined}><span className="pb-dot">{i < chapter ? '✓' : i + 1}</span><span className="pb-lbl">{tr(c)}</span></li>)}</ol>
     <div className="body intake">
       <div className="chat" aria-live="polite">
