@@ -1044,3 +1044,9 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 /* the Out since card keeps ordinary buttons, centred, not stretched */
 .today .card.flat.out-card > .row{align-items:center}
 .today .card.flat.out-card .row > .btn{height:42px;flex:none;align-self:center;padding:0 16px}
+/* Out since: a compact card with smaller heading and buttons */
+.today .card.flat.out-card.out-now{min-height:0;padding:14px 16px}
+.today .card.flat.out-card.out-now b{font-size:1.05rem;line-height:1.25}
+.today .card.flat.out-card.out-now .muted{font-size:.85rem}
+.today .card.flat.out-card.out-now .row > .btn{height:34px;padding:0 12px;font-size:.85rem}
+.today .card.flat.out-card.out-now::after{width:180px;height:110px;bottom:-60px}
