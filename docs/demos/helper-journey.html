@@ -227,7 +227,15 @@ const M = {
   today: { mr: 'आज', en: 'Today' }, yesterday: { mr: 'काल', en: 'Yesterday' },
   practiceTag: { mr: 'सराव', en: 'Practice' }, idTag: { mr: 'ओळखपत्र', en: 'Photo ID' }
 };
-const t = k => M[k][LANG];
+// Names: Sunita, Neha, Bruno and Misty by default; inside the app demo, the app sends the real ones.
+let NAMES = { helper: 'Sunita', owner: 'Neha', pets: ['Bruno', 'Misty'] };
+const petList = (and) => NAMES.pets.length > 1 ? NAMES.pets.slice(0, -1).join(', ') + ' ' + and + ' ' + NAMES.pets[NAMES.pets.length - 1] : (NAMES.pets[0] || 'your pet');
+const fill = s => s.replace(/Bruno and Misty/g, petList('and')).replace(/Bruno आणि Misty/g, petList('आणि')).replace(/Sunita/g, NAMES.helper).replace(/Neha/g, NAMES.owner).replace(/Bruno/g, NAMES.pets[0] || 'your pet');
+const t = k => fill(M[k][LANG]);
+// Inside the app demo (an iframe on the same site), taps here are sent to the app, which records them for real.
+const EMBED = window.parent !== window;
+const emit = (action, extra = {}) => { if (EMBED) try { parent.postMessage({ pawsure: 'helper-phone', action, ...extra }, location.origin); } catch (e) {} };
+window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.pawsure !== 'setup') return; NAMES = { ...NAMES, ...e.data.names }; render(); });
 const mean = k => LANG === 'mr' ? `<span class="mean">Meaning: ${esc(M[k].en)}</span>` : '';
 const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const CODE = '4821';
@@ -300,7 +308,7 @@ function render() {
         <div class="wa-tabs"><span class="t ic">${IC.group}</span><span class="t on">${LANG === 'mr' ? 'चॅट्स' : 'CHATS'}</span><span class="t">${LANG === 'mr' ? 'स्टेटस' : 'STATUS'}<i></i></span><span class="t">${LANG === 'mr' ? 'कॉल्स' : 'CALLS'}</span></div></div>
       <div class="wa-list"><div class="wa-arch"><span class="ai">${IC.archive}</span><b>${LANG === 'mr' ? 'संग्रहित' : 'Archived'}</b></div>
       <button type="button" class="chatrow hot" data-go><span class="av paw">🐾</span><span class="meta"><span class="nm"><b>Pawsure</b><time class="new">6:42 PM</time></span><span class="pv"><span>${esc(t('consent').split('\n')[0])}</span><span class="un">1</span></span></span></button>
-      <div class="chatrow"><span class="av" style="background:#C77D57">N</span><span class="meta"><span class="nm"><b>Neha didi</b><time>5:10 PM</time></span><span class="pv"><span><span class="tk">✓✓</span> ${LANG === 'mr' ? 'हो, उद्या ११ वाजता येते.' : 'Yes, I’ll come at 11 tomorrow.'}</span></span></span></div>
+      <div class="chatrow"><span class="av" style="background:#C77D57">N</span><span class="meta"><span class="nm"><b>${esc(NAMES.owner)} didi</b><time>5:10 PM</time></span><span class="pv"><span><span class="tk">✓✓</span> ${LANG === 'mr' ? 'हो, उद्या ११ वाजता येते.' : 'Yes, I’ll come at 11 tomorrow.'}</span></span></span></div>
       <div class="chatrow"><span class="av" style="background:#7B5EA7">R</span><span class="meta"><span class="nm"><b>Ranjana</b><time>${LANG === 'mr' ? 'काल' : 'Yesterday'}</time></span><span class="pv"><span>🎤 0:24</span></span></span></div>
       <div class="chatrow"><span class="av" style="background:#3E8E7E">S</span><span class="meta"><span class="nm"><b>${LANG === 'mr' ? 'सोसायटी मदतनीस' : 'Society helpers'}</b><time>${LANG === 'mr' ? 'काल' : 'Yesterday'}</time></span><span class="pv"><span>Asha: ${LANG === 'mr' ? 'उद्या पाणी बंद आहे' : 'No water tomorrow'}</span></span></span></div>
       <div class="chatrow"><span class="av" style="background:#B8863B">A</span><span class="meta"><span class="nm"><b>Aai</b><time>14/11/26</time></span><span class="pv"><span>📷 ${LANG === 'mr' ? 'फोटो' : 'Photo'}</span></span></span></div></div>
@@ -339,7 +347,12 @@ function render() {
   const [what, tone, label] = s.owner;
   $('#owner').innerHTML = `<span>${what}</span><span class="pill ${tone}">${label}</span>`;
 }
-function go() { i = i === STEPS.length - 1 ? 0 : i + 1; render(); }
+function go() {
+  i = i === STEPS.length - 1 ? 0 : i + 1; render();
+  // what the helper just did, for the app: she sent her ID, then joined with photos (the highlighted answer)
+  if (i === 3) emit('id_sent');
+  if (i === 4) emit('joined', { method: 'photo' });
+}
 $('#steps').innerHTML = STEPS.map((s, k) => `<li><button type="button"><span class="n">${k + 1}</span><span><span class="who">${s.who}</span><span class="t" style="display:block">${s.title}</span><span class="d">${s.d}</span></span></button></li>`).join('');
 document.querySelectorAll('#steps li button').forEach((b, k) => b.addEventListener('click', () => { i = k; render(); }));
 $('#next').addEventListener('click', go);

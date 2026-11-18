@@ -1050,3 +1050,39 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .card.flat.out-card.out-now .muted{font-size:.85rem}
 .today .card.flat.out-card.out-now .row > .btn{height:34px;padding:0 12px;font-size:.85rem}
 .today .card.flat.out-card.out-now::after{width:180px;height:110px;bottom:-60px}
+/* 18 Nov: adding tasks from Home */
+.first-tasks{background:var(--surface);border-radius:28px;padding:18px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.ft-head{display:flex;gap:10px;align-items:center}
+.ft-head h2{font-size:1.3rem;margin:0}
+.ft-head p{margin:4px 0 0}
+.ft-head img{width:96px;height:auto;flex:none}
+.starters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.starter{display:flex;align-items:center;gap:10px;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:18px;padding:10px;color:var(--ink);min-width:0}
+.starter .task-ic{width:36px;height:36px;border-radius:12px}
+.starter > span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1}
+.starter b{font-size:.92rem;line-height:1.2}
+.starter .plus{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--deep,#24402C);color:#fff;font-weight:800;flex:none}
+.starter[aria-pressed="true"]{border-color:var(--b-green,#22A55A);background:var(--sage-soft,#E3ECD6)}
+.starter[aria-pressed="true"] .plus{background:var(--b-green,#22A55A)}
+.add-task-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:99px;background:var(--deep,#24402C);color:#fff;font-weight:800;font-size:.85rem;padding:7px 14px;flex:none}
+.tasks-locked .add-task-btn{margin-left:auto}
+.add-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.add-tile{display:flex;flex-direction:column;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--surface);border-radius:20px;padding:14px 6px;color:var(--ink);text-align:center}
+.add-tile:hover{border-color:var(--accent)}
+.add-tile b{font-size:.88rem;line-height:1.2}
+.task-ic.t-other{background:var(--b-sun,#FFC21A);color:#1F2A1F}
+/* the helper's WhatsApp beside the owner's phone (demo) */
+.wa-dock{display:flex;flex-direction:column;gap:8px;flex:1 1 340px;max-width:440px}
+.wa-dock iframe{width:100%;height:min(720px,calc(100vh - 150px));min-height:520px;border:0;border-radius:28px;background:transparent}
+.wa-note{margin:0}
+.invite-pill .watch-helper{background:var(--deep,#24402C)!important;color:#fff!important}
+/* pet tabs: white with an outline; the chosen one in the navigation's green */
+.today .pet-tab.petchip,.pet-tab.tone-0,.pet-tab.tone-1,.pet-tab.tone-2,.pet-tab.tone-3{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line-2)}
+.pet-tab.tone-0 b,.pet-tab.tone-1 b,.pet-tab.tone-2 b,.pet-tab.tone-3 b{color:var(--ink)}
+.pet-tab[aria-selected="true"]{background:var(--hero-a)!important;color:#fff;box-shadow:none}
+.pet-tab[aria-selected="true"] b{color:#fff}
+/* on a phone-width screen the simulated phones sit above the app: keep their last buttons clear of the floating tab bar */
+@media not ((min-width:600px) and (min-height:480px)){.pwa > .simdock{padding-bottom:104px}}
+.today .card.help-card .invite-pill{flex-wrap:wrap}
+.today .card.help-card .invite-pill .ip-text{flex:1 1 60%}
+.today .card.help-card .invite-pill .watch-helper{flex:1 1 100%;order:3}

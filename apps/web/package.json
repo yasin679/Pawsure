@@ -7,7 +7,7 @@
     "dev": "vite --port 5173",
     "build": "vite build",
     "preview": "vite preview --port 4173",
-    "build:demo": "vite build --mode demo && node -e \"require('fs').copyFileSync('../../node_modules/@electric-sql/pglite/dist/postgres.data','dist-demo/pglite-fs.wasm')\"",
+    "build:demo": "node scripts/helper-phone.mjs && vite build --mode demo && node -e \"require('fs').copyFileSync('../../node_modules/@electric-sql/pglite/dist/postgres.data','dist-demo/pglite-fs.wasm')\"",
     "preview:demo": "vite preview --mode demo --outDir dist-demo --port 4174 --strictPort"
   },
   "dependencies": {

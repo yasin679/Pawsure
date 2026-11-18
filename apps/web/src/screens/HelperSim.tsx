@@ -2,7 +2,7 @@
  * DEMO ONLY: plays Sunita's WhatsApp / basic phone against the real webhooks so the flow can be tested end to end.
  * Hidden unless the API runs in DEMO_MODE. Real helpers use WhatsApp or a basic phone — never this screen.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, API, type DayView } from '../api';
 
 interface Msg { template?: string | null; gloss?: string | null; direction: 'in' | 'out'; body: string; buttons: { id: string; label: string }[] | null; at: string; task_id: string | null }
@@ -62,5 +62,39 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
     </div>
     {lookin && <button className="btn sm block" onClick={() => { location.hash = 'lookin-' + lookin.replace(/^\/l\//, ''); }}>Open the backup’s look-in link (Ankita)</button>}
     {!prompted.length && <p className="xs">Task prompts arrive 10 minutes before each task. Move the clock forward.</p>}
+  </div>;
+}
+
+/**
+ * DEMO ONLY: the helper's WhatsApp, as she sees it (the same page reviewers get as the helper journey), shown
+ * beside the owner's phone. Her taps there are sent here and played against the real webhooks, so the owner's
+ * Home changes from "Invite pending" to "Accepted" while you watch.
+ */
+export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: string; owner: string; pets: string[]; onChange: () => void; onClose: () => void }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [helper, setHelper] = useState<{ mid: string; phone: string; name: string } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => { api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(setHelper).catch(() => setHelper(null)); }, [hh]);
+  const first = helper?.name.split(' ')[0] ?? 'Your helper';
+  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: pets.length ? pets : ['your pet'] } }, location.origin);
+  useEffect(setup, [first, owner, pets.join()]);
+  useEffect(() => {
+    const on = async (e: MessageEvent) => {
+      if (e.origin !== location.origin || e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone' || !helper) return;
+      const reply = (payload: string) => api('/webhooks/whatsapp', { body: { messageId: 'wa-' + Date.now() + Math.random().toString(36).slice(2, 6), from: helper.phone, type: 'button', payload: `${payload}:${hh}` }, auth: false });
+      if (e.data.action === 'id_sent') setNote(`${first} sent a photo ID.`);
+      if (e.data.action === 'joined') {
+        await reply('consent_yes'); await reply('method_' + (e.data.method ?? 'photo'));
+        await api('/jobs/tick', { body: {}, auth: false });
+        setNote(`${first} joined with photo check-ins. Her invite is now accepted on your Home.`);
+        onChange();
+      }
+    };
+    addEventListener('message', on); return () => removeEventListener('message', on);
+  }, [helper, hh, first]);
+  return <div className="wa-dock" aria-label={`${first}’s WhatsApp (simulated)`}>
+    <div className="banner sim"><span className="bi">⚙</span><div className="grow">{first}’s WhatsApp (simulated). Tap the highlighted part of her phone.</div><button className="btn ghost sm" onClick={onClose}>Hide</button></div>
+    {note && <div className="banner info wa-note" role="status">{note}</div>}
+    <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
   </div>;
 }

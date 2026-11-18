@@ -11,3 +11,4 @@ e2e/results/
 e2e/report/
 test-results/
 test-results-smoke/
+apps/web/public/helper-phone.html

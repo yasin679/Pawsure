@@ -10,7 +10,7 @@ import { Today } from './screens/Today';
 import { PetScreen } from './screens/PetScreen';
 import { RoutineScreen, HealthScreen, HelperScreen, CircleScreen } from './screens/CareSetup';
 import { LookIn } from './screens/LookIn';
-import { HelperSim } from './screens/HelperSim';
+import { HelperSim, HelperWhatsApp } from './screens/HelperSim';
 import { FindCover } from './screens/FindCover';
 import { CoverAssistant, Sparkle } from './screens/Assistant';
 import { Friends, PrivacyScreen } from './screens/Friends';
@@ -60,7 +60,7 @@ export function App() {
   const [day, setDay] = useState<DayView | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [invites, setInvites] = useState<{ id: string; role: string; society: string }[]>([]);
-  const [demo, setDemo] = useState(false); const [tools, setTools] = useState(toolsOn);
+  const [demo, setDemo] = useState(false); const [tools, setTools] = useState(toolsOn); const [waOpen, setWaOpen] = useState(false);
   const toggleTools = () => setTools(t => { try { localStorage.setItem(TOOLS_KEY, t ? '0' : '1'); } catch { /* private window */ } return !t; });
   const [online, setOnline] = useState(navigator.onLine);
   const [isFriend, setIsFriend] = useState(false); const [draft, setDraft] = useState(''); const [checked, setChecked] = useState(false); const [openReq, setOpenReq] = useState<string | null>(null); const [thin, setThin] = useState<{ keyHolders: number; thin: boolean } | undefined>(undefined);
@@ -105,7 +105,7 @@ export function App() {
 
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
-    {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
+    {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} wa={waOpen} setWa={setWaOpen} />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
     {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
     {sub === 'helper' && hh && <HelperScreen hh={hh} onBack={() => setSub(null)} />}
@@ -115,7 +115,7 @@ export function App() {
     {sub === 'rights' && <RightsScreen me={me} onBack={() => setSub(null)} reload={load} />}
     {sub === 'backups' && hh && <BackupsScreen hh={hh} onBack={() => { setSub(null); load(); }} onBuild={() => setSub('builder')} />}
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
-    {!sub && tab === 'today' && hh && <Today openPlan={planAsk} onPlanOpened={() => setPlanAsk(false)} onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
+    {!sub && tab === 'today' && hh && <Today onWatchHelper={demo ? () => { if (!tools) toggleTools(); setWaOpen(true); } : undefined} openPlan={planAsk} onPlanOpened={() => setPlanAsk(false)} onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
     {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} me={me?.user.id ?? ''} meName={me?.user.display_name ?? ''} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
@@ -143,7 +143,7 @@ export function App() {
 }
 
 /** Demo-only controls: simulated clock + Sunita's simulated phone. Hidden when the API is not in DEMO_MODE. */
-function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView | null; onChange: () => void; friendOnly?: boolean }) {
+function DemoBar({ hh, day, onChange, friendOnly, owner = '', pets = [], wa = false, setWa = () => {} }: { hh: string; day: DayView | null; onChange: () => void; friendOnly?: boolean; owner?: string; pets?: string[]; wa?: boolean; setWa?: (on: boolean) => void }) {
   const resetDemo = (window as unknown as { pawsureResetDemo?: () => Promise<void> }).pawsureResetDemo;
   const [busy, setBusy] = useState(false); const [phone, setPhone] = useState(false); const [friends, setFriends] = useState(false); const [cover, setCover] = useState(false); const [hint, setHint] = useState<string | null>(null);
   // whose phone the simulated helper phone plays: Sunita in the seeded demo, or the helper this owner invited
@@ -158,13 +158,13 @@ function DemoBar({ hh, day, onChange, friendOnly }: { hh: string; day: DayView |
     <div className="demobar" role="region" aria-label="Demo controls">
       <span>DEMO</span><span className="t">{day ? fmt(day.now) : '—'}</span>
       {[5, 15, 60].map(m => <button key={m} disabled={busy} onClick={() => act(() => api('/demo/clock', { body: { advance: m }, auth: false }))}>+{m === 60 ? '1h' : m + 'm'}</button>)}
-      {!friendOnly && <button aria-pressed={phone} onClick={() => { setPhone(!phone); setFriends(false); setCover(false); }}>{phone ? 'Hide' : 'Show'} {helperFirst}’s phone</button>}
+      {!friendOnly && <button aria-pressed={phone} onClick={() => { setPhone(!phone); setWa(false); setFriends(false); setCover(false); }}>{phone ? 'Hide' : 'Show'} {helperFirst}’s phone</button>}
       {!friendOnly && <button aria-pressed={friends} onClick={() => { setFriends(!friends); setPhone(false); setCover(false); }}>{friends ? 'Hide' : 'Show'} friends’ phones</button>}
       {!friendOnly && <button aria-pressed={cover} onClick={() => { setCover(!cover); setPhone(false); setFriends(false); }}>{cover ? 'Hide' : 'Show'} backups’ phones</button>}
       <button onClick={() => { location.hash = 'admin'; }}>Ops console</button>
       {resetDemo && <button onClick={() => { if (confirm('Reset the demo? Accounts and homes you created in this browser are deleted.')) resetDemo(); }}>Reset demo</button>}
     </div>
     {hint && <div className="banner sim" role="status"><span className="bi">▶</span><div className="grow">{hint} <button className="btn ghost sm" onClick={() => setHint(null)}>Hide</button></div></div>}
-    {(phone || friends || cover) && <div className="simdock" aria-label="Simulated phones">{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}
+    {(phone || friends || cover || wa) && <div className="simdock" aria-label="Simulated phones">{wa && <HelperWhatsApp hh={hh} owner={owner} pets={pets} onChange={onChange} onClose={() => setWa(false)} />}{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}
   </>;
 }

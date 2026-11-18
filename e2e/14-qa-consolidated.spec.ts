@@ -292,6 +292,41 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
     await expect(card.locator('.help-track')).toContainText('Accepted');
   });
+  test('U2c The helper verifies and joins on her WhatsApp beside the owner’s phone; Home changes to Accepted by itself', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 980 });
+    await toCare(page, '9822200204');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500013' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    const card = page.locator('.help-card');
+    await expect(card).toContainText('Invite pending');
+    await card.getByRole('button', { name: 'Watch on Lata’s phone' }).click();
+    const wa = page.frameLocator('.wa-dock iframe');
+    await expect(wa.locator('.notif')).toContainText('Hello Lata! Isha has invited you to Pawsure for Coco');
+    for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click(); // open, open the chat, send ID, join with photos
+    await expect(page.locator('.wa-note')).toContainText('Lata joined with photo check-ins');
+    await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
+    await expect(card.locator('.help-track')).toContainText('Accepted');
+  });
+
+  test('U3 A new owner adds tasks from Home: one-tap suggestions, or Add task → tile → a few quick steps', async ({ page }) => {
+    await toCare(page, '9822200205');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
+    const addBtn = page.getByRole('button', { name: /^Add (a )?task$/ }).first();
+    await expect(addBtn).toBeVisible();
+    // one-tap suggestion, when the home has no tasks yet
+    const starter = page.locator('.starter').first();
+    if (await starter.isVisible()) { await starter.click(); await expect(page.getByText(/Added: Breakfast at 8:00 AM, every day/)).toBeVisible(); }
+    // the guided way
+    await page.getByRole('button', { name: /^Add (a )?task$/ }).first().click();
+    await page.locator('.add-tile', { hasText: 'Walk' }).click();
+    const form = page.getByRole('group', { name: 'Add walk' });
+    await expect(form.locator('#when')).toContainText('6:00 PM'); // a sensible time is already filled in
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await form.getByRole('button', { name: 'Skip', exact: true }).click();
+    await form.getByRole('button', { name: 'Every day', exact: true }).click();
+    await expect(page.getByText('Added: Evening walk for Coco at 6:00 PM, every day.')).toBeVisible();
+    await expect(page.locator('.task', { hasText: 'Evening walk' })).toBeVisible(); // shows today, straight away
+  });
 });
 
 test.describe('V. Breed and sex, and small forms in the conversation (16 Nov)', () => {
