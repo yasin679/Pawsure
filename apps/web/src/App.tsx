@@ -54,7 +54,7 @@ export function App() {
   // One-time task links for a substitute or an ad-hoc number (PS-128, PS-133): /t/<token>, or #task-<token> in the demo.
   const taskToken = location.pathname.startsWith('/t/') ? location.pathname.slice(3) : hash.startsWith('#task-') ? hash.slice(6) : null;
   const [authed, setAuthed] = useState(!!session.get());
-  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [askFriend, setAskFriend] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('today'); const [sub, setSub] = useState<Sub>(null); const [addPet, setAddPet] = useState(false); const [findForm, setFindForm] = useState(false); const [planAsk, setPlanAsk] = useState(false); const [askFriend, setAskFriend] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [day, setDay] = useState<DayView | null>(null);
@@ -115,7 +115,7 @@ export function App() {
     {sub === 'rights' && <RightsScreen me={me} onBack={() => setSub(null)} reload={load} />}
     {sub === 'backups' && hh && <BackupsScreen hh={hh} onBack={() => { setSub(null); load(); }} onBuild={() => setSub('builder')} />}
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
-    {!sub && tab === 'today' && hh && <Today onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
+    {!sub && tab === 'today' && hh && <Today openPlan={planAsk} onPlanOpened={() => setPlanAsk(false)} onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
     {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} me={me?.user.id ?? ''} meName={me?.user.display_name ?? ''} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
@@ -125,6 +125,7 @@ export function App() {
       <div className="card"><div className="row"><PersonAvatar lg seed={me?.user.id ?? ''} name={me?.user.display_name ?? ''} /><div className="grow"><h2>{me?.user.display_name}</h2><div className="small muted">{me?.memberships[0]?.society} · {me?.memberships[0]?.tower} · {role?.replace('_', '-')}</div></div></div></div>
       <ThinCard thin={thin} onOpen={() => setSub('backups')} />
       <div className="list">
+        <button className="li" onClick={() => { setPlanAsk(true); go('today'); }}><span className="avatar icon"><Icon name="list" size={20} /></span><div className="grow"><b>{tr('Today’s plan')}</b><div className="small muted">{tr('Who’s caring, timeline, day report, routine, tomorrow')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => setSub('backups')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Backups')}</b><div className="small muted">{tr('People asked in order if a task is at risk · standing approval')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => setSub('privacy')}><span className="avatar icon"><Icon name="shield" size={20} /></span><div className="grow"><b>{tr('Profile and what friends see')}</b><div className="small muted">{tr('Edit name, city, society, tower and flat; privacy; nearby members (off)')}</div></div><span className="chev">›</span></button>
         <button className="li" onClick={() => setSub('helper')}><span className="avatar icon"><Icon name="user" size={20} /></span><div className="grow"><b>{tr('Helper and check-ins')}</b><div className="small muted">{tr('Invite, consent, method, food-box code card')}</div></div><span className="chev">›</span></button>

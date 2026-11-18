@@ -102,7 +102,10 @@ export async function closePlan(page: Page) {
 /** Opens Home → Plan for today (who's caring, leaving / back, timeline, day report, edit routine, tomorrow). */
 export async function openPlan(page: Page) {
   if (await page.getByRole('heading', { name: 'Plan for today' }).isVisible()) return;
-  await page.getByRole('button', { name: 'Plan for today' }).click();
+  // before leaving, Home's Heading out card links to it; after, it's under Me → Today’s plan
+  const link = page.getByRole('button', { name: 'Plan for today' });
+  const viaLink = await link.isVisible() && await link.click({ timeout: 2000 }).then(() => true, () => false);
+  if (!viaLink) { await page.locator('nav.tabbar').getByRole('button', { name: 'Me' }).click(); await page.locator('button.li', { hasText: 'Today’s plan' }).click(); }
   await expect(page.getByRole('heading', { name: 'Plan for today' })).toBeVisible();
 }
 export const tick = (page: Page) => api(page, 'POST', '/jobs/tick', {});

@@ -1041,3 +1041,6 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 /* tasks waiting for "I'm leaving" */
 .tasks-locked{background:var(--locked-bg);border:1.5px dashed var(--locked-line);border-radius:24px;padding:18px 20px;color:var(--ink-2);display:flex;gap:14px;align-items:center;font-size:.98rem}
 .today .card.help-card .btnrow .btn{white-space:nowrap;padding:0 10px;font-size:.95rem}
+/* the Out since card keeps ordinary buttons, centred, not stretched */
+.today .card.flat.out-card > .row{align-items:center}
+.today .card.flat.out-card .row > .btn{height:42px;flex:none;align-self:center;padding:0 16px}
