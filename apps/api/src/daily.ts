@@ -6,7 +6,7 @@ import { uid, type Db } from '@pawsure/db';
 import { applyReturnCheck, checkCode, generateCard, dueSteps, severityOf, healthState, canOpenLookIn, photoSampleRate, COVERED_DAY_RULE, wallet, expiryFor, rightsDue, type LedgerEntry, type CodeCard, type ReturnAnswers, type Severity, type Resource, type Action, type Role } from '@pawsure/domain';
 import { isPersonName, NAME_MESSAGE, LANG_CODES, msgLang } from '@pawsure/domain';
 import type { Deps } from './app.js';
-import { istDate, minutesOnDay, atMinute } from './clock.js';
+import { istDate, minutesOnDay, atMinute, istMinutes } from './clock.js';
 import { audit, loadDay, ingestSignal, runEscalations, hashImage } from './care.js';
 import { seal, open } from './secrets.js';
 import { ProofIn, recordProof, proofMessage } from './proof.js';
@@ -154,18 +154,21 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'routine', 'read'))) return x.deny(c);
     return c.json(await db.query(`select r.*, r.effective_from::text as effective_from, m.role as assignee_role from routine_tasks r left join memberships m on m.id=r.assignee_membership_id where r.household_id=$1 and r.superseded_by is null and (r.recurrence <> 'once' or r.effective_from >= $2) order by r.due_minute, r.title`, [hh, istDate(now())]));
   });
-  const RoutineIn = z.object({ petId: z.string(), title: z.string({ error: 'Give the task a name.' }).trim().min(1, 'Give the task a name.').max(80, 'Keep the task name under 80 characters.'), type: z.enum(['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other']), due: z.number().int().min(0).max(1439), minMinutes: z.number().int().min(1).max(60).optional(), assignee: z.enum(['helper', 'owner', 'co_owner']), urgency: z.enum(['CanWait', 'TimeSensitive', 'MustHappen']).optional(), instructions: z.string().max(500).optional(), oneOffToday: z.boolean().optional(), enabled: z.boolean().optional() })
+  const RoutineIn = z.object({ petId: z.string(), title: z.string({ error: 'Give the task a name.' }).trim().min(1, 'Give the task a name.').max(80, 'Keep the task name under 80 characters.'), type: z.enum(['feeding', 'walk', 'medicine', 'toilet', 'litter', 'water', 'other']), due: z.number().int().min(0).max(1439), minMinutes: z.number().int().min(1).max(60).optional(), assignee: z.enum(['helper', 'owner', 'co_owner']), urgency: z.enum(['CanWait', 'TimeSensitive', 'MustHappen']).optional(), instructions: z.string().max(500).optional(), oneOffToday: z.boolean().optional(), startToday: z.boolean().optional(), enabled: z.boolean().optional() })
     // PAW-008: same rule as the form: a medicine task carries the vet's written instructions.
     .refine(b => b.type !== 'medicine' || !!b.instructions?.trim(), { path: ['instructions'], message: 'Add the vet’s written instructions for a medicine task.' });
   async function writeRoutine(hh: string, userId: string, b: z.infer<typeof RoutineIn>, replaces?: string) {
     const date = istDate(now()); const tomorrow = istDate(new Date(now().getTime() + 86400000));
     const assignee = (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and role=$2 and status in ('active','invited') order by role limit 1`, [hh, b.assignee]))[0]?.id ?? null;
+    // startToday: a new home's first routine (sign-up, or Add task on Home) is in today's plan straight away,
+    // unless its time has already passed today: then it starts tomorrow, so nothing is overdue the moment it is made.
+    if (b.startToday && b.due < istMinutes(now())) b = { ...b, startToday: false };
     const id = uid('rt'), slot = b.assignee !== 'owner' ? (b.due < 900 ? 'v1' : b.due < 1080 ? 'v2' : 'v3') : null;
     await db.query(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, recurrence, assignee_membership_id, escalation_profile, instructions, visit_slot, enabled, effective_from, urgency)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [id, hh, b.petId, b.title, b.type, b.due, b.minMinutes ?? TYPE_MIN[b.type], b.oneOffToday ? 'once' : 'daily', assignee, TYPE_PROFILE[b.type] ?? 'standard', b.instructions ?? null, slot, b.enabled ?? true, b.oneOffToday ? date : tomorrow, b.urgency ?? null]);
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [id, hh, b.petId, b.title, b.type, b.due, b.minMinutes ?? TYPE_MIN[b.type], b.oneOffToday ? 'once' : 'daily', assignee, TYPE_PROFILE[b.type] ?? 'standard', b.instructions ?? null, slot, b.enabled ?? true, (b.oneOffToday || b.startToday ? date : tomorrow), b.urgency ?? null]);
     if (replaces) await db.query(`update routine_tasks set superseded_by=$2 where id=$1 and household_id=$3`, [replaces, id, hh]);
-    await audit(db, userId, hh, replaces ? 'routine.edited' : 'routine.created', { id, replaces, effectiveFrom: b.oneOffToday ? date : tomorrow, title: b.title });
-    return { id, effectiveFrom: b.oneOffToday ? date : tomorrow };
+    await audit(db, userId, hh, replaces ? 'routine.edited' : 'routine.created', { id, replaces, effectiveFrom: (b.oneOffToday || b.startToday ? date : tomorrow), title: b.title });
+    return { id, effectiveFrom: (b.oneOffToday || b.startToday ? date : tomorrow) };
   }
   app.post('/v1/households/:hh/routine', async (c) => {
     const hh = c.req.param('hh'); if (!(await x.guard(c, hh, 'routine', 'create'))) return x.deny(c);

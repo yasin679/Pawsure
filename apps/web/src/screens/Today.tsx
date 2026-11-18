@@ -47,8 +47,7 @@ const titleFor = (type: TType, due: number, name = '') => type === 'feeding' ? (
 /** Makes the task: every day (and today too, so it shows straight away) or just today. */
 async function addTask(hh: string, b: { petId: string; type: TType; title: string; due: number; everyDay: boolean; instructions?: string; assignee: 'helper' | 'owner'; now: number }) {
   const body = { petId: b.petId, title: b.title, type: b.type, due: b.due, assignee: b.assignee, instructions: b.instructions || undefined };
-  if (b.everyDay) await api(`/v1/households/${hh}/routine`, { body });
-  if (!b.everyDay || b.due >= b.now - 60) await api(`/v1/households/${hh}/routine`, { body: { ...body, oneOffToday: true } });
+  await api(`/v1/households/${hh}/routine`, { body: b.everyDay ? { ...body, startToday: true } : { ...body, oneOffToday: true } });
 }
 /** Ready-made first tasks for a new home: one tap each. */
 const STARTERS = (species: string): [TType, number][] => species === 'Cat' ? [['feeding', 480], ['litter', 600], ['water', 720], ['feeding', 1140]] : [['feeding', 480], ['walk', 1080], ['water', 720], ['feeding', 1140]];
@@ -76,7 +75,7 @@ function AddTaskSheet({ hh, pets, petId, assignee, now, onClose, onAdded }: { hh
           const due = Number(v.when) || DEFAULT_DUE[type]; const title = titleFor(type, due, v.name);
           setBusy(true); setErr(null);
           try { await addTask(hh, { petId: pet.id, type, title, due, everyDay: v.repeat !== 'Just today', instructions: v.notes, assignee, now });
-            onAdded(`${tr('Added')}: ${title} ${tr('for')} ${pet.name} ${tr('at')} ${fmt(due)}${v.repeat === 'Just today' ? ', ' + tr('just today') : ', ' + tr('every day')}.`); }
+            onAdded(`${tr('Added')}: ${title} ${tr('for')} ${pet.name} ${tr('at')} ${fmt(due)}${v.repeat === 'Just today' ? ', ' + tr('just today') : due < now ? ', ' + tr('every day from tomorrow') : ', ' + tr('every day')}.`); }
           catch (e) { setErr(e instanceof ApiError ? String((e.body as { message?: string }).message ?? e.body.error) : tr('Can’t reach Pawsure.')); }
           setBusy(false);
         }} /></>}
@@ -88,6 +87,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   // Me → Today’s plan opens the plan here (once you've left, Home no longer shows a link to it)
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [added, setAdded] = useState<string[]>([]);
+  // Routine tasks that begin tomorrow (e.g. a sign-up feed time that had already passed today): shown so nothing set up goes missing.
+  const [upcoming, setUpcoming] = useState<{ id: string; pet_id: string; title: string; task_type: string; due_minute: number; effective_from: string; enabled: boolean; recurrence: string }[]>([]);
+  useEffect(() => { if (!day) return; api<typeof upcoming>(`/v1/households/${hh}/routine`).then(r => setUpcoming(r.filter(x => x.enabled && x.recurrence !== 'once' && x.effective_from > day.careDate))).catch(() => setUpcoming([])); }, [hh, day]);
   useEffect(() => { if (openPlan) { setSheet('plan'); onPlanOpened?.(); } }, [openPlan]);
   const [task, setTask] = useState<DayTask | null>(null);
   const [inc, setInc] = useState<Incident | null>(null);
@@ -209,7 +211,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
           : <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
           {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
       </section>
-      {noHelper && <p className="add-helper-note">{tr('Add helper to start tasks.')}</p>}
+      {noHelper && <p className="add-helper-note">{tr('Add a helper to get check-ins on these tasks.')}</p>}
       {noHelper ? null : d.leftAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div><button type="button" className="linkbtn plan-link" aria-label="Plan for today" onClick={() => setSheet('plan')}>{tr('Today’s plan')}</button></div><div className="out-art"><img src={`${import.meta.env.BASE_URL}assets/heading-out-pets.webp`} alt="" width={140} height={104} /><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div></div>
         : d.backAt == null ? <div className="card flat out-card out-now"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
         : !d.returnCheckDone && d.returnCheckNeeded ? <div className="card flat"><div className="row"><b className="grow">{tr('Quick return check (10 s)')}</b><button className="btn primary sm" onClick={() => setSheet('return')}>{tr('Start')}</button></div></div> : null}
@@ -225,17 +227,16 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
           <button className="btn" onClick={() => run(() => api(`${H}/day/call-helper`, { body: {} }), () => setMsg(`Logged that you called ${helperFirst}. Use your phone to place the call.`))}><Icon name="phone" size={18} />Call {helperFirst}</button></div>
       </div>)}
 
-      {/* Tasks. A new home starts with one-tap suggestions; with a helper, the day's tasks show once the owner
-          has headed out (Heading out → I'm leaving); without one, the owner sees them straight away. */}
-      {day.tasks.length === 0 ? <section className="first-tasks" aria-label="Add your first tasks">
+      {/* Tasks: the same for every owner, new or returning. A home with no tasks yet starts with one-tap suggestions. */}
+      {day.tasks.length === 0 && upcoming.length === 0 ? <section className="first-tasks" aria-label="Add your first tasks">
           <div className="ft-head"><div className="grow"><h2>{tr('No tasks yet')}</h2><p className="small muted">{tr('Add what your pets need each day. One tap each, change them any time.')}</p></div>
             <img src={`${import.meta.env.BASE_URL}assets/heading-out-pets.webp`} alt="" width={96} height={72} /></div>
           <div className="starters">{(pets[0] ? STARTERS(pets[0].species) : []).map(([k, due]) => { const title = titleFor(k, due); const key = `${k}-${due}`; const on = added.includes(key);
-            return <button key={key} type="button" className="starter" aria-pressed={on} disabled={on} onClick={() => run(async () => { await addTask(hh, { petId: (pets.find(p => p.id === petId) ?? pets[0]!).id, type: k, title, due, everyDay: true, assignee: helperRow ? 'helper' : 'owner', now: day.now }); setAdded(x => [...x, key]); }, () => setMsg(`${tr('Added')}: ${title} ${tr('at')} ${fmt(due)}, ${tr('every day')}.`))}>
+            return <button key={key} type="button" className="starter" aria-pressed={on} disabled={on} onClick={() => run(async () => { await addTask(hh, { petId: (pets.find(p => p.id === petId) ?? pets[0]!).id, type: k, title, due, everyDay: true, assignee: helperRow ? 'helper' : 'owner', now: day.now }); setAdded(x => [...x, key]); }, () => setMsg(`${tr('Added')}: ${title} ${tr('at')} ${fmt(due)}, ${due < day.now ? tr('every day from tomorrow') : tr('every day')}.`))}>
               <span className={`task-ic t-${k}`} aria-hidden="true"><Icon name={TASK_ICON[k] ?? 'paw'} size={18} /></span><span><b>{tr(title)}</b><span className="xs muted">{fmt(due)} · {tr('every day')}</span></span><span className="plus" aria-hidden="true">{on ? '✓' : '+'}</span></button>; })}</div>
           <button type="button" className="btn primary block" onClick={() => setSheet('addtask')}><Icon name="plus" size={18} />{tr('Add a task')}</button>
         </section>
-      : (noHelper || d.leftAt != null) ? <>
+      : <>
       <div className="pet-tabs" role="tablist" aria-label="Whose schedule">
         {pets.map((p, i) => <button key={p.id} role="tab" aria-selected={p.id === petId} className={`petchip pet-tab tone-${i % 4}`} onClick={() => setPetTab(p.id)}>
           <PetAvatar species={p.species} size={40} /><b>{p.name}</b></button>)}
@@ -247,8 +248,10 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
         {pending.length ? pending.map(taskCard) : <div className="task-empty">{mine.length ? `${tr('Nothing pending for')} ${petName(petId ?? '')} 🎉` : tr('No tasks today.')}</div>}
         <div className="sec-head"><h2>{tr('Completed')} <span className="sec-n">{completed.length}</span></h2></div>
         {completed.length ? completed.map(taskCard) : <div className="task-empty">{tr('Nothing done yet today.')}</div>}
+        {upcoming.some(u => u.pet_id === petId) && <><div className="sec-head"><h2>{tr('Starts tomorrow')}</h2></div>
+          {upcoming.filter(u => u.pet_id === petId).sort((a, b) => a.due_minute - b.due_minute).map(u => <div key={u.id} className="task tl-row upcoming"><span className={`task-ic t-${u.task_type}`} aria-hidden="true"><Icon name={TASK_ICON[u.task_type] ?? 'paw'} size={20} /></span><div className="grow"><b>{u.title}</b><div className="small muted">{fmt(u.due_minute)} · {tr('every day from tomorrow')}</div></div></div>)}</>}
       </section>
-      </> : <div className="tasks-locked"><Icon name="list" size={20} /><span className="grow">{tr('Your pets’ tasks for today show here once you tap “I’m leaving” and set the options.')}</span><button type="button" className="add-task-btn" onClick={() => setSheet('addtask')}><Icon name="plus" size={16} />{tr('Add task')}</button></div>}
+      </>}
     </main>
 
     {sheet === 'addtask' && <AddTaskSheet hh={hh} pets={pets} petId={petId ?? null} assignee={helperRow ? 'helper' : 'owner'} now={day.now} onClose={close} onAdded={m => { close(); setMsg(m); reloadAll(); }} />}

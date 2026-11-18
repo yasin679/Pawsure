@@ -46,7 +46,7 @@ test.describe('L. Cross-cutting', () => {
     await expect(page.getByRole('heading', { name: /Isha/ })).toBeVisible();
     // No helper yet: Home asks for one first; Heading out and the tasks come after (17 Nov)
     await expect(page.getByRole('button', { name: 'Add helper' })).toBeVisible();
-    await expect(page.getByText('Add helper to start tasks.')).toBeVisible();
+    await expect(page.getByText('Add a helper to get check-ins on these tasks.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'I’m leaving' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Add helper' }).click();
     await expect(page.getByRole('heading', { name: 'Invite a helper' })).toBeVisible();

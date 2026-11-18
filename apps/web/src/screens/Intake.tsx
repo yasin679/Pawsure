@@ -416,7 +416,7 @@ export function Intake({ onDone }: { onDone: () => void }) {
     try {
       // With a helper: invite her on WhatsApp first, then give her the routine (prompts start once she says Yes).
       if (who === 'My house help') await api(`/v1/households/${hh}/helpers/invite`, { body: { name: h.name, phone: '+91' + h.phone, language: h.language } });
-      for (const t of tasks) await api(`/v1/households/${hh}/routine`, { body: { ...t, assignee: who === 'My house help' ? 'helper' : 'owner' } });
+      for (const t of tasks) await api(`/v1/households/${hh}/routine`, { body: { ...t, assignee: who === 'My house help' ? 'helper' : 'owner', startToday: true } }); // on Home today, not from tomorrow
       setCare(c => ({ ...c, who })); setRoutineCount(tasks.length); setLock(steps.length); setPos(steps.length);
       // Only a house help needs a separate backup question; family is already the backup, and "nobody" goes straight to the circle builder.
       if (who === 'My house help') setCircle('ask'); else if (who === 'Nobody yet') setCircle('no'); else { setCircle('yes'); setTimeout(onDone, reduced() ? 0 : 1800); }

@@ -315,7 +315,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(addBtn).toBeVisible();
     // one-tap suggestion, when the home has no tasks yet
     const starter = page.locator('.starter').first();
-    if (await starter.isVisible()) { await starter.click(); await expect(page.getByText(/Added: Breakfast at 8:00 AM, every day/)).toBeVisible(); }
+    if (await starter.isVisible()) { await starter.click(); await expect(page.getByText(/Added: Breakfast at 8:00 AM, every day from tomorrow/)).toBeVisible(); } // 8 AM has passed (demo clock 9 AM)
     // the guided way
     await page.getByRole('button', { name: /^Add (a )?task$/ }).first().click();
     await page.locator('.add-tile', { hasText: 'Walk' }).click();
@@ -326,6 +326,21 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await form.getByRole('button', { name: 'Every day', exact: true }).click();
     await expect(page.getByText('Added: Evening walk for Coco at 6:00 PM, every day.')).toBeVisible();
     await expect(page.locator('.task', { hasText: 'Evening walk' })).toBeVisible(); // shows today, straight away
+  });
+  test('U4 Right after sign-up, Home shows the tasks from the care answers (feed at 8 AM → Breakfast), with or without a helper, same as for a returning owner', async ({ page }) => {
+    await toCare(page, '9822200206');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500014' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    // 8 AM has already passed (demo clock 9 AM): Breakfast is listed as starting tomorrow, so no alarm fires on day one
+    await expect(page.locator('.task.upcoming', { hasText: 'Breakfast' })).toContainText('8:00 AM');
+    await expect(page.getByText('Starts tomorrow')).toBeVisible();
+    await expect(page.getByText(/Your backup was alerted/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add task' })).toBeVisible();
+    await expect(page.locator('.pet-tab', { hasText: 'Coco' })).toBeVisible();
+    // a returning owner sees the same Home: tasks and Add task before heading out too
+    await signOut(page); await boot(page); await signInOwner(page, { home: true });
+    await expect(page.locator('.task').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add task' })).toBeVisible();
   });
 });
 
