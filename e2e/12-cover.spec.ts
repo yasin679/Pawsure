@@ -269,10 +269,11 @@ test.describe('P. v1.1.0 fixes from demo testing (10 Nov 2026)', () => {
     const r = (await api(page, 'POST', `${HH}/requests`, { text: 'Can someone feed Bruno at 6 pm?' })).body;
     expect(r.parsedBy).toBe('rules (no AI connected)');
   });
-  test('P5 The login page is text only: no illustration, no background shapes (17 Nov)', async ({ page }) => {
+  test('P5 The login page is minimal: the Pawsure logo, no illustration, no background shapes', async ({ page }) => {
     await boot(page);
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-    await expect(page.locator('.login img')).toHaveCount(0);
+    await expect(page.locator('.login img')).toHaveCount(1); // only the Pawsure logo (18 Nov), no illustration
+    await expect(page.locator('.login img')).toHaveAttribute('alt', 'Pawsure');
     expect(await page.locator('.login').evaluate(el => getComputedStyle(el, '::before').display)).toBe('none');
   });
   test('P6 On a wide screen the simulated phones sit beside the owner app, with no developer wording', async ({ page }) => {

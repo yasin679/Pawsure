@@ -18,7 +18,7 @@ import { registerCover } from './coverRoutes.js';
 import { withFailover } from './delivery.js';
 import { createMonitor, serviceChecks, type Monitor } from './ops.js';
 
-export interface Deps { db: Db; adapters: Adapters; clock: Clock; pepper: string; demoMode: boolean; monitor?: Monitor; limits?: { requestsPerHour?: number; invitesPerDay?: number } }
+export interface Deps { db: Db; adapters: Adapters; clock: Clock; pepper: string; demoMode: boolean; /** the in-browser demo: new homes start with the demo's friends */ demoFriends?: boolean; monitor?: Monitor; limits?: { requestsPerHour?: number; invitesPerDay?: number } }
 type Env = { Variables: { userId: string } };
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -181,6 +181,9 @@ export function createApp(input: Deps) {
       await t.query(`insert into memberships(id, household_id, user_id, role, status, accepted_at) values ($1,$2,$3,'owner','active',now())`, [uid('m'), id, c.get('userId')]);
     });
     await audit(db, c.get('userId'), id, 'household.created', { society: soc.society, city: soc.city, verified: soc.verified });
+    // Demo only: a new home starts with the demo's friends, so Find cover works after sign-up just as it does
+    // for the seeded home (in a real launch the owner invites their own friends).
+    if (d.demoMode && d.demoFriends) await db.query(`insert into friend_links(household_id, friend_user_id, status, distance_band) select $1, friend_user_id, status, distance_band from friend_links where household_id='hh_demo' and status='accepted' on conflict do nothing`, [id]);
     return c.json({ id, societyVerified: soc.verified }, 201);
   });
 

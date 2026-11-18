@@ -333,7 +333,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(page.locator('.demobar')).toHaveCount(0);
   });
 
-  test('U2f Her first task: Pawsure’s reminder on her WhatsApp → bowl photo with today’s code → the owner is told on Home → reviews and marks it complete', async ({ page }) => {
+  test('U2f Her first task: Pawsure’s reminder on her WhatsApp → a bowl photo → the owner is told on Home → reviews and marks it complete', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 980 });
     await toCare(page, '9822200208');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500016' } });
@@ -346,8 +346,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await wa.locator('.screen .view').click();              // practice done
     await expect(wa.locator('.notif')).toContainText('Coco, ⏰ Breakfast (8:00 AM)'); // Pawsure's reminder for her real first task (from sign-up)
     await wa.locator('.screen [data-go]').first().click(); // open the reminder
-    await wa.locator('.screen [data-go]').first().click(); // bowl photo
-    await wa.locator('.screen [data-go]').first().click(); // today's code, send
+    await wa.locator('.screen [data-go]').first().click(); // bowl photo (no code card: a photo or a short video is all she sends)
     const note = page.locator('.review-note');
     await expect(note).toContainText('Lata completed Breakfast', { timeout: 10000 });
     await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('To review');
@@ -357,6 +356,25 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(page.getByText('Marked complete: Breakfast. Thank you, Lata!')).toBeVisible();
     await expect(page.locator('.review-note')).toHaveCount(0);
     await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('Completed');
+  });
+
+  test('U5 Find cover works the same right after sign-up as after login: friends to ask, the in-chat form, Send', async ({ page }) => {
+    await toCare(page, '9822200209');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
+    await tab(page, 'Find cover');
+    await expect(page.getByRole('heading', { name: /How can I help\?/ })).toBeVisible();
+    await page.getByRole('button', { name: /Walk Coco this evening/ }).click();
+    const first = page.locator('.friend-card').first();
+    await expect(first).toBeVisible();
+    const name = (await first.locator('b').innerText()).split(' ')[0]!;
+    await first.getByRole('button', { name: /^Ask / }).click();
+    const form = page.getByRole('group', { name: `Ask ${name}` });
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await form.getByRole('button', { name: 'Next', exact: true }).click();
+    await form.getByRole('button', { name: 'Key handover', exact: true }).click();
+    await expect(page.getByText(`Here’s the WhatsApp message for ${name}.`)).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Send on WhatsApp' }).click();
+    await expect(page.getByRole('status', { name: `Sent to ${name} on WhatsApp.` })).toBeVisible();
   });
 
   test('U3 A new owner adds tasks from Home: one-tap suggestions, or Add task → tile → a few quick steps', async ({ page }) => {

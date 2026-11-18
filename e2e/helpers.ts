@@ -172,8 +172,8 @@ export const tab = (page: Page, name: string) => page.locator('nav.tabbar').getB
 export const meItem = async (page: Page, name: string | RegExp) => { await tab(page, 'Me'); await page.locator('button.li', { hasText: name }).click(); };
 /** Find cover opens on Pawly, the assistant; this goes to the full request form (understand → search → approve). */
 export async function findCoverForm(page: Page) {
-  await tab(page, 'Find cover');
-  await page.getByRole('button', { name: 'Your requests' }).click();
+  await tab(page, 'Me');
+  await page.locator('button.li', { hasText: 'Cover requests' }).click();
 }
 export const taskCard = (page: Page, title: string) => page.locator('button.task', { hasText: title }).first();
 /** Opens a task and its Task details, returns the details text (evidence label, cover, lifecycle), and closes it. */

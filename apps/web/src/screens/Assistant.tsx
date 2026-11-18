@@ -116,7 +116,7 @@ export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvit
   const live = [...msgs].reverse().find(m => m.role === 'form' || m.role === 'preview' || m.role === 'status' || m.role === 'friends');
   return <>
     <AppBar title={tr('Find cover')} />
-    <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true">✦</span><span><b>Pawly</b>, {tr('your cover assistant')}</span><button type="button" className="linkbtn ai-form" onClick={onForm}>{tr('Your requests')}</button></div>
+    <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true">✦</span><span><b>Pawly</b>, {tr('your cover assistant')}</span></div>
     <div className="body ai-chat" aria-live="polite">
       {msgs.map((m, i) => {
         if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div><img className="me-av" src={personSrc(me, meName)} alt="" width={30} height={30} /></div>;

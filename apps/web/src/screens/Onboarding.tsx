@@ -67,7 +67,7 @@ export function Onboarding({ onDone, start = 'phone' }: { onDone: () => void; st
   if (step === 'phone') return <div className="login login-min">
     <div className="login-lang"><LangSwitch compact /></div>
     <div className="login-sheet">
-      <div className="lm-brand">Pawsure</div>
+      <div className="lm-brand"><img src={`${import.meta.env.BASE_URL}assets/pawsure-logo.png`} alt="Pawsure" width={613} height={162} /></div>
       <div className="authtabs" role="group" aria-label="Log in or sign up">
         <button type="button" aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setErr(null); }}>{tr('Log in')}</button>
         <button type="button" aria-pressed={mode === 'signup'} onClick={() => { setMode('signup'); setErr(null); }}>{tr('Sign up')}</button>

@@ -34,7 +34,7 @@ export async function start() {
   // Demo build only: the server's seed and its tests are unchanged. Every other new number goes through sign-up.
   await db.query(`insert into users(id, phone_e164, display_name, language) values ('u_demo_owner', '+918860750239', 'Owner', 'en') on conflict do nothing`);
   await db.query(`insert into memberships(id, household_id, user_id, role, status, accepted_at) values ('m_demo_owner', $1, 'u_demo_owner', 'co_owner', 'active', now()) on conflict do nothing`, [DEMO.household]);
-  const app = createApp({ db, adapters: mockAdapters(), clock: demoClock('2026-11-06T09:00:00+05:30', { live: true }), pepper: 'demo-pepper-not-secret', demoMode: true });
+  const app = createApp({ db, adapters: mockAdapters(), clock: demoClock('2026-11-06T09:00:00+05:30', { live: true }), pepper: 'demo-pepper-not-secret', demoMode: true, demoFriends: true });
   await app.request('/jobs/tick', { method: 'POST' });
   return app;
 }

@@ -75,7 +75,7 @@ test.describe('M. Login separation and security (on screen)', () => {
     await intake(page, 'Eve', 'Hiranandani, Powai');
     await expect(page.getByRole('heading', { name: /Eve/ })).toBeVisible();
     await expect(page.getByText('Bruno')).toHaveCount(0);
-    await tab(page, 'Friends'); await expect(page.getByText('Priya Shah')).toHaveCount(0);
+    // in the demo every new home starts with the demo's friends (so Find cover works after sign-up); Neha's requests stay hers
     await findCoverForm(page); await expect(page.getByText('No requests yet')).toBeVisible();
   });
 

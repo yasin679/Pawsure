@@ -7,29 +7,30 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
 <title>Pawsure Demo</title>
 <style id="splash-css">
-/* Shown by the HTML itself, before any script loads; the app removes it once the first screen is ready (at least about 3 s). */
-#splash{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#587539 0%,#6F8F4E 38%,#A9BE8C 72%,#F1E6C4 100%);font-family:Nunito,system-ui,sans-serif;color:#FBF8EF;transition:opacity .8s ease,transform .8s ease}
-#splash .sp{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:24px}
-#splash .mark{width:92px;height:92px;animation:sp-pop .7s cubic-bezier(.2,1.4,.4,1) both}
-#splash .word{font:800 52px/1 'Baloo 2',Nunito,system-ui,sans-serif;letter-spacing:.01em;margin-top:10px;animation:sp-up .6s ease-out .15s both}
-#splash .sp-tag{font-size:17px;font-weight:700;margin:0;opacity:.9;animation:sp-up .6s ease-out .3s both}
-#splash .note{position:absolute;bottom:28px;left:0;right:0;font-size:13px;font-weight:700;color:#3F4F33;margin:0;padding:0 24px}
-#splash i.dot{position:absolute;border-radius:50%;background:#FBF8EF;opacity:.75;animation:sp-drift 6s ease-in-out infinite}
-#splash i.ring{position:absolute;border-radius:50%;border:1.5px solid #FBF8EF;opacity:.6;animation:sp-drift 7s ease-in-out infinite reverse}
+/* Shown by the HTML itself, before any script loads; the app removes it once the first screen is ready.
+   The vertical Pawsure logo over a soft, slowly moving gradient in the palette (sage, honey, apricot on warm ivory). */
+#splash{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#F8F6ED;font-family:Nunito,system-ui,sans-serif;color:#253128;transition:opacity .8s ease,transform .8s ease}
+#splash::before{content:"";position:absolute;inset:-40%;background:radial-gradient(40% 35% at 30% 30%,rgba(117,150,79,.28),transparent 70%),radial-gradient(38% 32% at 72% 38%,rgba(233,199,94,.30),transparent 70%),radial-gradient(42% 36% at 50% 75%,rgba(230,161,92,.24),transparent 70%),radial-gradient(30% 28% at 20% 80%,rgba(169,197,176,.30),transparent 70%);filter:blur(10px);animation:sp-flow 9s ease-in-out infinite alternate}
+#splash .sp{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px}
+#splash .logo{width:min(190px,48vw);height:auto;animation:sp-in .8s cubic-bezier(.2,.9,.3,1) both}
+#splash .sp-tag{font-size:16px;font-weight:700;margin:0;color:#3F4F33;animation:sp-in .8s ease-out .2s both}
+#splash .bar{position:relative;width:120px;height:4px;border-radius:4px;background:rgba(37,49,40,.10);overflow:hidden;margin-top:6px}
+#splash .bar::after{content:"";position:absolute;inset:0;width:45%;border-radius:4px;background:linear-gradient(90deg,#75964F,#E9C75E,#E6A15C);animation:sp-bar 1.4s ease-in-out infinite}
+#splash .note{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#3F4F33;margin:0;padding:0 24px}
 #splash.gone{opacity:0;transform:scale(1.03);pointer-events:none}
-@keyframes sp-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
-@keyframes sp-up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
-@keyframes sp-drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-@media (prefers-reduced-motion:reduce){#splash *{animation:none!important}#splash{transition:none}}
+@keyframes sp-flow{0%{transform:translate(-4%,-3%) rotate(0deg) scale(1)}50%{transform:translate(3%,2%) rotate(8deg) scale(1.05)}100%{transform:translate(-2%,4%) rotate(-6deg) scale(1)}}
+@keyframes sp-in{from{transform:translateY(10px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+@keyframes sp-bar{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion:reduce){#splash *,#splash::before{animation:none!important}#splash{transition:none}}
 </style>
 </head>
 <body>
 <div id="demo-boot" class="offline" hidden></div>
-<div id="splash" role="status" aria-live="polite" aria-label="Pawsure is loading"><i class="dot" style="width:10px;height:10px;left:14%;top:18%"></i><i class="dot" style="width:6px;height:6px;right:20%;top:30%"></i><i class="ring" style="width:22px;height:22px;left:22%;top:64%"></i><i class="dot" style="width:8px;height:8px;right:16%;top:72%;animation-delay:1s"></i><i class="ring" style="width:30px;height:30px;right:12%;top:12%;animation-delay:.6s"></i>
+<div id="splash" role="status" aria-live="polite" aria-label="Pawsure is loading">
 <div class="sp">
-  <svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="#FBF8EF"><ellipse cx="11" cy="17" rx="4.2" ry="5.4" transform="rotate(-18 11 17)"/><ellipse cx="19.5" cy="9.5" rx="4.4" ry="5.6"/><ellipse cx="28.5" cy="9.5" rx="4.4" ry="5.6"/><ellipse cx="37" cy="17" rx="4.2" ry="5.4" transform="rotate(18 37 17)"/></g><path d="M24 21c-7.5 0-13 6.3-13 12.6C11 39.8 16.6 43 24 43s13-3.2 13-9.4C37 27.3 31.5 21 24 21z" fill="none" stroke="#FBF8EF" stroke-width="3.4"/><path d="M24 38.5s-6-3.6-6-7.4a3.2 3.2 0 0 1 6-1.6 3.2 3.2 0 0 1 6 1.6c0 3.8-6 7.4-6 7.4z" fill="#F2C14E"/></svg>
-  <div class="word">Pawsure</div>
+  <img class="logo" src="assets/pawsure-logo-vertical.png" width="412" height="295" alt="Pawsure">
   <p class="sp-tag">Be sure, whoever’s caring.</p>
+  <span class="bar" aria-hidden="true"></span>
 </div>
   <p class="note" id="splash-note">Starting the demo. The first visit takes a few seconds.</p></div>
 <script>/* failsafe: never leave the splash up if the app fails to start */setTimeout(function(){var s=document.getElementById('splash');if(s){s.classList.add('gone');setTimeout(function(){s.remove()},300)}},45000)</script>

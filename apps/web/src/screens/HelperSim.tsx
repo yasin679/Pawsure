@@ -108,7 +108,7 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
     const h = helper ?? await api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).catch(() => null);
     if (!h || !firstTask || sentRef.current) return;
     sentRef.current = true;
-    await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now(), caption: firstTask.code }, auth: false });
+    await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now() }, auth: false });
     await api('/jobs/tick', { body: {}, auth: false });
     setNote(`${first} sent a photo for ${firstTask.title}. It’s waiting for your review on Home.`);
     onChange();
