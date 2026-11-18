@@ -8,31 +8,43 @@
 <title>Pawsure Demo</title>
 <style id="splash-css">
 /* Shown by the HTML itself, before any script loads; the app removes it once the first screen is ready.
-   The vertical Pawsure logo over a soft, slowly moving gradient in the palette (sage, honey, apricot on warm ivory). */
-#splash{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#F8F6ED;font-family:Nunito,system-ui,sans-serif;color:#253128;transition:opacity .8s ease,transform .8s ease}
-#splash::before{content:"";position:absolute;inset:-40%;background:radial-gradient(40% 35% at 30% 30%,rgba(117,150,79,.28),transparent 70%),radial-gradient(38% 32% at 72% 38%,rgba(233,199,94,.30),transparent 70%),radial-gradient(42% 36% at 50% 75%,rgba(230,161,92,.24),transparent 70%),radial-gradient(30% 28% at 20% 80%,rgba(169,197,176,.30),transparent 70%);filter:blur(10px);animation:sp-flow 9s ease-in-out infinite alternate}
+   The vertical Pawsure logo over a soft, slowly moving gradient (sage, honey, apricot on warm ivory). On a wide screen it
+   sits inside the same phone frame the app uses (428 x 900, scaled to fit), so the app takes over without a jump. */
+#splash{position:fixed;inset:0;z-index:10000;overflow:hidden;background:#F8F6ED;font-family:Nunito,system-ui,sans-serif;color:#253128;transition:opacity .8s ease}
+#splash .frame,#splash .screen{position:absolute;inset:0}
+#splash .screen{overflow:hidden;background:#F8F6ED;display:flex;align-items:center;justify-content:center}
+#splash .screen::before{content:"";position:absolute;inset:-40%;background:radial-gradient(40% 35% at 30% 30%,rgba(117,150,79,.28),transparent 70%),radial-gradient(38% 32% at 72% 38%,rgba(233,199,94,.30),transparent 70%),radial-gradient(42% 36% at 50% 75%,rgba(230,161,92,.24),transparent 70%),radial-gradient(30% 28% at 20% 80%,rgba(169,197,176,.30),transparent 70%);filter:blur(10px);animation:sp-flow 9s ease-in-out infinite alternate}
 #splash .sp{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px}
 #splash .logo{width:min(190px,48vw);height:auto;animation:sp-in .8s cubic-bezier(.2,.9,.3,1) both}
 #splash .sp-tag{font-size:16px;font-weight:700;margin:0;color:#3F4F33;animation:sp-in .8s ease-out .2s both}
 #splash .bar{position:relative;width:120px;height:4px;border-radius:4px;background:rgba(37,49,40,.10);overflow:hidden;margin-top:6px}
 #splash .bar::after{content:"";position:absolute;inset:0;width:45%;border-radius:4px;background:linear-gradient(90deg,#75964F,#E9C75E,#E6A15C);animation:sp-bar 1.4s ease-in-out infinite}
 #splash .note{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#3F4F33;margin:0;padding:0 24px}
-#splash.gone{opacity:0;transform:scale(1.03);pointer-events:none}
+@media (min-width:600px) and (min-height:480px){
+  #splash{background:#EDE7D9}
+  #splash .frame{inset:auto;width:428px;height:900px;padding:3px;border-radius:65px;left:calc(50% - 214px * var(--sz,1));top:calc(50% - 450px * var(--sz,1));transform:scale(var(--sz,1));transform-origin:0 0;
+    background:linear-gradient(135deg,#9aa0a6 0%,#d9dde0 18%,#6c7177 45%,#c3c7cb 70%,#80868c 100%);box-shadow:0 0 0 1px #4a4e52,0 40px 80px -24px rgba(32,32,29,.6),0 18px 36px -18px rgba(0,0,0,.45)}
+  #splash .screen{inset:3px;border-radius:62px;border:10px solid #050505}
+  #splash .screen::after{content:"";position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:18px;background:#000}
+  #splash .logo{width:190px}
+}
+#splash.gone{opacity:0;pointer-events:none}
 @keyframes sp-flow{0%{transform:translate(-4%,-3%) rotate(0deg) scale(1)}50%{transform:translate(3%,2%) rotate(8deg) scale(1.05)}100%{transform:translate(-2%,4%) rotate(-6deg) scale(1)}}
 @keyframes sp-in{from{transform:translateY(10px) scale(.96);opacity:0}to{transform:none;opacity:1}}
 @keyframes sp-bar{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
-@media (prefers-reduced-motion:reduce){#splash *,#splash::before{animation:none!important}#splash{transition:none}}
+@media (prefers-reduced-motion:reduce){#splash *,#splash .screen::before{animation:none!important}#splash{transition:none}}
 </style>
 </head>
 <body>
 <div id="demo-boot" class="offline" hidden></div>
-<div id="splash" role="status" aria-live="polite" aria-label="Pawsure is loading">
+<div id="splash" role="status" aria-live="polite" aria-label="Pawsure is loading"><div class="frame"><div class="screen">
 <div class="sp">
   <img class="logo" src="assets/pawsure-logo-vertical.png" width="412" height="295" alt="Pawsure">
   <p class="sp-tag">Be sure, whoever’s caring.</p>
   <span class="bar" aria-hidden="true"></span>
 </div>
-  <p class="note" id="splash-note">Starting the demo. The first visit takes a few seconds.</p></div>
+  <p class="note" id="splash-note">Starting the demo. The first visit takes a few seconds.</p></div></div></div>
+<script>/* the phone frame's scale, same rule as the app (StatusBar.tsx) */(function(){var s=document.getElementById('splash');function fit(){var z=Math.max(.3,Math.min(1,(innerHeight-48)/900,(innerWidth-48)/436));s.style.setProperty('--sz',z)}fit();addEventListener('resize',fit)})()</script>
 <script>/* failsafe: never leave the splash up if the app fails to start */setTimeout(function(){var s=document.getElementById('splash');if(s){s.classList.add('gone');setTimeout(function(){s.remove()},300)}},45000)</script>
 <div id="root"></div>
 <script type="module" src="/src/demo/main.ts"></script>

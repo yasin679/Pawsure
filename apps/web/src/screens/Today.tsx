@@ -34,7 +34,7 @@ function HelperAvatar({ who, seed = '', name = '' }: { who: 'sunita' | 'helper' 
 /** Home shows a task as Pending or Completed (or Cancelled); the evidence label is in Task details. */
 function StatusPill({ t }: { t: DayTask }) {
   const review = ['Confirmed', 'Likely'].includes(t.ev.state) && t.signals.some(x => x.kind === 'photo') && !t.returnCheck?.reviewed && t.returnCheck?.by !== 'owner';
-  if (review) return <span className="st-pill review">{tr('To review')}</span>;
+  if (review) return <span className="st-pill approve">{tr('Approve')}</span>;
   const st = t.ev.state === 'Cancelled' ? 'Cancelled' : ['Confirmed', 'Likely', 'Matched'].includes(t.ev.state) ? 'Completed' : 'Pending';
   return <span className={`st-pill ${st.toLowerCase()}`}>{st === 'Completed' ? '✓ ' : ''}{tr(st)}</span>;
 }
@@ -171,7 +171,8 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
     return s ? `${s.kind.includes('photo') ? tr('Photo from') : tr('Check-in from')} ${who} · ${fmt(s.eventTime)}` : tr('Completed');
   };
   const taskCard = (t: DayTask, i = 0) => <button key={t.id} className={`task tl-row${isDone(t) ? ' done' : ''}`} onClick={() => { setTask(t); setSheet('task'); }}>
-    <span className={`task-ic t-${t.type} pal-${i % 6}`} aria-hidden="true"><Icon name={TASK_ICON[t.type] ?? 'paw'} size={22} /></span>
+    {t.signals.some(x => x.kind === 'photo') ? <TaskThumb hh={hh} taskId={t.id} fallback={<span className={`task-ic t-${t.type} pal-${i % 6}`} aria-hidden="true"><Icon name={TASK_ICON[t.type] ?? 'paw'} size={22} /></span>} />
+      : <span className={`task-ic t-${t.type} pal-${i % 6}`} aria-hidden="true"><Icon name={TASK_ICON[t.type] ?? 'paw'} size={22} /></span>}
     <span className="grow task-txt"><b className="task-title">{t.title}</b>
       <span className="task-sub">{fmt(t.due)}{t.lifecycle.at(-1)?.state && t.lifecycle.at(-1)?.state !== 'Planned' ? ` · ${t.lifecycle.at(-1)?.state}` : ''}{t.signals.length ? ' · ' + t.signals.map(s => s.kind === 'photo' ? `📷 ${s.code === 'today' ? 'photo + code' : 'photo'}` : s.kind === 'friend_photo' ? '📷 photo' : s.kind).join(' · ') : ''}{t.ev.late ? ` · ${tr('Late')}` : ''}</span></span>
     <StatusPill t={t} /><span className="chev" aria-hidden="true">›</span>
@@ -277,9 +278,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="row"><h2 className="grow">{task.title}</h2><StatusPill t={task} /></div>
       <div className="small muted">{petName(task.petId)} · {fmt(task.due)}{helperRow ? ` · ${helperFirst}` : ''}</div>
       {isDone(task) && task.ev.state !== 'Cancelled'
-        ? <>{toReview(task) && <div className="review-head">{helperFirst} {tr('sent this photo. Check it, then mark the task complete.')}</div>}<TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
-          {toReview(task) && <button className="btn primary block" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`${tr('Marked complete')}: ${task.title}. ${tr('Thank you')}, ${helperFirst}!`); })}><Icon name="check" size={18} />{tr('Mark as complete')}</button>}
-          {task.returnCheck?.reviewed && <div className="small muted">✓ {tr('Reviewed by you')}</div>}</>
+        ? <>{toReview(task) && <div className="review-head">{helperFirst} {tr('sent this photo. Check it, then approve the task.')}</div>}<TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
+          {toReview(task) && <button className="btn primary block" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`${tr('Approved')}: ${task.title}. ${tr('Thank you')}, ${helperFirst}!`); })}><Icon name="check" size={18} />{tr('Approve')}</button>}
+          {task.returnCheck?.reviewed && <div className="small muted">✓ {tr('Approved by you')}</div>}</>
         : task.ev.state === 'Cancelled' ? <div className="task-desc">{tr('Cancelled for today.')}</div>
         : <>
           <div className="task-desc">{taskDescription(task)}</div>
@@ -395,6 +396,12 @@ function VisitTime({ v }: { v: Visit }) {
 /** The random code sent at the arrival / exit call, and whether her photo of it came back in time. */
 const CODE_WORD: Record<VisitCodeState, string> = { ok: 'photo matched ✓', late: 'photo came late', wrong: 'code didn’t match', waiting: 'waiting for photo', missing: 'no photo sent' };
 
+/** The helper's photo, small, on the task card: the same picture as in the review. */
+function TaskThumb({ hh, taskId, fallback }: { hh: string; taskId: string; fallback: ReactNode }) {
+  const [src, setSrc] = useState<string | null | undefined>(undefined);
+  useEffect(() => { api<ProofRow[]>(`/v1/households/${hh}/tasks/${taskId}/proof`).then(r => setSrc(r.find(x => x.photo)?.photo ?? null)).catch(() => setSrc(null)); }, [hh, taskId]);
+  return src ? <img className="task-thumb" src={src} alt="Photo from the helper" width={44} height={44} /> : <>{fallback}</>;
+}
 function TaskProof({ hh, taskId, fallback }: { hh: string; taskId: string; fallback?: ReactNode }) {
   const [rows, setRows] = useState<ProofRow[] | null>(null);
   useEffect(() => { api<ProofRow[]>(`/v1/households/${hh}/tasks/${taskId}/proof`).then(setRows).catch(() => setRows([])); }, [hh, taskId]);

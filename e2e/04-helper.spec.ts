@@ -14,11 +14,11 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(phone(page)).toContainText('Lunch + fresh water');
     await phone(page).getByRole('button', { name: '☎ Arrival call' }).click();
     await phone(page).getByRole('button', { name: '📷 Photo + today’s code' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('To review'); // done by her photo, waiting for the owner's review (18 Nov)
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Approve'); // done by her photo, waiting for the owner's review (18 Nov)
     expect(await taskDetails(page, 'Lunch + fresh water')).toContain('Likely');
     await page.getByRole('button', { name: '+15m' }).click();
     await phone(page).getByRole('button', { name: '☎ Exit call' }).click();
-    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('To review');
+    await expect(taskCard(page, 'Lunch + fresh water')).toContainText('Approve');
     await expect.poll(() => taskDetails(page, 'Lunch + fresh water')).toContain('Confirmed');
   });
 

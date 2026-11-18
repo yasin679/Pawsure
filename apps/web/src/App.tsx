@@ -10,7 +10,7 @@ import { Today } from './screens/Today';
 import { PetScreen } from './screens/PetScreen';
 import { RoutineScreen, HealthScreen, HelperScreen, CircleScreen } from './screens/CareSetup';
 import { LookIn } from './screens/LookIn';
-import { HelperSim, HelperWhatsApp } from './screens/HelperSim';
+import { HelperSim, HelperWhatsApp, HelperWhatsAppLink } from './screens/HelperSim';
 import { FindCover } from './screens/FindCover';
 import { CoverAssistant, Sparkle } from './screens/Assistant';
 import { Friends, PrivacyScreen } from './screens/Friends';
@@ -107,7 +107,8 @@ export function App() {
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
     {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} wa={waOpen} setWa={setWaOpen} />}
-    {demo && hh && waOpen && <div className="simdock" aria-label="Helper’s WhatsApp"><HelperWhatsApp hh={hh} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} onChange={load} onClose={() => setWaOpen(false)} /></div>}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
+    {demo && hh && waOpen && <div className="simdock" aria-label="Helper’s WhatsApp"><HelperWhatsApp hh={hh} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} onChange={load} onClose={() => setWaOpen(false)} /></div>}
+    {demo && hh && !waOpen && tab === 'today' && <HelperWhatsAppLink key={hh + String(waOpen)} hh={hh} onShow={() => setWaOpen(true)} />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
     {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
     {sub === 'helper' && hh && <HelperScreen hh={hh} onBack={() => setSub(null)} />}

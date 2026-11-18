@@ -344,13 +344,21 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await wa.locator('.screen [data-go]').first().click(); // bowl photo (no code card: a photo or a short video is all she sends)
     const note = page.locator('.review-note');
     await expect(note).toContainText('Lata completed Breakfast', { timeout: 10000 });
-    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('To review');
+    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('Approve');
+    const thumb = page.locator('.task', { hasText: 'Breakfast' }).locator('img.task-thumb');
+    await expect(thumb).toHaveAttribute('src', /^data:image\/webp/); // the photo she sent, on the task card
+    const sent = await thumb.getAttribute('src');
     await note.getByRole('button', { name: 'Review' }).click();
     await expect(page.getByRole('dialog')).toContainText('Lata sent this photo');
-    await page.getByRole('dialog').getByRole('button', { name: 'Mark as complete' }).click();
-    await expect(page.getByText('Marked complete: Breakfast. Thank you, Lata!')).toBeVisible();
+    await expect(page.getByRole('dialog').locator('.proofs img').first()).toHaveAttribute('src', sent!); // the same photo in the review
+    await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+    await expect(page.getByText('Approved: Breakfast. Thank you, Lata!')).toBeVisible();
     await expect(page.locator('.review-note')).toHaveCount(0);
     await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('Completed');
+    // hide her WhatsApp, then bring it back with the link beside the phone
+    await page.locator('.wa-dock').getByRole('button', { name: 'Hide' }).click();
+    await page.getByRole('button', { name: 'Show Lata’s WhatsApp' }).click();
+    await expect(page.locator('.wa-dock')).toBeVisible();
   });
 
   test('U5 Find cover works the same right after sign-up as after login: friends to ask, the in-chat form, Send', async ({ page }) => {

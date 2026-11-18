@@ -298,6 +298,17 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
     return c.json({ code: card?.codes[Number(istDate(now()).slice(8, 10))] ?? null });
   });
 
+  /** DEMO ONLY: the photo she sent on her (simulated) WhatsApp, stored with the task like any photo evidence,
+   *  so the owner sees that same picture on Home and in the review. */
+  app.post('/demo/helper-photo/:hh', async (c) => {
+    if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);
+    const hh = c.req.param('hh'); const b = z.object({ taskId: z.string(), photo: ProofIn.shape.photo }).parse(await c.req.json());
+    const t = (await db.query<{ assignee_membership_id: string | null }>(`select assignee_membership_id from care_tasks where id=$1 and household_id=$2`, [b.taskId, hh]))[0];
+    if (!t?.assignee_membership_id) return c.json({ error: 'unknown_task' }, 404);
+    const r = await recordProof(db, { householdId: hh, taskId: b.taskId, actor: 'helper:' + t.assignee_membership_id, channel: 'whatsapp', proof: { photo: b.photo ?? null }, now: now(), key: `wa-photo:${b.taskId}:${now().getTime()}` });
+    await helperSay(hh, t.assignee_membership_id, 'W_THANKS', {}, b.taskId);
+    return c.json({ ok: true, proof: r });
+  });
   /** DEMO ONLY: the home's newest helper, so the simulated phone plays whoever the owner invited. */
   app.get('/demo/helper-of/:hh', async (c) => {
     if (!x.d.demoMode) return c.json({ error: 'not_found' }, 404);

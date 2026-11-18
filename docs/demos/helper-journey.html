@@ -349,7 +349,7 @@ function go() {
   // what the helper just did, for the app: she sent her ID, then joined with photos (the highlighted answer)
   if (i === 3) emit('id_sent');
   if (i === 4) emit('joined', { method: 'photo' });
-  if (i === 8) emit('task_photo'); // she sent the bowl photo
+  if (i === 8) emit('task_photo', { photo: BOWL }); // she sent the bowl photo: the app attaches this same picture to the task
 }
 $('#steps').innerHTML = STEPS.map((s, k) => `<li><button type="button"><span class="n">${k + 1}</span><span><span class="who">${s.who}</span><span class="t" style="display:block">${s.title}</span><span class="d">${s.d}</span></span></button></li>`).join('');
 document.querySelectorAll('#steps li button').forEach((b, k) => b.addEventListener('click', () => { i = k; render(); }));

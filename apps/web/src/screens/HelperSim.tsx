@@ -98,17 +98,19 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
       if (e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone') return;
       if (e.data.action === 'joined') await join(e.data.method ?? 'photo');
       if (e.data.action === 'id_sent') setNote(`${first} sent a photo ID.`);
-      if (e.data.action === 'task_photo') await sendTaskPhoto();
+      if (e.data.action === 'task_photo') await sendTaskPhoto(typeof e.data.photo === 'string' ? e.data.photo : undefined);
     };
     addEventListener('message', on); return () => removeEventListener('message', on);
   }, [helper, hh, first, firstTask]);
   /** She sent the bowl photo with today's code for her first task: the same WhatsApp check-in a real helper sends. */
   const sentRef = useRef(false);
-  async function sendTaskPhoto() {
+  async function sendTaskPhoto(photo?: string) {
     const h = helper ?? await api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).catch(() => null);
     if (!h || !firstTask || sentRef.current) return;
     sentRef.current = true;
-    await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now() }, auth: false });
+    // the picture from her phone is stored with the task; without one, a plain WhatsApp photo check-in
+    if (photo) await api(`/demo/helper-photo/${hh}`, { body: { taskId: firstTask.id, photo }, auth: false });
+    else await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now() }, auth: false });
     await api('/jobs/tick', { body: {}, auth: false });
     setNote(`${first} sent a photo for ${firstTask.title}. It’s waiting for your review on Home.`);
     onChange();
@@ -132,4 +134,14 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
     {!joined && <button type="button" className="btn ghost sm" onClick={() => join('photo')}>{first} said Yes (if her phone doesn’t respond)</button>}
     <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
   </div>;
+}
+
+/** DEMO ONLY: after her WhatsApp is hidden, a link beside the phone shows it again (once it has been opened for this home). */
+export function HelperWhatsAppLink({ hh, onShow }: { hh: string; onShow: () => void }) {
+  const [first, setFirst] = useState<string | null>(null);
+  useEffect(() => { let seen = false; try { seen = !!sessionStorage.getItem('pawsure.watched.' + hh); } catch { /* storage blocked */ }
+    if (!seen) { setFirst(null); return; }
+    api<{ name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(h => setFirst(h.name.split(' ')[0] || 'helper')).catch(() => setFirst(null)); }, [hh]);
+  if (!first) return null;
+  return <div className="simdock wa-link-dock" aria-label="Helper’s WhatsApp"><button type="button" className="btn sm wa-show" onClick={onShow}>Show {first}’s WhatsApp</button></div>;
 }
