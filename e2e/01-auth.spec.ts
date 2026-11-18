@@ -107,14 +107,17 @@ test.describe('A+. Separate Log in and Sign up (15 Nov)', () => {
 });
 
 test.describe('A++. Welcome screens before Log in (15 Nov)', () => {
-  test('A14 First visit: three welcome screens; Next moves on; Get started opens Sign up; they are not shown again', async ({ page }) => {
+  test('A14 First visit: the welcome screens move on by themselves; the footer (Get started, Log in) stays put; Get started opens Sign up; not shown again', async ({ page }) => {
     await boot(page, '', { intro: true });
-    await expect(page.getByRole('heading', { name: 'When help can’t come, ask friends.' })).toBeVisible();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.getByRole('heading', { name: 'Know who’s caring, every day.' })).toBeVisible();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.getByRole('heading', { name: 'Your helper checks in on WhatsApp.' })).toBeVisible();
+    const dot = (n: number) => page.getByRole('tab', { name: `Screen ${n}` });
+    await expect(dot(1)).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
+    const footer = await page.locator('.intro-foot').boundingBox();
+    await expect(dot(2)).toHaveAttribute('aria-selected', 'true', { timeout: 6000 }); // about 4 s later, by itself
+    await expect(dot(3)).toHaveAttribute('aria-selected', 'true', { timeout: 6000 });
+    expect(await page.locator('.intro-foot').boundingBox()).toEqual(footer); // the footer never moves
+    await expect(dot(1)).toHaveAttribute('aria-selected', 'true', { timeout: 6000 }); // and round again
+    await dot(3).click(); await expect(dot(3)).toHaveAttribute('aria-selected', 'true');
     await page.getByRole('button', { name: 'Get started' }).click();
     await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
     await page.reload(); await page.waitForSelector('html[data-demo-ready]', { state: 'attached' });
