@@ -995,3 +995,49 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 /* status pills: solid */
 .st-pill.pending{background:var(--b-sun);color:var(--b-ink);border-color:var(--b-sun)}
 .st-pill.completed{background:var(--b-green);color:#fff;border-color:var(--b-green)}
+
+/* 18 Nov: Home redesign (owner's reference). Soft lavender help card and peach heading-out card with
+   blob shapes and illustrations, a pending-invite note in cream, coral SOS with a phone icon. */
+:root{--lav-a:#EEE5F8;--lav-b:#DCCDF0;--lav-ink:#6A4C9C;--peach-a:#FDE8CC;--peach-b:#F9D3A6;--peach-ink:#4A2E12;--cream-note:#FCF1CF;--sos:#E4644F;--deep:#24402C;--locked-bg:#EEF3E6;--locked-line:#B9CDA3}
+:root[data-theme="dark"]{--lav-a:#2E2640;--lav-b:#3A2F52;--lav-ink:#C6AEF0;--peach-a:#3D2D1E;--peach-b:#4A3622;--peach-ink:#FBE4C8;--cream-note:#3A3220;--locked-bg:#1F271B;--locked-line:#3C4D30}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lav-a:#2E2640;--lav-b:#3A2F52;--lav-ink:#C6AEF0;--peach-a:#3D2D1E;--peach-b:#4A3622;--peach-ink:#FBE4C8;--cream-note:#3A3220;--locked-bg:#1F271B;--locked-line:#3C4D30}}
+.today .today-hero .th-greet{font-size:1.95rem;letter-spacing:-.01em}
+.th-greet .wave{display:inline-block;font-size:.85em;transform-origin:70% 70%;animation:wave 2.4s ease-in-out 1}
+@keyframes wave{0%,60%,100%{transform:none}10%,30%{transform:rotate(14deg)}20%,40%{transform:rotate(-8deg)}}
+@media (prefers-reduced-motion:reduce){.th-greet .wave{animation:none}}
+.today .today-hero .th-date{font-size:1rem;color:var(--ink-2)}
+.today .today-hero .th-sos,:root[data-theme="dark"] .today .today-hero .th-sos{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 20px 0 16px;background:var(--sos);color:#fff;font-size:1rem;letter-spacing:.02em;box-shadow:0 8px 18px -10px rgba(228,100,79,.8)}
+/* your help today */
+.today .card.help-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--lav-a) 0%,var(--lav-b) 100%);color:var(--ink);border-radius:28px;padding:18px 18px 16px;gap:14px}
+.today .card.help-card::after{content:'';position:absolute;right:-50px;bottom:-60px;width:220px;height:170px;border-radius:50%;background:var(--lav-b);opacity:.9;pointer-events:none}
+.today .card.help-card > *{position:relative;z-index:1}
+.hc-spark{position:absolute!important;top:16px;right:18px;width:40px;height:30px;fill:none;stroke:var(--lav-ink);stroke-width:2.6;stroke-linecap:round}
+.today .card.help-card .eyebrow{color:var(--lav-ink);font-size:.82rem;letter-spacing:.06em}
+.today .card.help-card h2{color:var(--ink);font-size:1.6rem}
+.today .card.help-card .small,.today .card.help-card .muted{color:var(--ink-2)}
+.today .card.help-card .helper-av{width:84px;height:84px;box-shadow:0 0 0 4px #fff,0 6px 14px -8px rgba(60,40,90,.5)}
+.today .card.help-card .helper-av img{width:84px;height:84px}
+.today .card.help-card .btn:not(.primary){background:var(--surface);color:var(--ink);border-color:transparent;height:46px;font-size:1rem}
+.today .card.help-card .btn.primary{background:var(--deep);border-color:var(--deep);color:#fff}
+.today .card.help-card .help-track li{color:var(--ink-2)}
+.today .card.help-card .help-track li:not(:first-child)::before{background:rgba(106,76,156,.25)}
+.today .card.help-card .ht-dot{background:var(--surface);border-color:var(--lav-ink)}
+.today .card.help-card .help-track li.done .ht-dot{background:var(--lav-ink);border-color:var(--lav-ink);color:#fff}
+.today .card.help-card .help-track li.now .ht-dot{border-color:var(--lav-ink);box-shadow:0 0 0 4px rgba(106,76,156,.2)}
+.today .card.help-card .invite-pill{background:var(--cream-note);border:0;border-radius:20px;padding:14px 14px 14px 16px;color:var(--ink);display:flex;align-items:center;gap:12px}
+.today .card.help-card .invite-pill .ip-text b{font-size:1rem}
+.today .card.help-card .invite-pill .btn{background:var(--surface)!important;color:var(--deep)!important;border:0;border-radius:99px;font-weight:800;padding:0 18px;height:42px;box-shadow:0 4px 10px -6px rgba(0,0,0,.3)}
+/* heading out */
+.today .card.flat.out-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--peach-a) 0%,var(--peach-b) 100%);color:var(--peach-ink);border-radius:28px;padding:18px 18px 16px;min-height:150px}
+.today .card.flat.out-card::after{content:'';position:absolute;left:46%;bottom:-70px;width:260px;height:150px;border-radius:50%;background:var(--peach-b);pointer-events:none}
+.today .card.flat.out-card > .row{position:relative;z-index:1;align-items:stretch}
+.today .card.flat.out-card b{font:800 1.45rem/1.15 var(--f-display);color:var(--peach-ink)}
+.today .card.flat.out-card .muted{color:var(--peach-ink);opacity:.85;font-size:.95rem}
+.today .card.flat.out-card .plan-link{color:var(--peach-ink);font-size:1rem;margin-top:14px;text-decoration-thickness:2px}
+.out-art{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:0;flex:none}
+.out-art img{width:140px;height:auto;margin:-8px -4px -18px 0}
+.today .card.flat.out-card .out-art .btn.primary{position:relative;background:var(--deep);border-color:var(--deep);color:#fff;height:46px;padding:0 22px;font-size:1rem;border-radius:99px}
+.today .card.flat.out-card .btn:not(.primary){background:var(--surface);color:var(--ink)}
+/* tasks waiting for "I'm leaving" */
+.tasks-locked{background:var(--locked-bg);border:1.5px dashed var(--locked-line);border-radius:24px;padding:18px 20px;color:var(--ink-2);display:flex;gap:14px;align-items:center;font-size:.98rem}
+.today .card.help-card .btnrow .btn{white-space:nowrap;padding:0 10px;font-size:.95rem}
