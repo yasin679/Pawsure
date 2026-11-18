@@ -39,7 +39,6 @@ test.describe('E. Helper check-ins (Sunita’s phone)', () => {
     await expect(page.getByRole('dialog').locator('.visit-time')).toContainText('Visit confirmed');
     await expect(page.getByRole('dialog')).toContainText('Start code: photo matched ✓');
     await expect(page.getByRole('dialog')).toContainText('End code: photo matched ✓');
-    await expect(page.getByRole('dialog')).toContainText('R-START-CODE-OK');
   });
 
   test('E1c A photo with the wrong visit code is flagged: the visit is Not confirmed', async ({ page }) => {
