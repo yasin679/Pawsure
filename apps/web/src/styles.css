@@ -1157,3 +1157,5 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .intro-foot .intro-note{margin:0 8px 4px}
 .intro-brand{flex:none;display:flex;justify-content:center;padding:14px 0 0}
 .intro-brand img{height:38px;width:auto;display:block}
+/* the carousel dots sit 10 px higher */
+.intro-dots{margin-bottom:10px}
