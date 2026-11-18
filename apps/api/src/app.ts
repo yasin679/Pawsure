@@ -291,7 +291,13 @@ export function createApp(input: Deps) {
     const hh = c.req.param('hh'); if (!(await guard(c, hh, 'task', 'update'))) return deny(c);
     const day = await loadDay(db, hh, careDate(c), now());
     const t = day.tasks.find(x => x.id === c.req.param('id')); if (!t) return c.json({ error: 'not_found' }, 404);
-    if (['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(t.ev.state)) return c.json({ ok: true, state: t.ev.state });
+    if (t.ev.state === 'Cancelled') return c.json({ ok: true, state: t.ev.state });
+    // The helper's photo already counts as done: the owner's tap records that they reviewed it.
+    if (['Confirmed', 'Likely', 'Matched'].includes(t.ev.state)) {
+      await db.query(`update care_tasks set return_check=$3 where id=$1 and household_id=$2`, [t.id, hh, JSON.stringify({ ...(t.returnCheck ?? {}), at: day.now, matched: true, by: 'owner', reviewed: true })]);
+      await audit(db, c.get('userId'), hh, 'task.owner_reviewed', { task: t.id });
+      return c.json({ ok: true, state: t.ev.state, reviewed: true });
+    }
     await db.query(`update care_tasks set return_check=$3, ack_at=coalesce(ack_at,$4), ack_by=coalesce(ack_by,$5) where id=$1 and household_id=$2`, [t.id, hh, JSON.stringify({ at: day.now, matched: true, by: 'owner' }), now().toISOString(), c.get('userId')]);
     await audit(db, c.get('userId'), hh, 'task.owner_done', { task: t.id });
     return c.json({ ok: true, state: 'Matched' });

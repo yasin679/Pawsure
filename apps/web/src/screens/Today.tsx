@@ -33,6 +33,8 @@ function HelperAvatar({ who, seed = '', name = '' }: { who: 'sunita' | 'helper' 
 }
 /** Home shows a task as Pending or Completed (or Cancelled); the evidence label is in Task details. */
 function StatusPill({ t }: { t: DayTask }) {
+  const review = ['Confirmed', 'Likely'].includes(t.ev.state) && t.signals.some(x => x.kind === 'photo') && !t.returnCheck?.reviewed && t.returnCheck?.by !== 'owner';
+  if (review) return <span className="st-pill review">{tr('To review')}</span>;
   const st = t.ev.state === 'Cancelled' ? 'Cancelled' : ['Confirmed', 'Likely', 'Matched'].includes(t.ev.state) ? 'Completed' : 'Pending';
   return <span className={`st-pill ${st.toLowerCase()}`}>{st === 'Completed' ? '✓ ' : ''}{tr(st)}</span>;
 }
@@ -143,6 +145,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const petId = pets.some(p => p.id === petTab) ? petTab : pets[0]?.id;
   const mine = day.tasks.filter(t => t.petId === petId).sort((a, b) => a.due - b.due);
   const isDone = (t: DayTask) => ['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(t.ev.state);
+  /** The helper sent her photo and it counts as done, but the owner hasn't reviewed it yet. */
+  const toReview = (t: DayTask) => ['Confirmed', 'Likely'].includes(t.ev.state) && t.signals.some(s => s.kind === 'photo') && !t.returnCheck?.reviewed && t.returnCheck?.by !== 'owner';
+  const reviewList = day ? day.tasks.filter(toReview) : [];
   const pending = mine.filter(t => !isDone(t)), completed = mine.filter(isDone);
   /** A task as in the prototype: type icon, title, time as sub text, status pill (cover details are in the task sheet). */
   /** A plain description of what the task involves, from the pet's profile. */
@@ -210,6 +215,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
           : <div className="btnrow even"><button className="btn sm" onClick={() => setSheet('caring')}>{tr('Change')}</button>
           {d.mode === 'tracked' && !d.helperUnavailable && <button className="btn sm" onClick={() => setSheet('cantcome')}>{tr('My help can’t come')}</button>}</div>}
       </section>
+      {reviewList.map(t => <div key={t.id} className="review-note" role="status"><span className="rn-ic" aria-hidden="true">🎉</span>
+        <div className="grow"><b>{helperFirst} {tr('completed')} {t.title}</b><div className="small">{petName(t.petId)} · {fmt(t.due)} · {tr('photo received')}</div></div>
+        <button type="button" className="btn sm" onClick={() => { setTask(t); setSheet('task'); }}>{tr('Review')}</button></div>)}
       {noHelper && <p className="add-helper-note">{tr('Add a helper to get check-ins on these tasks.')}</p>}
       {noHelper ? null : d.leftAt == null ? <div className="card flat out-card"><div className="row"><div className="grow"><b>{tr('Heading out?')}</b><div className="small muted">{tr('30-second leaving checklist')}</div></div><div className="out-art"><button className="btn primary sm" onClick={() => setSheet(ov?.preDeparture.warn ? 'predeparture' : 'leaving')}>{tr('I’m leaving')}</button></div></div></div>
         : d.backAt == null ? <div className="card flat out-card out-now"><div className="row"><div className="grow"><b>Out since {fmt(d.leftAt)}</b><div className="small muted">Back around {fmt(d.returnAt)}</div></div><button className="btn sm" onClick={() => setSheet('delay')}>{tr('I’m delayed')}</button><button className="btn sm" onClick={() => run(async () => { const r = await api<{ returnCheckNeeded: boolean }>(`${H}/day/back`, { body: {} }); setSheet(r.returnCheckNeeded ? 'return' : null); if (!r.returnCheckNeeded) setMsg('Welcome back. Everything had evidence today, no return check needed.'); }, () => {})}>{tr('I’m back')}</button></div></div>
@@ -270,7 +278,9 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="row"><h2 className="grow">{task.title}</h2><StatusPill t={task} /></div>
       <div className="small muted">{petName(task.petId)} · {fmt(task.due)}{helperRow ? ` · ${helperFirst}` : ''}</div>
       {isDone(task) && task.ev.state !== 'Cancelled'
-        ? <TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
+        ? <>{toReview(task) && <div className="review-head">{helperFirst} {tr('sent this photo. Check it, then mark the task complete.')}</div>}<TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
+          {toReview(task) && <button className="btn primary block" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`${tr('Marked complete')}: ${task.title}. ${tr('Thank you')}, ${helperFirst}!`); })}><Icon name="check" size={18} />{tr('Mark as complete')}</button>}
+          {task.returnCheck?.reviewed && <div className="small muted">✓ {tr('Reviewed by you')}</div>}</>
         : task.ev.state === 'Cancelled' ? <div className="task-desc">{tr('Cancelled for today.')}</div>
         : <>
           <div className="task-desc">{taskDescription(task)}</div>

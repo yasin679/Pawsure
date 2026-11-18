@@ -333,6 +333,32 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(page.locator('.demobar')).toHaveCount(0);
   });
 
+  test('U2f Her first task: Pawsure’s reminder on her WhatsApp → bowl photo with today’s code → the owner is told on Home → reviews and marks it complete', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 980 });
+    await toCare(page, '9822200208');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500016' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    await page.getByRole('button', { name: /Watch on Lata/ }).click();
+    const wa = page.frameLocator('.wa-dock iframe');
+    for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click(); // invite → chat → ID → join with photos
+    await expect(page.locator('.help-card')).not.toContainText('Invite pending', { timeout: 10000 });
+    await wa.locator('.screen [data-go]').first().click(); // practice photo
+    await wa.locator('.screen .view').click();              // practice done
+    await expect(wa.locator('.notif')).toContainText('Coco, ⏰ Breakfast (8:00 AM)'); // Pawsure's reminder for her real first task (from sign-up)
+    await wa.locator('.screen [data-go]').first().click(); // open the reminder
+    await wa.locator('.screen [data-go]').first().click(); // bowl photo
+    await wa.locator('.screen [data-go]').first().click(); // today's code, send
+    const note = page.locator('.review-note');
+    await expect(note).toContainText('Lata completed Breakfast', { timeout: 10000 });
+    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('To review');
+    await note.getByRole('button', { name: 'Review' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Lata sent this photo');
+    await page.getByRole('dialog').getByRole('button', { name: 'Mark as complete' }).click();
+    await expect(page.getByText('Marked complete: Breakfast. Thank you, Lata!')).toBeVisible();
+    await expect(page.locator('.review-note')).toHaveCount(0);
+    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('Completed');
+  });
+
   test('U3 A new owner adds tasks from Home: one-tap suggestions, or Add task → tile → a few quick steps', async ({ page }) => {
     await toCare(page, '9822200205');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');

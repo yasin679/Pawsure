@@ -43,8 +43,10 @@ type Msg =
   | { role: 'status'; reqId: string; friend: Friend };
 type Of<R extends Msg['role']> = Extract<Msg, { role: R }>;
 
+const PAWLY = `${import.meta.env.BASE_URL}assets/pawly-sparkle.webp`;
+const PawlyAv = () => <span className="ai-av" aria-hidden="true"><img src={PAWLY} alt="" width={46} height={46} /></span>;
 function Bot({ children }: { children: ReactNode }) {
-  return <div className="cb-row bot"><span className="ai-av" aria-hidden="true"><Sparkle size={20} /></span><div className="cb bot">{children}</div></div>;
+  return <div className="cb-row bot"><PawlyAv /><div className="cb bot">{children}</div></div>;
 }
 
 export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvite }: { hh: string; pets: Pet[]; me?: string; meName?: string; onForm: () => void; onInvite?: () => void }) {
@@ -114,11 +116,11 @@ export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvit
   const live = [...msgs].reverse().find(m => m.role === 'form' || m.role === 'preview' || m.role === 'status' || m.role === 'friends');
   return <>
     <AppBar title={tr('Find cover')} />
-    <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true"><Sparkle size={16} /></span>{tr('Pawly, your cover assistant')}<button type="button" className="linkbtn ai-form" onClick={onForm}>{tr('Your requests')}</button></div>
+    <div className="ai-sub"><span className="ai-spark-sm" aria-hidden="true">✦</span><span><b>Pawly</b>, {tr('your cover assistant')}</span><button type="button" className="linkbtn ai-form" onClick={onForm}>{tr('Your requests')}</button></div>
     <div className="body ai-chat" aria-live="polite">
       {msgs.map((m, i) => {
         if (m.role === 'me') return <div key={i} className="cb-row me"><div className="cb me">{m.text}</div><img className="me-av" src={personSrc(me, meName)} alt="" width={30} height={30} /></div>;
-        if (m.role === 'bot') return <Bot key={i}>{i === 0 ? <><h2 className="ai-hello">{m.text}</h2><span className="cb-note">{tr('Tell me what you need, by typing or speaking. For example:')} “{tr('Can someone feed')} {pet} {tr('at 6 PM today?')}”</span></> : <>{m.text}{m.note && <span className="cb-note">{m.note}</span>}</>}</Bot>;
+        if (m.role === 'bot') return <Bot key={i}>{i === 0 ? <><h2 className="ai-hello">{m.text} <span aria-hidden="true">👋</span></h2><span className="cb-note">{tr('Tell me what you need, by typing or speaking. For example:')} “{tr('Can someone feed')} {pet} {tr('at 6 PM today?')}”</span></> : <>{m.text}{m.note && <span className="cb-note">{m.note}</span>}</>}</Bot>;
         if (m.role === 'thinking') return <div key={i} className="ai-think" role="status" aria-label="Pawly is thinking">
           <div className="ai-orb"><span /><span /><span /><i /></div>
           <div className="ai-wave" aria-hidden="true">{Array.from({ length: 9 }, (_, k) => <b key={k} style={{ animationDelay: `${k * 0.09}s` }} />)}</div>
@@ -149,7 +151,7 @@ export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvit
         </div>;
         return <ReplyStatus key={i} H={H} m={m} />;
       })}
-      {msgs.length === 1 && <div className="cb-chips ai-suggest">{[`${tr('Feed')} ${pet} ${tr('at 6 PM today')}`, `${tr('Walk')} ${pet} ${tr('this evening')}`, tr('Someone to look in while I travel')].map(sg => <button key={sg} type="button" className="chip" onClick={() => send(sg)}>{sg}</button>)}</div>}
+      {msgs.length === 1 && <div className="ai-suggest">{([[`${tr('Feed')} ${pet} ${tr('at 6 PM today')}`, 'food'], [`${tr('Walk')} ${pet} ${tr('this evening')}`, 'walk'], [tr('Someone to look in while I travel'), 'home']] as const).map(([sg, ic]) => <button key={sg} type="button" className="ai-chip" onClick={() => send(sg)}><span className={`ai-chip-ic ic-${ic}`} aria-hidden="true"><Icon name={ic} size={20} /></span>{sg}</button>)}</div>}
       {onInvite && msgs.some(m => m.role === 'bot' && m.text.startsWith(tr('None of your friends'))) && <button className="btn sm" onClick={onInvite}>{tr('Invite a friend')}</button>}
       <div ref={end} />
     </div>
@@ -158,7 +160,7 @@ export function CoverAssistant({ hh, pets, me = '', meName = '', onForm, onInvit
       {mic.error && <div className="cb-err" role="alert">{mic.error}</div>}
       <div className="cb-input">
         <label htmlFor="ai-in" className="sr-only">{tr('Ask Pawly')}</label>
-        <input id="ai-in" className="input" value={draft} onChange={e => setDraft(e.target.value)} placeholder={mic.listening ? tr('Listening…') : tr('Ask for help with your pet…')} autoComplete="off" disabled={busy} />
+        <input id="ai-in" className="input" value={draft} onChange={e => setDraft(e.target.value)} placeholder={mic.listening ? tr('Listening…') : tr('Ask Pawly for help with your pet…')} autoComplete="off" disabled={busy} />
         {mic.available && <button type="button" className={`cb-mic${mic.listening ? ' on' : ''}`} aria-label={mic.listening ? 'Stop voice input' : 'Speak your request'} aria-pressed={mic.listening} disabled={busy} onClick={() => mic.toggle(t => setDraft(d => (d ? d + t : t.trimStart())))}><Icon name="mic" size={20} /></button>}
         <button type="submit" className="cb-send ai-send" aria-label="Send" disabled={!draft.trim() || busy}><Icon name="send" size={20} /></button>
       </div>
@@ -182,7 +184,7 @@ function ReplyStatus({ H, m }: { H: string; m: Of<'status'> }) {
     else if (['declined', 'expired', 'withdrawn', 'cancelled'].includes(rec.state)) { text = `${who} ${tr('can’t do it this time.')}`; note = tr('Type a new request to ask someone else.'); tone = 'no'; }
     else note = `${tr('Waiting for a reply · expires')} ${fmt(rec.sentAt + 15)}`;
   }
-  return <div className="cb-row bot"><span className="ai-av" aria-hidden="true"><Sparkle size={20} /></span>
+  return <div className="cb-row bot"><PawlyAv />
     <div className={`cb bot ai-status ${tone}`} role="status" aria-label={text}>{tone === 'wait' && <span className="geo-dot" aria-hidden="true" />}{text}{note && <span className="cb-note">{note}</span>}
       {action && <button type="button" className="btn primary sm" disabled={busy} onClick={confirm}>{rec?.state === 'proposed' ? `${tr('Confirm')} ${fmt(rec.proposal!)}` : `${tr('Confirm')} ${who}`}</button>}
       {err && <span className="cb-err" role="alert">{err}</span>}</div></div>;

@@ -77,16 +77,42 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
   useEffect(() => { api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(setHelper).catch(() => setHelper(null)); }, [hh]);
   const first = helper?.name.split(' ')[0] ?? 'Your helper';
   // '*' with a source check on the way back: the phone page may be served from the artifact's own file host.
-  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: pets.length ? pets : ['your pet'] } }, '*');
-  useEffect(setup, [first, owner, pets.join()]);
+  // Her first task today and today's code from the code card, so her phone shows the real reminder.
+  const [firstTask, setFirstTask] = useState<{ id: string; title: string; pet: string; time: string; code: string; day: number } | null>(null);
+  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: firstTask ? [firstTask.pet, ...pets.filter(p => p !== firstTask.pet)] : pets.length ? pets : ['your pet'], ...(firstTask ? { task: { title: firstTask.title, time: firstTask.time }, code: firstTask.code, day: firstTask.day } : {}) } }, '*');
+  async function loadFirstTask(mid: string) {
+    try {
+      const day = await api<{ tasks: { id: string; title: string; petId: string; due: number; assignee: string; ev: { state: string } }[]; careDate: string }>(`/v1/households/${hh}/today`);
+      const petsOf = await api<{ id: string; name: string }[]>(`/v1/households/${hh}/pets`).catch(() => [] as { id: string; name: string }[]);
+      const t = day.tasks.filter(x => x.assignee === mid && !['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(x.ev.state)).sort((a, b) => a.due - b.due)[0];
+      if (!t) return;
+      const card = await api<{ codes: Record<string, string>; today: number }>(`/v1/households/${hh}/code-cards/current`).catch(() => null);
+      const h = Math.floor(t.due / 60), m = t.due % 60, time = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+      setFirstTask({ id: t.id, title: t.title, pet: petsOf.find(p => p.id === t.petId)?.name ?? pets[0] ?? 'your pet', time, code: card?.codes[card.today] ?? '', day: card?.today ?? Number(day.careDate.slice(8, 10)) });
+    } catch { /* the phone keeps its example task */ }
+  }
+  useEffect(() => { if (helper) loadFirstTask(helper.mid); }, [helper?.mid]);
+  useEffect(setup, [first, owner, pets.join(), firstTask?.id]);
   useEffect(() => {
     const on = async (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone') return;
       if (e.data.action === 'joined') await join(e.data.method ?? 'photo');
       if (e.data.action === 'id_sent') setNote(`${first} sent a photo ID.`);
+      if (e.data.action === 'task_photo') await sendTaskPhoto();
     };
     addEventListener('message', on); return () => removeEventListener('message', on);
-  }, [helper, hh, first]);
+  }, [helper, hh, first, firstTask]);
+  /** She sent the bowl photo with today's code for her first task: the same WhatsApp check-in a real helper sends. */
+  const sentRef = useRef(false);
+  async function sendTaskPhoto() {
+    const h = helper ?? await api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).catch(() => null);
+    if (!h || !firstTask || sentRef.current) return;
+    sentRef.current = true;
+    await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now(), caption: firstTask.code }, auth: false });
+    await api('/jobs/tick', { body: {}, auth: false });
+    setNote(`${first} sent a photo for ${firstTask.title}. It’s waiting for your review on Home.`);
+    onChange();
+  }
   /** She said Yes and chose how to check in: the same WhatsApp replies a real helper sends. */
   const [joined, setJoined] = useState(false); const joinedRef = useRef(false);
   async function join(method: string) {
