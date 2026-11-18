@@ -54,3 +54,22 @@ document.addEventListener('click', e => {
 }, true);
 
 void import('../main');
+
+/**
+ * "Start from the beginning": a small button outside the app that signs out and reloads the demo, so the loading
+ * screen, the welcome screens and the login show again. The demo's data (accounts, homes, tasks) is kept.
+ */
+function addRestart() {
+  if (document.getElementById('demo-restart')) return;
+  const b = document.createElement('button');
+  b.id = 'demo-restart'; b.type = 'button'; b.className = 'demo-restart';
+  b.textContent = '↺ Start from the beginning';
+  b.title = 'Shows the loading screen, the welcome screens and the login again. Your demo data is kept.';
+  b.addEventListener('click', () => {
+    try { localStorage.removeItem('pawsure.session'); localStorage.removeItem('pawsure.introSeen'); } catch { /* storage blocked: reload anyway */ }
+    try { Object.keys(sessionStorage).filter(k => k.startsWith('pawsure.')).forEach(k => sessionStorage.removeItem(k)); } catch { /* ignore */ }
+    location.hash = ''; location.reload();
+  });
+  document.body.appendChild(b);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addRestart); else addRestart();

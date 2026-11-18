@@ -377,6 +377,18 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(page.getByRole('status', { name: `Sent to ${name} on WhatsApp.` })).toBeVisible();
   });
 
+  test('U6 “Start from the beginning” (outside the app) shows the loading screen, then the welcome screens, signed out', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 }); // the button sits outside the phone frame
+    await boot(page, '', { tools: false, intro: true }); // the welcome screens are not pre-skipped in this test
+    await page.getByRole('button', { name: 'Log in' }).first().click();
+    await signInOwner(page, { home: true });
+    await page.getByRole('button', { name: /Start from the beginning/ }).click();
+    await expect(page.locator('#splash')).toBeVisible();
+    await expect(page.locator('#splash img.logo')).toHaveAttribute('alt', 'Pawsure');
+    await expect(page.getByRole('button', { name: 'Get started' })).toBeVisible({ timeout: 30000 }); // the welcome screens
+    await expect(page.locator('.help-card')).toHaveCount(0);
+  });
+
   test('U3 A new owner adds tasks from Home: one-tap suggestions, or Add task → tile → a few quick steps', async ({ page }) => {
     await toCare(page, '9822200205');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
