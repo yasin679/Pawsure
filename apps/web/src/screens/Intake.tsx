@@ -33,7 +33,7 @@ const langLabel = (code: string) => { const l = LANGUAGES.find(x => x.code === c
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function Bot({ children }: { children: ReactNode }) {
-  return <div className="cb-row bot"><span className="cb-av" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/avatars/dog.webp`} alt="" width={34} height={34} /></span><div className="cb bot">{children}</div></div>;
+  return <div className="cb-row bot"><span className="cb-av" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/pawly-sparkle.webp`} alt="" width={34} height={34} /></span><div className="cb bot">{children}</div></div>;
 }
 function Me({ text, onEdit }: { text: string; onEdit?: () => void }) {
   return <div className="cb-row me">{onEdit
@@ -47,7 +47,7 @@ function Playbook({ n, title, intro }: { n: number; title: string; intro: string
     <p className="pb-intro">{intro}</p>
   </section>;
 }
-function Typing() { return <div className="cb-row bot"><span className="cb-av" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/avatars/dog.webp`} alt="" width={34} height={34} /></span><div className="cb bot typing" aria-label="Pawly is typing"><i /><i /><i /></div></div>; }
+function Typing() { return <div className="cb-row bot"><span className="cb-av" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/pawly-sparkle.webp`} alt="" width={34} height={34} /></span><div className="cb bot typing" aria-label="Pawly is typing"><i /><i /><i /></div></div>; }
 
 /**
  * In-app list picker: a field that opens a searchable list sliding up inside the phone. Used instead of a native
