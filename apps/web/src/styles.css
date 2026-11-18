@@ -1086,3 +1086,21 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .card.help-card .invite-pill{flex-wrap:wrap}
 .today .card.help-card .invite-pill .ip-text{flex:1 1 60%}
 .today .card.help-card .invite-pill .watch-helper{flex:1 1 100%;order:3}
+/* Heading out without the illustration: a tidy card, button centred on the right */
+.today .card.flat.out-card{min-height:0}
+.today .card.flat.out-card > .row{align-items:center}
+.out-art{justify-content:center}
+/* 18 Nov: task colours from the Pawsure palette, one per task in turn (icons in Forest Charcoal) */
+:root{--apricot:#E6A15C;--rose:#D9A8B5;--eucalyptus:#A9C5B0;--periwinkle:#9EADD0;--honey:#E9C75E;--lilac:#C5A7D9;--charcoal-ink:#253128}
+.today .task-ic.pal-0{background:var(--apricot);color:var(--charcoal-ink)}
+.today .task-ic.pal-1{background:var(--rose);color:var(--charcoal-ink)}
+.today .task-ic.pal-2{background:var(--eucalyptus);color:var(--charcoal-ink)}
+.today .task-ic.pal-3{background:var(--periwinkle);color:var(--charcoal-ink)}
+.today .task-ic.pal-4{background:var(--honey);color:var(--charcoal-ink)}
+.today .task-ic.pal-5{background:var(--lilac);color:var(--charcoal-ink)}
+/* Heading out: a tight card with a smaller heading */
+.today .card.flat.out-card:not(.out-now){padding:12px 16px}
+.today .card.flat.out-card:not(.out-now) b{font-size:1.05rem;line-height:1.25}
+.today .card.flat.out-card:not(.out-now) .muted{font-size:.85rem}
+.today .card.flat.out-card:not(.out-now) .out-art .btn.primary{height:36px;padding:0 16px;font-size:.88rem}
+.today .card.flat.out-card::after{display:none}
