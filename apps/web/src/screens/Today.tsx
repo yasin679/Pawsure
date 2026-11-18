@@ -107,6 +107,8 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
   const loadHelpers = () => api<Helper[]>(`/v1/households/${hh}/helpers`).then(setHelpers).catch(() => setHelpers([]));
   useEffect(() => { loadHelpers(); }, [hh, day]);
   const pendingInvite = !!helpers?.some(h => h.consent === 'pending');
+  // Demo: the first time a new invite is pending, open the helper's WhatsApp beside the owner's phone, once per home.
+  useEffect(() => { if (!pendingInvite || !onWatchHelper) return; const k = 'pawsure.watched.' + hh; try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch { /* storage blocked: still open it */ } onWatchHelper(); }, [pendingInvite]);
   useEffect(() => { if (!pendingInvite) return; const t = setInterval(loadHelpers, 4000); return () => clearInterval(t); }, [hh, pendingInvite]);
   // The header turns into a compact bar as Home scrolls: --hp goes 0 → 1 over the first 110 px (styles.css).
   const mainRef = useRef<HTMLElement>(null);

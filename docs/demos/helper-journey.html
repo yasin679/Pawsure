@@ -234,8 +234,9 @@ const fill = s => s.replace(/Bruno and Misty/g, petList('and')).replace(/Bruno à
 const t = k => fill(M[k][LANG]);
 // Inside the app demo (an iframe on the same site), taps here are sent to the app, which records them for real.
 const EMBED = window.parent !== window;
-const emit = (action, extra = {}) => { if (EMBED) try { parent.postMessage({ pawsure: 'helper-phone', action, ...extra }, location.origin); } catch (e) {} };
-window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.pawsure !== 'setup') return; NAMES = { ...NAMES, ...e.data.names }; render(); });
+// '*': the app may serve this page from its own file host; the app checks that the message comes from this frame.
+const emit = (action, extra = {}) => { if (EMBED) try { parent.postMessage({ pawsure: 'helper-phone', action, ...extra }, '*'); } catch (e) {} };
+window.addEventListener('message', e => { if (e.source !== window.parent || !e.data || e.data.pawsure !== 'setup') return; NAMES = { ...NAMES, ...e.data.names }; render(); });
 const mean = k => LANG === 'mr' ? `<span class="mean">Meaning: ${esc(M[k].en)}</span>` : '';
 const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const CODE = '4821';

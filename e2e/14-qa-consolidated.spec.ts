@@ -299,11 +299,23 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
     const card = page.locator('.help-card');
     await expect(card).toContainText('Invite pending');
-    await card.getByRole('button', { name: 'Watch on Lata’s phone' }).click();
+    // the invite was just sent: her WhatsApp opens beside the owner's phone by itself
+    await expect(page.locator('.wa-dock')).toBeVisible();
     const wa = page.frameLocator('.wa-dock iframe');
     await expect(wa.locator('.notif')).toContainText('Hello Lata! Isha has invited you to Pawsure for Coco');
     for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click(); // open, open the chat, send ID, join with photos
     await expect(page.locator('.wa-note')).toContainText('Lata joined with photo check-ins');
+    await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
+    await expect(card.locator('.help-track')).toContainText('Accepted');
+  });
+
+  test('U2d If her phone can’t message the app, “Lata said Yes” under it accepts the invite, and Home updates', async ({ page }) => {
+    await toCare(page, '9822200207');
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500015' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    const card = page.locator('.help-card');
+    await expect(card).toContainText('Invite pending');
+    await page.getByRole('button', { name: /Lata said Yes/ }).click();
     await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
     await expect(card.locator('.help-track')).toContainText('Accepted');
   });

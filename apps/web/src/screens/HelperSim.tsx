@@ -76,25 +76,34 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => { api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(setHelper).catch(() => setHelper(null)); }, [hh]);
   const first = helper?.name.split(' ')[0] ?? 'Your helper';
-  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: pets.length ? pets : ['your pet'] } }, location.origin);
+  // '*' with a source check on the way back: the phone page may be served from the artifact's own file host.
+  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: pets.length ? pets : ['your pet'] } }, '*');
   useEffect(setup, [first, owner, pets.join()]);
   useEffect(() => {
     const on = async (e: MessageEvent) => {
-      if (e.origin !== location.origin || e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone' || !helper) return;
-      const reply = (payload: string) => api('/webhooks/whatsapp', { body: { messageId: 'wa-' + Date.now() + Math.random().toString(36).slice(2, 6), from: helper.phone, type: 'button', payload: `${payload}:${hh}` }, auth: false });
+      if (e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone') return;
+      if (e.data.action === 'joined') await join(e.data.method ?? 'photo');
       if (e.data.action === 'id_sent') setNote(`${first} sent a photo ID.`);
-      if (e.data.action === 'joined') {
-        await reply('consent_yes'); await reply('method_' + (e.data.method ?? 'photo'));
-        await api('/jobs/tick', { body: {}, auth: false });
-        setNote(`${first} joined with photo check-ins. Her invite is now accepted on your Home.`);
-        onChange();
-      }
     };
     addEventListener('message', on); return () => removeEventListener('message', on);
   }, [helper, hh, first]);
+  /** She said Yes and chose how to check in: the same WhatsApp replies a real helper sends. */
+  const [joined, setJoined] = useState(false); const joinedRef = useRef(false);
+  async function join(method: string) {
+      const h = helper ?? await api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).catch(() => null);
+      if (!h || joinedRef.current) return;
+      joinedRef.current = true;
+      const reply = (payload: string) => api('/webhooks/whatsapp', { body: { messageId: 'wa-' + Date.now() + Math.random().toString(36).slice(2, 6), from: h.phone, type: 'button', payload: `${payload}:${hh}` }, auth: false });
+      setJoined(true);
+      await reply('consent_yes'); await reply('method_' + method);
+      await api('/jobs/tick', { body: {}, auth: false });
+      setNote(`${first} joined with ${method === 'photo' ? 'photo' : method === 'voice' ? 'voice-note' : 'missed-call'} check-ins. Her invite is now accepted on your Home.`);
+      onChange();
+  }
   return <div className="wa-dock" aria-label={`${first}’s WhatsApp (simulated)`}>
     <div className="banner sim"><span className="bi">⚙</span><div className="grow">{first}’s WhatsApp (simulated). Tap the highlighted part of her phone.</div><button className="btn ghost sm" onClick={onClose}>Hide</button></div>
     {note && <div className="banner info wa-note" role="status">{note}</div>}
     <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
+    {!joined && <button type="button" className="btn ghost sm" onClick={() => join('photo')}>{first} said Yes (if her phone doesn’t respond)</button>}
   </div>;
 }
