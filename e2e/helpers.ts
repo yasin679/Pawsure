@@ -10,7 +10,7 @@ export const SUNITA = '+919000000035';
 export async function boot(page: Page, hash = '', opts: { tools?: boolean; intro?: boolean } = {}) {
   // The welcome screens show once per browser; tests start at Log in unless they are about the welcome screens.
   if (!opts.intro) await page.addInitScript(() => { try { localStorage.setItem('pawsure.introSeen', '1'); } catch { /* ignore */ } });
-  if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools', '1'); } catch { /* ignore */ } });
+  if (opts.tools !== false) await page.addInitScript(() => { try { localStorage.setItem('pawsure.demoTools.v2', '1'); } catch { /* ignore */ } });
   // The demo keeps its data in the browser; a test that boots again in the same page starts from a fresh demo.
   if (page.url().startsWith('http')) await page.evaluate(async () => {
     try { localStorage.removeItem('pawsure.session'); localStorage.removeItem('pawsure.staff.session'); } catch { /* ignore */ }

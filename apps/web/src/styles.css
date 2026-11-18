@@ -1086,4 +1086,3 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .card.help-card .invite-pill{flex-wrap:wrap}
 .today .card.help-card .invite-pill .ip-text{flex:1 1 60%}
 .today .card.help-card .invite-pill .watch-helper{flex:1 1 100%;order:3}
-.today .task.upcoming{opacity:.75;background:var(--surface)}

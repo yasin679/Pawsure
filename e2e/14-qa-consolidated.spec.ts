@@ -129,7 +129,7 @@ test.describe('R. QA consolidated tracker (14 Nov)', () => {
   test('R8 The demo tools are hidden unless switched on', async ({ page }) => {
     const fresh = await page.context().newPage(); // the shared setup switched the tools on for the first page
     await boot(fresh, '', { tools: false });
-    await fresh.evaluate(() => localStorage.removeItem('pawsure.demoTools'));
+    await fresh.evaluate(() => localStorage.removeItem('pawsure.demoTools.v2'));
     await fresh.reload(); await fresh.waitForSelector('html[data-demo-ready]', { state: 'attached' });
     await signInOwner(fresh, { home: true });
     await expect(fresh.locator('.demobar')).toHaveCount(0);
@@ -320,6 +320,19 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(card.locator('.help-track')).toContainText('Accepted');
   });
 
+  test('U2e With demo tools off, the helper’s WhatsApp still opens after the invite and the demo bar stays hidden', async ({ page }) => {
+    await boot(page, '', { tools: false }); await signUp(page, '9822200311');
+    await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500311' } });
+    await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+    await expect(page.locator('.wa-dock')).toBeVisible();
+    await expect(page.locator('.demobar')).toHaveCount(0);
+    await page.getByRole('button', { name: /Lata said Yes/ }).click();
+    await expect(page.locator('.help-card')).not.toContainText('Invite pending', { timeout: 10000 });
+    await expect(page.locator('.demobar')).toHaveCount(0);
+  });
+
   test('U3 A new owner adds tasks from Home: one-tap suggestions, or Add task → tile → a few quick steps', async ({ page }) => {
     await toCare(page, '9822200205');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');
@@ -327,7 +340,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(addBtn).toBeVisible();
     // one-tap suggestion, when the home has no tasks yet
     const starter = page.locator('.starter').first();
-    if (await starter.isVisible()) { await starter.click(); await expect(page.getByText(/Added: Breakfast at 8:00 AM, every day from tomorrow/)).toBeVisible(); } // 8 AM has passed (demo clock 9 AM)
+    if (await starter.isVisible()) { await starter.click(); await expect(page.getByText(/Added: Breakfast at 8:00 AM, every day/)).toBeVisible(); }
     // the guided way
     await page.getByRole('button', { name: /^Add (a )?task$/ }).first().click();
     await page.locator('.add-tile', { hasText: 'Walk' }).click();
@@ -343,10 +356,10 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await toCare(page, '9822200206');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500014' } });
     await page.getByRole('button', { name: 'Yes, I have someone' }).click();
-    // 8 AM has already passed (demo clock 9 AM): Breakfast is listed as starting tomorrow, so no alarm fires on day one
-    await expect(page.locator('.task.upcoming', { hasText: 'Breakfast' })).toContainText('8:00 AM');
-    await expect(page.getByText('Starts tomorrow')).toBeVisible();
-    await expect(page.getByText(/Your backup was alerted/)).toHaveCount(0);
+    // today's tasks at the times chosen in sign-up; 8 AM has already passed (demo clock 9 AM), so it raises no alarm
+    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('8:00 AM');
+    await expect(page.locator('.task', { hasText: 'Breakfast' })).toContainText('Pending');
+    await expect(page.getByText(/Your backup was alerted|No evidence yet/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Add task' })).toBeVisible();
     await expect(page.locator('.pet-tab', { hasText: 'Coco' })).toBeVisible();
     // a returning owner sees the same Home: tasks and Add task before heading out too

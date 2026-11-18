@@ -7,7 +7,7 @@ import { applyReturnCheck, checkCode, generateCard, dueSteps, severityOf, health
 import { isPersonName, NAME_MESSAGE, LANG_CODES, msgLang } from '@pawsure/domain';
 import type { Deps } from './app.js';
 import { istDate, minutesOnDay, atMinute, istMinutes } from './clock.js';
-import { audit, loadDay, ingestSignal, runEscalations, hashImage } from './care.js';
+import { audit, loadDay, ingestSignal, runEscalations, hashImage, materialiseDay } from './care.js';
 import { seal, open } from './secrets.js';
 import { ProofIn, recordProof, proofMessage } from './proof.js';
 import { render, BUTTONS, type Lang } from './templates.js';
@@ -160,13 +160,16 @@ export function registerDaily(app: Hono<Env>, x: Ctx) {
   async function writeRoutine(hh: string, userId: string, b: z.infer<typeof RoutineIn>, replaces?: string) {
     const date = istDate(now()); const tomorrow = istDate(new Date(now().getTime() + 86400000));
     const assignee = (await db.query<{ id: string }>(`select id from memberships where household_id=$1 and role=$2 and status in ('active','invited') order by role limit 1`, [hh, b.assignee]))[0]?.id ?? null;
-    // startToday: a new home's first routine (sign-up, or Add task on Home) is in today's plan straight away,
-    // unless its time has already passed today: then it starts tomorrow, so nothing is overdue the moment it is made.
-    if (b.startToday && b.due < istMinutes(now())) b = { ...b, startToday: false };
+    // startToday: a new home's first routine (sign-up, or Add task on Home) is in today's plan straight away.
     const id = uid('rt'), slot = b.assignee !== 'owner' ? (b.due < 900 ? 'v1' : b.due < 1080 ? 'v2' : 'v3') : null;
     await db.query(`insert into routine_tasks(id, household_id, pet_id, title, task_type, due_minute, min_minutes, recurrence, assignee_membership_id, escalation_profile, instructions, visit_slot, enabled, effective_from, urgency)
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [id, hh, b.petId, b.title, b.type, b.due, b.minMinutes ?? TYPE_MIN[b.type], b.oneOffToday ? 'once' : 'daily', assignee, TYPE_PROFILE[b.type] ?? 'standard', b.instructions ?? null, slot, b.enabled ?? true, (b.oneOffToday || b.startToday ? date : tomorrow), b.urgency ?? null]);
     if (replaces) await db.query(`update routine_tasks set superseded_by=$2 where id=$1 and household_id=$3`, [replaces, id, hh]);
+    // Added after its time today: it shows as Pending, but raises no alarm and alerts no backup on its first day.
+    if (b.startToday && b.due < istMinutes(now())) {
+      await materialiseDay(db, hh, date);
+      await db.query(`update care_tasks set resolved_at=$2, resolved_note=$3 where routine_task_id=$1 and care_date=$4 and resolved_at is null`, [id, now().toISOString(), 'Added after its time today, so no alert', date]);
+    }
     await audit(db, userId, hh, replaces ? 'routine.edited' : 'routine.created', { id, replaces, effectiveFrom: (b.oneOffToday || b.startToday ? date : tomorrow), title: b.title });
     return { id, effectiveFrom: (b.oneOffToday || b.startToday ? date : tomorrow) };
   }

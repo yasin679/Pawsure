@@ -103,7 +103,7 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
   return <div className="wa-dock" aria-label={`${first}’s WhatsApp (simulated)`}>
     <div className="banner sim"><span className="bi">⚙</span><div className="grow">{first}’s WhatsApp (simulated). Tap the highlighted part of her phone.</div><button className="btn ghost sm" onClick={onClose}>Hide</button></div>
     {note && <div className="banner info wa-note" role="status">{note}</div>}
-    <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
     {!joined && <button type="button" className="btn ghost sm" onClick={() => join('photo')}>{first} said Yes (if her phone doesn’t respond)</button>}
+    <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
   </div>;
 }

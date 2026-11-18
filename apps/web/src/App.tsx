@@ -35,7 +35,8 @@ export function hideSplash() {
 }
 const TABS: [Tab, string, string][] = [['today', 'Today', 'home'], ['find', 'Find cover', 'sparkle'], ['friends', 'Friends', 'friends'], ['pet', 'Pet', 'paw'], ['me', 'Me', 'user']];
 
-const TOOLS_KEY = 'pawsure.demoTools';
+// v2: an earlier build switched the tools on by itself; the new key starts everyone with them off again.
+const TOOLS_KEY = 'pawsure.demoTools.v2';
 const toolsOn = () => { try { if (location.hash.includes('tools')) localStorage.setItem(TOOLS_KEY, '1'); return localStorage.getItem(TOOLS_KEY) === '1'; } catch { return false; } };
 /** A quiet switch outside the phone (wide screens only) that shows or hides the demo tools. */
 function DemoToolsSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
@@ -105,7 +106,8 @@ export function App() {
 
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
-    {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} wa={waOpen} setWa={setWaOpen} />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
+    {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} wa={waOpen} setWa={setWaOpen} />}
+    {demo && hh && waOpen && <div className="simdock" aria-label="Helper’s WhatsApp"><HelperWhatsApp hh={hh} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} onChange={load} onClose={() => setWaOpen(false)} /></div>}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
     {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
     {sub === 'helper' && hh && <HelperScreen hh={hh} onBack={() => setSub(null)} />}
@@ -115,7 +117,7 @@ export function App() {
     {sub === 'rights' && <RightsScreen me={me} onBack={() => setSub(null)} reload={load} />}
     {sub === 'backups' && hh && <BackupsScreen hh={hh} onBack={() => { setSub(null); load(); }} onBuild={() => setSub('builder')} />}
     {sub === 'builder' && hh && <CircleBuilder hh={hh} onBack={() => setSub('backups')} />}
-    {!sub && tab === 'today' && hh && <Today onWatchHelper={demo ? () => { if (!tools) toggleTools(); setWaOpen(true); } : undefined} openPlan={planAsk} onPlanOpened={() => setPlanAsk(false)} onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
+    {!sub && tab === 'today' && hh && <Today onWatchHelper={demo ? () => setWaOpen(true) : undefined} openPlan={planAsk} onPlanOpened={() => setPlanAsk(false)} onAddHelper={() => setSub('helper')} hh={hh} day={day} pets={pets} incidents={incidents} ownerName={me?.user.display_name ?? ''} reload={load} onFindCover={(text) => { if (text) setDraft(text); go('find'); }} onOpenRequest={(id) => { setOpenReq(id); go('find'); }} onEditRoutine={role === 'owner' || role === 'co_owner' ? () => setSub('routine') : undefined} onAddPet={role === 'owner' || role === 'co_owner' ? () => go('pet', true) : undefined} />}
     {!sub && tab === 'pet' && hh && <PetScreen key={addPet ? 'add' : 'view'} startAdd={addPet} hh={hh} pets={pets} reload={load} onOpen={setSub} />}
     {!sub && tab === 'find' && hh && !findForm && !draft && !openReq && <CoverAssistant hh={hh} pets={pets} me={me?.user.id ?? ''} meName={me?.user.display_name ?? ''} onForm={() => setFindForm(true)} onInvite={() => setTab('friends')} />}
     {!sub && tab === 'find' && hh && (findForm || !!draft || !!openReq) && <FindCover hh={hh} pets={pets} draft={draft} onDraft={setDraft} openRequest={openReq} onOpened={() => setOpenReq(null)} prefer={askFriend} onPreferUsed={() => setAskFriend(null)} onInvite={() => setTab('friends')} />}
@@ -165,6 +167,6 @@ function DemoBar({ hh, day, onChange, friendOnly, owner = '', pets = [], wa = fa
       {resetDemo && <button onClick={() => { if (confirm('Reset the demo? Accounts and homes you created in this browser are deleted.')) resetDemo(); }}>Reset demo</button>}
     </div>
     {hint && <div className="banner sim" role="status"><span className="bi">▶</span><div className="grow">{hint} <button className="btn ghost sm" onClick={() => setHint(null)}>Hide</button></div></div>}
-    {(phone || friends || cover || wa) && <div className="simdock" aria-label="Simulated phones">{wa && <HelperWhatsApp hh={hh} owner={owner} pets={pets} onChange={onChange} onClose={() => setWa(false)} />}{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}
+    {(phone || friends || cover) && <div className="simdock" aria-label="Simulated phones">{phone && <HelperSim hh={hh} day={day} onChange={onChange} />}{friends && <FriendSim onChange={onChange} />}{cover && <CoverPhones hh={hh} stamp={day?.now} onChange={onChange} />}</div>}
   </>;
 }
