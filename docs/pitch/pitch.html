@@ -42,6 +42,31 @@
   .stats{display:flex;gap:72px;text-align:center}
   .stat b{display:block;font:700 54px 'Inter Display',Inter;letter-spacing:-.02em;color:var(--ink)}
   .stat span{font-size:18px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--sage)}
+  .gaps{display:flex;gap:22px}
+  .gap{width:300px;border-top:3px solid var(--sage);padding-top:16px}
+  .gap b{display:block;font:700 30px 'Inter Display',Inter;letter-spacing:-.01em}
+  .gap span{display:block;margin-top:6px;font-size:21px;color:var(--ink2);font-weight:500;line-height:1.35}
+  .grid{border-collapse:collapse;width:1520px;font-size:21px}
+  .grid th{font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);text-align:center;padding:0 10px 14px}
+  .grid td{border-top:1.5px solid var(--line);padding:14px 10px;text-align:center}
+  .grid td:first-child{text-align:left;width:520px}
+  .grid td b{display:block;font-size:23px}.grid td span{display:block;font-size:17px;color:var(--ink2);margin-top:2px}
+  .grid tr.us td{background:#EEF2E4;border-top:2px solid var(--sage)}
+  .grid tr.us td:first-child{border-radius:14px 0 0 14px}.grid tr.us td:last-child{border-radius:0 14px 14px 0}
+  i.no,i.yes{font-style:normal;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:18px;font-weight:800}
+  i.no{color:#B9B3A3;background:#F1EDE2}i.yes{color:#fff;background:var(--sage)}
+  .vs{display:grid;gap:14px;font-size:26px}
+  .vs div{display:grid;grid-template-columns:420px 50px 460px;align-items:center}
+  .vs span{text-align:right;color:var(--ink2);text-decoration:line-through;text-decoration-color:rgba(94,107,87,.45)}
+  .vs b{text-align:center;color:var(--sage)}.vs em{font-style:normal;font-weight:700}
+  .road{display:flex;gap:22px}
+  .ph{width:490px;border:2px solid var(--line);border-radius:22px;padding:24px 26px;background:#fff}
+  .ph.now{border-color:var(--sage);box-shadow:0 0 0 4px rgba(88,117,57,.12)}
+  .ph i{font-style:normal;font-size:16px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sage)}
+  .ph b{display:block;font:700 38px 'Inter Display',Inter;letter-spacing:-.02em;margin:10px 0 8px}
+  .ph span{font-size:20px;color:var(--ink2);line-height:1.4;font-weight:500}
+  .years{display:flex;align-items:center;gap:26px;font-size:22px;color:var(--ink2);font-weight:500}
+  .years b{color:var(--ink);margin-right:10px}.years i{font-style:normal;color:var(--sage);font-weight:700}
   #progress{position:absolute;left:0;bottom:0;height:4px;background:var(--sage);opacity:.35}
 </style>
 </head>
@@ -60,76 +85,102 @@ const fill = secs => (dt, n) => { const g = n.querySelector('.dots'), k = Math.r
 const T = (html, x, y, a, b, o = {}) => scenes.push({ html, x, y, a, b, ...o });
 const P = (src, kind, x, y, a, b, o = {}) => T(`<img class="phone ${kind}" src="${S + src}.png">`, x, y, a, b, { dy: 40, ...o });
 
-// Scene start times (seconds), set from the voice-over by timing.json; the last entry is the end of the film.
-const TIMES = window.PITCH_TIMES || [0, 4, 15, 22, 28, 35, 43, 50, 55, 63, 69, 76];
+// Scene start times (seconds), set from the voice-over by timing.js; the last entry is the end of the film.
+const TIMES = window.PITCH_TIMES;
 const at = (n, off = 0) => TIMES[n] + off, end = n => TIMES[n + 1];
 const L = (n, k, h, m, o = {}) => { // the left column: kicker, headline, line
   T(`<div class="k">${k}</div>`, 200, 380, at(n, .2), end(n), o);
   T(`<div class="h l">${h}</div>`, 200, 440, at(n, .5), end(n), o);
   if (m) T(`<div class="m">${m}</div>`, 200, 650, at(n, 1.6), end(n), o);
 };
+const X = '<i class="no">✕</i>', V = '<i class="yes">✓</i>';
 
-// 1. Name and promise
+// 0. Name and promise
 T(`<img src="${A}pawsure-logo.png" style="height:120px">`, 960, 470, at(0, .3), end(0), { center: true, dy: 0, zoom: .03 });
 T(`<div class="m" style="text-align:center">Be sure, whoever’s caring.</div>`, 960, 600, at(0, 1.1), end(0), { center: true });
 
-// 2. The problem
-T(`<div class="k">The problem</div>`, 200, 330, at(1, .2), end(1));
-T(`<div class="h xl">You leave home.<br>Your pet stays.</div>`, 200, 390, at(1, .5), end(1));
-T(`<div class="m">No plan, no signal when a visit<br>is missed, no easy backup.</div>`, 200, 650, at(1, 6.5), end(1));
-// infographic: one working day; the alone window fills in, the helper's visit is a question mark
-T(`<div class="tl"><div class="big">2–8 hours</div>alone at home, most working days<div class="track"><div class="alone"></div><div class="visit">?</div></div><div class="ends"><span>Leave · 9 AM</span><span>Back · 7 PM</span></div><div class="cap">One helper visit at lunch. Did it happen?</div></div>`, 1160, 360, at(1, 2.2), end(1), {
+// 1. The job to be done
+T(`<div class="k" style="text-align:center">The real job</div>`, 960, 330, at(1, .1), end(1), { center: true });
+T(`<div class="h l" style="text-align:center;max-width:1400px">“When I’m away, help me know my pet<br>is cared for <span class="accent">as planned</span>.”</div>`, 960, 400, at(1, .3), end(1), { center: true });
+T(`<div class="m" style="text-align:center">Calm, not guilt. Trust, without micromanaging.</div>`, 960, 640, at(1, 2.4), end(1), { center: true });
+
+// 2. The three gaps
+T(`<div class="k">The problem</div>`, 200, 300, at(2, .1), end(2));
+T(`<div class="h l">For most pet parents,<br>care is a guess.</div>`, 200, 360, at(2, .3), end(2));
+T(`<div class="gaps"><div class="gap"><b>No shared plan</b><span>Instructions scattered across chats</span></div><div class="gap"><b>No signal</b><span>Nothing tells you a task was done</span></div><div class="gap"><b>No backup</b><span>When the helper can’t come</span></div></div>`, 200, 600, at(2, 1.6), end(2), {
+  tick: (dt, n) => n.querySelectorAll('.gap').forEach((g, j) => { const p = Math.min(1, Math.max(0, (dt - [2.5, 3.8, 6.1][j]) / .5)); g.style.opacity = .15 + .85 * p; }) });
+T(`<div class="tl"><div class="big">2–8 hours</div>alone at home, on a working day<div class="track"><div class="alone"></div><div class="visit">?</div></div><div class="ends"><span>Leave · 9 AM</span><span>Back · 7 PM</span></div></div>`, 1200, 330, at(2, .8), end(2), {
   tick: (dt, n) => { const p = Math.min(1, Math.max(0, (dt - .4) / 2.2)); n.querySelector('.alone').style.width = (p * 100) + '%';
-    const v = n.querySelector('.visit'); v.style.left = '40%'; v.style.opacity = Math.min(1, Math.max(0, (dt - 5) / .6)); } });
+    const v = n.querySelector('.visit'); v.style.left = '40%'; v.style.opacity = Math.min(1, Math.max(0, (dt - 2.6) / .6)); } });
 
-// 3. Evidence
-T(`<div class="k">Owner survey · 45 owners</div>`, 200, 330, at(2, .2), end(2));
-T(`<div class="h xl"><span class="accent">36</span> of 45</div>`, 200, 400, at(2, .4), end(2));
-T(`<div class="m">leave their pet alone at home.</div>`, 200, 520, at(2, .9), end(2));
-T(`<div class="dots " data-n="36"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>`, 200, 610, at(2, 1.2), end(2), { tick: fill(1.5) });
-T(`<div class="h xl"><span class="accent">7</span> of 45</div>`, 1000, 400, at(2, 5), end(2));
-T(`<div class="m">came home to something wrong.</div>`, 1000, 520, at(2, 5.4), end(2));
-T(`<div class="dots warn" data-n="7"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>`, 1000, 610, at(2, 5.6), end(2), { tick: fill(.6) });
+// 3. The research
+T(`<div class="k">Our research · survey of 45 pet parents</div>`, 200, 300, at(3, .1), end(3));
+T(`<div class="h xl accent">80%</div>`, 200, 360, at(3, .3), end(3));
+T(`<div class="m">leave their pet alone<br>at least sometimes.</div>`, 200, 490, at(3, .7), end(3));
+T(`<div class="dots" data-n="36">${'<i></i>'.repeat(45)}</div>`, 200, 640, at(3, .9), end(3), { tick: fill(1.6) });
+T(`<div class="h xl" style="color:#C8742F">16%</div>`, 1000, 360, at(3, 5.5), end(3));
+T(`<div class="m">came home to find<br>something wrong.</div>`, 1000, 490, at(3, 5.8), end(3));
+T(`<div class="dots warn" data-n="7">${'<i></i>'.repeat(45)}</div>`, 1000, 640, at(3, 6), end(3), { tick: fill(.6) });
 
-// 4. Positioning
-T(`<div class="m">Other apps sell you a caretaker.</div>`, 200, 380, at(3, .2), end(3));
-T(`<div class="h l">Pawsure verifies<br><span class="accent">the one you already have.</span></div>`, 200, 450, at(3, 2.4), end(3));
-P('01-welcome', 'app', 1250, 110, at(3, .6), end(3));
+// 4. The landscape: everyone solves a slice
+T(`<div class="k">Pet care today is fragmented</div>`, 200, 170, at(4, .1), end(4));
+T(`<div class="h l">Today’s options solve slices.</div>`, 200, 225, at(4, .3), end(4));
+T(`<table class="grid"><thead><tr><th></th><th>Book care</th><th>Watch</th><th>Proof care happened</th><th>Backup if plans fail</th></tr></thead><tbody>
+  <tr><td><b>Care marketplaces</b><span>PetBacker · ThePetNest</span></td><td>${V}</td><td>${X}</td><td>${X}</td><td>${X}</td></tr>
+  <tr><td><b>Sitting &amp; boarding</b><span>Rover · Wag! · TrustedHousesitters · PawSpace</span></td><td>${V}</td><td>${X}</td><td>${X}</td><td>${X}</td></tr>
+  <tr><td><b>Pet cameras</b><span>Furbo · Petcube</span></td><td>${X}</td><td>${V}</td><td>${X}</td><td>${X}</td></tr>
+  <tr><td><b>Friends &amp; helpers</b><span>Informal care</span></td><td>${X}</td><td>${X}</td><td>${X}</td><td>${X}</td></tr>
+  <tr class="us"><td><b>Pawsure</b><span>Your own helper, assured</span></td><td>–</td><td>–</td><td>${V}</td><td>${V}</td></tr></tbody></table>`, 200, 370, at(4, 1), end(4), {
+  tick: (dt, n) => n.querySelectorAll('tbody tr').forEach((r, j) => { const p = Math.min(1, Math.max(0, (dt - [2, 2.5, 4, 4.6, 6][j]) / .45)); r.style.opacity = p; r.style.transform = `translateY(${(1 - p) * 10}px)`; }) });
 
-// 5. Set up by chat
-L(4, '01 · Set up', 'A short chat<br>with Pawly.', 'Your pet, their routine, your helper.<br>Today’s tasks are ready.');
-P('02-pawly-signup', 'app', 1250, 110, at(4, .5), end(4));
+// 5. The difference
+T(`<div class="k" style="text-align:center">The difference</div>`, 960, 300, at(5, .1), end(5), { center: true });
+T(`<div class="h l" style="text-align:center">Others help you <span style="color:var(--ink2)">book</span> care.<br>Pawsure assures it <span class="accent">happened</span>.</div>`, 960, 360, at(5, .3), end(5), { center: true });
+T(`<div class="vs"><div><span>A booking, then silence</span><b>→</b><em>Proof of care</em></div><div><span>Helpers must learn an app</span><b>→</b><em>WhatsApp, in her language</em></div><div><span>No fallback</span><b>→</b><em>Cover when help can’t come</em></div></div>`, 960, 600, at(5, 2.2), end(5), { center: true });
 
-// 6. Helper on WhatsApp
-L(5, '02 · Your helper', 'She joins on<br>WhatsApp.', 'Nothing to install, in her own language.<br>Reminded when each task is due.');
-P('03-wa-invite', 'wa', 1110, 150, at(5, .5), end(5), { h: 780 });
-P('05-wa-reminder', 'wa', 1500, 150, at(5, 4.8), end(5), { h: 780 });
+// 6. Set up by chat
+L(6, '01 · Set up', 'A short chat<br>with Pawly.', 'Your pet, their routine, your helper.<br>Today’s tasks are ready.');
+P('02-pawly-signup', 'app', 1250, 110, at(6, .5), end(6));
 
-// 7. Proof
-L(6, '03 · Proof', 'Proof,<br>not promises.', 'A photo of the bowl. Never her face.<br>An honest status on every task.');
-T(`<div class="chips"><div class="chip" style="--c:var(--sage)"><b>Confirmed</b><span>two independent signals</span></div><div class="chip" style="--c:#E9C75E"><b>Likely</b><span>one task signal</span></div><div class="chip" style="--c:#B9B3A3"><b>Not confirmed</b><span>never “failed”</span></div></div>`, 200, 790, at(6, 3.4), end(6));
-P('06-wa-photo', 'wa', 1110, 150, at(6, .4), end(6), { h: 780 });
-P('07-home-approve', 'app', 1500, 150, at(6, 3.4), end(6), { h: 780 });
+// 7. Helper on WhatsApp
+L(7, '02 · Your helper', 'She joins on<br>WhatsApp.', 'Nothing to install, in her own language.<br>Reminded when each task is due.');
+P('03-wa-invite', 'wa', 1110, 150, at(7, .5), end(7), { h: 780 });
+P('05-wa-reminder', 'wa', 1500, 150, at(7, 4.9), end(7), { h: 780 });
 
-// 8. Approve
-L(7, '04 · You decide', 'Check it.<br>One tap to approve.', '');
-P('08-review', 'app', 1110, 150, at(7, .3), end(7), { h: 780 });
-P('09-approved', 'app', 1500, 150, at(7, 1.3), end(7), { h: 780 });
+// 8. Proof
+L(8, '03 · Proof', 'Proof,<br>not promises.', 'A photo of the bowl. Never her face.<br>An honest status on every task.');
+T(`<div class="chips"><div class="chip" style="--c:var(--sage)"><b>Confirmed</b><span>two independent signals</span></div><div class="chip" style="--c:#E9C75E"><b>Likely</b><span>one task signal</span></div><div class="chip" style="--c:#B9B3A3"><b>Not confirmed</b><span>never “failed”</span></div></div>`, 200, 790, at(8, 3.4), end(8));
+P('06-wa-photo', 'wa', 1110, 150, at(8, .4), end(8), { h: 780 });
+P('07-home-approve', 'app', 1500, 150, at(8, 3.4), end(8), { h: 780 });
 
-// 9. Find cover
-L(8, '05 · Find cover', 'When help can’t come,<br><span class="accent">ask friends.</span>', 'Friends nearby who are free.<br>Nothing is sent until you approve.');
-T(`<div class="steps"><div class="step"><em>1</em>Your friends</div><span class="arrow">→</span><div class="step"><em>2</em>Nearest, free now</div><span class="arrow">→</span><div class="step"><em>3</em>You approve</div></div>`, 200, 800, at(8, 3.2), end(8));
-P('11-pawly-cover', 'app', 1110, 150, at(8, .4), end(8), { h: 780 });
-P('12-friends', 'app', 1500, 150, at(8, 2.0), end(8), { h: 780 });
+// 9. Approve
+L(9, '04 · You decide', 'Check it.<br>One tap to approve.', '');
+P('08-review', 'app', 1110, 150, at(9, .3), end(9), { h: 780 });
+P('09-approved', 'app', 1500, 150, at(9, 1.3), end(9), { h: 780 });
 
-// 10. Every day
-T(`<div class="h l" style="text-align:center">Every day, at a glance.</div>`, 960, 150, at(9, .2), end(9), { center: true });
-P('10-home-owner', 'app', 960, 280, at(9, .6), end(9), { center: true, h: 770, dy: 60 });
+// 10. Find cover
+L(10, '05 · Find cover', 'When help can’t come,<br><span class="accent">ask friends.</span>', 'Friends nearby who are free.<br>Nothing is sent until you approve.');
+T(`<div class="steps"><div class="step"><em>1</em>Your friends</div><span class="arrow">→</span><div class="step"><em>2</em>Nearest, free now</div><span class="arrow">→</span><div class="step"><em>3</em>You approve</div></div>`, 200, 800, at(10, 3.2), end(10));
+P('11-pawly-cover', 'app', 1110, 150, at(10, .4), end(10), { h: 780 });
+P('12-friends', 'app', 1500, 150, at(10, 2.0), end(10), { h: 780 });
 
-// 11. Close
-T(`<img src="${A}pawsure-logo-vertical.png" style="height:230px">`, 960, 330, at(10, .2), end(10), { center: true, dy: 0, zoom: .03, hold: true });
-T(`<div class="m" style="text-align:center">Be sure, whoever’s caring.</div>`, 960, 610, at(10, .8), end(10), { center: true, hold: true });
-T(`<div class="stats"><div class="stat"><b>Mumbai</b><span>Andheri–Powai</span></div><div class="stat"><b>20</b><span>homes</span></div><div class="stat"><b>4</b><span>weeks</span></div></div>`, 960, 740, at(10, 1.8), end(10), { center: true, hold: true });
+// 11. Roadmap
+T(`<div class="k">Product roadmap</div>`, 200, 210, at(11, .1), end(11));
+T(`<div class="h l">Start with the daily loop.<br>Expand as trust grows.</div>`, 200, 265, at(11, .3), end(11));
+T(`<div class="road"><div class="ph now"><i>Now · P0</i><b>Daily care loop</b><span>Routine · WhatsApp check-ins · proof of care · AI Friend Finder</span></div><div class="ph"><i>Next · P1</i><b>Graded day care</b><span>Free 100-point audit · consent-based grade · search and book</span></div><div class="ph"><i>Later · P2</i><b>Verified carers</b><span>ID checks · skills test · Verified → Trained → Trusted</span></div></div>`, 200, 520, at(11, 1), end(11), {
+  tick: (dt, n) => n.querySelectorAll('.ph').forEach((g, j) => { const p = Math.min(1, Math.max(0, (dt - [0, 1.5, 2.9][j]) / .5)); g.style.opacity = p; g.style.transform = `translateX(${(1 - p) * 30}px)`; }) });
+
+// 12. Growth
+T(`<div class="k">Growth</div>`, 200, 210, at(12, .1), end(12));
+T(`<div class="h l">Density first, then a trust loop.</div>`, 200, 265, at(12, .3), end(12));
+T(`<div class="road"><div class="ph now"><i>0 → 1 · Prove the habit</i><b>20 homes</b><span>One Mumbai cluster · ≥ 50% week-4 retention</span></div><div class="ph"><i>1 → 10 · Replicate</i><b>3–5 societies</b><span>Nearby clusters · champions and helper referrals</span></div><div class="ph"><i>10 → 100 · Local supply</i><b>Mumbai-wide</b><span>Day cares and verified carers join</span></div></div>`, 200, 420, at(12, .8), end(12), {
+  tick: (dt, n) => n.querySelectorAll('.ph').forEach((g, j) => { const p = Math.min(1, Math.max(0, (dt - [0, 2.7, 4.2][j]) / .5)); g.style.opacity = p; g.style.transform = `translateX(${(1 - p) * 30}px)`; }) });
+T(`<div class="years"><span><b>Year 1</b>Mumbai · ~1,000 users</span><i>→</i><span><b>Year 2</b>4 cities</span><i>→</i><span><b>Year 3</b>8 cities</span></div>`, 200, 790, at(12, 6), end(12));
+
+// 13. Close
+T(`<img src="${A}pawsure-logo-vertical.png" style="height:230px">`, 960, 360, at(13, .2), end(13), { center: true, dy: 0, zoom: .03, hold: true });
+T(`<div class="m" style="text-align:center">Be sure, whoever’s caring.</div>`, 960, 640, at(13, .8), end(13), { center: true, hold: true });
+T(`<div class="k" style="text-align:center">Pet-care assurance · visibility, accountability, continuity</div>`, 960, 720, at(13, 1.6), end(13), { center: true, hold: true });
 
 const DURATION = TIMES[TIMES.length - 1];
 const stage = document.getElementById('stage'), bar = document.getElementById('progress');
