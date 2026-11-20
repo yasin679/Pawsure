@@ -1,6 +1,6 @@
 # Pawsure pitch video
 
-`pawsure-pitch.mp4`: 3 minutes 2 seconds, 1920 × 1080, minimal style, with real app screenshots, simple infographics, an ElevenLabs voice-over and ElevenLabs background music.
+`pawsure-pitch.mp4`: 3 minutes 5 seconds, 1920 × 1080, minimal style, with real app screenshots, simple infographics, an ElevenLabs voice-over and ElevenLabs background music.
 
 | File | What it is |
 |------|------------|
