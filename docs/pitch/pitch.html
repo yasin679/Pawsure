@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pawsure pitch</title>
+<!-- A minimal pitch film, 1920 x 1080. Every frame is drawn by render(t) (t in seconds), so render.mjs can step
+     through it frame by frame and hand the frames to ffmpeg. Open it in a browser to watch it play live. -->
+<style>
+  :root{--bg:#F8F6ED;--ink:#253128;--ink2:#5E6B57;--sage:#587539;--line:#E4DFCF}
+  *{box-sizing:border-box;margin:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);font-family:Inter,'Inter Display',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .el{position:absolute;opacity:0;will-change:transform,opacity}
+  .h{font-family:'Inter Display',Inter,sans-serif;font-weight:700;letter-spacing:-.025em;line-height:1.05}
+  .xl{font-size:104px}.l{font-size:68px}.m{font-size:34px;font-weight:500;color:var(--ink2);line-height:1.4;letter-spacing:-.005em}
+  .k{font-size:20px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--sage)}
+  .accent{color:var(--sage)}
+  .phone{height:860px;width:auto;filter:drop-shadow(0 40px 60px rgba(37,49,40,.18))}
+  .phone.app{border-radius:14.7% / 6.95%}
+  .phone.wa{border-radius:14.4% / 6.85%}
+  .rule{height:2px;background:var(--sage);width:0}
+  /* infographics */
+  .tl{width:600px;font-size:20px;font-weight:600;color:var(--ink2)}
+  .tl .track{position:relative;height:14px;border-radius:7px;background:var(--line);margin:18px 0 14px}
+  .tl .alone{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--sage);opacity:.85}
+  .tl .visit{position:absolute;top:-17px;width:48px;height:48px;margin-left:-24px;border-radius:50%;background:var(--bg);border:3px dashed var(--ink2);display:grid;place-items:center;font:700 24px Inter;color:var(--ink2)}
+  .tl .ends{display:flex;justify-content:space-between}
+  .tl .cap{margin-top:34px;font-size:22px;color:var(--ink)}
+  .tl .big{font:700 64px 'Inter Display',Inter;letter-spacing:-.02em;color:var(--ink);margin-bottom:6px}
+  .dots{display:grid;grid-template-columns:repeat(9,28px);gap:10px}
+  .dots i{width:28px;height:28px;border-radius:50%;background:var(--line);display:block}
+  .dots i.on{background:var(--sage)}
+  .dots.warn i.on{background:#C8742F}
+  .chips{display:flex;gap:14px}
+  .chip{border:2px solid var(--line);border-radius:18px;padding:14px 18px;min-width:210px;background:#fff}
+  .chip b{display:flex;align-items:center;gap:10px;font-size:22px}
+  .chip b::before{content:'';width:14px;height:14px;border-radius:50%;background:var(--c)}
+  .chip span{display:block;margin-top:4px;font-size:17px;color:var(--ink2);font-weight:500}
+  .steps{display:flex;align-items:center;gap:14px}
+  .step{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:600}
+  .step em{font-style:normal;width:40px;height:40px;border-radius:50%;background:var(--sage);color:#fff;display:grid;place-items:center;font-size:19px;font-weight:700;flex:none}
+  .arrow{color:var(--ink2);font-size:26px}
+  .stats{display:flex;gap:72px;text-align:center}
+  .stat b{display:block;font:700 54px 'Inter Display',Inter;letter-spacing:-.02em;color:var(--ink)}
+  .stat span{font-size:18px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--sage)}
+  #progress{position:absolute;left:0;bottom:0;height:4px;background:var(--sage);opacity:.35}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="timing.js" onerror=""></script>
+<div id="progress"></div>
+<script>
+const A = '../../apps/web/public/assets/', S = 'shots/';
+// One entry per element: when it comes in and goes out (seconds), where it sits, and how it moves.
+// in/out are fades with a short slide (dy pixels); 'zoom' adds a slow push-in while it is on screen.
+const scenes = [];
+// dot grids fill one dot at a time over `secs` seconds
+const fill = secs => (dt, n) => { const g = n.querySelector('.dots'), k = Math.round(+g.dataset.n * Math.min(1, Math.max(0, (dt - .5) / secs)));
+  g.querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j < k)); };
+const T = (html, x, y, a, b, o = {}) => scenes.push({ html, x, y, a, b, ...o });
+const P = (src, kind, x, y, a, b, o = {}) => T(`<img class="phone ${kind}" src="${S + src}.png">`, x, y, a, b, { dy: 40, ...o });
+
+// Scene start times (seconds), set from the voice-over by timing.json; the last entry is the end of the film.
+const TIMES = window.PITCH_TIMES || [0, 4, 15, 22, 28, 35, 43, 50, 55, 63, 69, 76];
+const at = (n, off = 0) => TIMES[n] + off, end = n => TIMES[n + 1];
+const L = (n, k, h, m, o = {}) => { // the left column: kicker, headline, line
+  T(`<div class="k">${k}</div>`, 200, 380, at(n, .2), end(n), o);
+  T(`<div class="h l">${h}</div>`, 200, 440, at(n, .5), end(n), o);
+  if (m) T(`<div class="m">${m}</div>`, 200, 650, at(n, 1.6), end(n), o);
+};
+
+// 1. Name and promise
+T(`<img src="${A}pawsure-logo.png" style="height:120px">`, 960, 470, at(0, .3), end(0), { center: true, dy: 0, zoom: .03 });
+T(`<div class="m" style="text-align:center">Be sure, whoever’s caring.</div>`, 960, 600, at(0, 1.1), end(0), { center: true });
+
+// 2. The problem
+T(`<div class="k">The problem</div>`, 200, 330, at(1, .2), end(1));
+T(`<div class="h xl">You leave home.<br>Your pet stays.</div>`, 200, 390, at(1, .5), end(1));
+T(`<div class="m">No plan, no signal when a visit<br>is missed, no easy backup.</div>`, 200, 650, at(1, 6.5), end(1));
+// infographic: one working day; the alone window fills in, the helper's visit is a question mark
+T(`<div class="tl"><div class="big">2–8 hours</div>alone at home, most working days<div class="track"><div class="alone"></div><div class="visit">?</div></div><div class="ends"><span>Leave · 9 AM</span><span>Back · 7 PM</span></div><div class="cap">One helper visit at lunch. Did it happen?</div></div>`, 1160, 360, at(1, 2.2), end(1), {
+  tick: (dt, n) => { const p = Math.min(1, Math.max(0, (dt - .4) / 2.2)); n.querySelector('.alone').style.width = (p * 100) + '%';
+    const v = n.querySelector('.visit'); v.style.left = '40%'; v.style.opacity = Math.min(1, Math.max(0, (dt - 5) / .6)); } });
+
+// 3. Evidence
+T(`<div class="k">Owner survey · 45 owners</div>`, 200, 330, at(2, .2), end(2));
+T(`<div class="h xl"><span class="accent">36</span> of 45</div>`, 200, 400, at(2, .4), end(2));
+T(`<div class="m">leave their pet alone at home.</div>`, 200, 520, at(2, .9), end(2));
+T(`<div class="dots " data-n="36"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>`, 200, 610, at(2, 1.2), end(2), { tick: fill(1.5) });
+T(`<div class="h xl"><span class="accent">7</span> of 45</div>`, 1000, 400, at(2, 5), end(2));
+T(`<div class="m">came home to something wrong.</div>`, 1000, 520, at(2, 5.4), end(2));
+T(`<div class="dots warn" data-n="7"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>`, 1000, 610, at(2, 5.6), end(2), { tick: fill(.6) });
+
+// 4. Positioning
+T(`<div class="m">Other apps sell you a caretaker.</div>`, 200, 380, at(3, .2), end(3));
+T(`<div class="h l">Pawsure verifies<br><span class="accent">the one you already have.</span></div>`, 200, 450, at(3, 2.4), end(3));
+P('01-welcome', 'app', 1250, 110, at(3, .6), end(3));
+
+// 5. Set up by chat
+L(4, '01 · Set up', 'A short chat<br>with Pawly.', 'Your pet, their routine, your helper.<br>Today’s tasks are ready.');
+P('02-pawly-signup', 'app', 1250, 110, at(4, .5), end(4));
+
+// 6. Helper on WhatsApp
+L(5, '02 · Your helper', 'She joins on<br>WhatsApp.', 'Nothing to install, in her own language.<br>Reminded when each task is due.');
+P('03-wa-invite', 'wa', 1110, 150, at(5, .5), end(5), { h: 780 });
+P('05-wa-reminder', 'wa', 1500, 150, at(5, 4.8), end(5), { h: 780 });
+
+// 7. Proof
+L(6, '03 · Proof', 'Proof,<br>not promises.', 'A photo of the bowl. Never her face.<br>An honest status on every task.');
+T(`<div class="chips"><div class="chip" style="--c:var(--sage)"><b>Confirmed</b><span>two independent signals</span></div><div class="chip" style="--c:#E9C75E"><b>Likely</b><span>one task signal</span></div><div class="chip" style="--c:#B9B3A3"><b>Not confirmed</b><span>never “failed”</span></div></div>`, 200, 790, at(6, 3.4), end(6));
+P('06-wa-photo', 'wa', 1110, 150, at(6, .4), end(6), { h: 780 });
+P('07-home-approve', 'app', 1500, 150, at(6, 3.4), end(6), { h: 780 });
+
+// 8. Approve
+L(7, '04 · You decide', 'Check it.<br>One tap to approve.', '');
+P('08-review', 'app', 1110, 150, at(7, .3), end(7), { h: 780 });
+P('09-approved', 'app', 1500, 150, at(7, 1.3), end(7), { h: 780 });
+
+// 9. Find cover
+L(8, '05 · Find cover', 'When help can’t come,<br><span class="accent">ask friends.</span>', 'Friends nearby who are free.<br>Nothing is sent until you approve.');
+T(`<div class="steps"><div class="step"><em>1</em>Your friends</div><span class="arrow">→</span><div class="step"><em>2</em>Nearest, free now</div><span class="arrow">→</span><div class="step"><em>3</em>You approve</div></div>`, 200, 800, at(8, 3.2), end(8));
+P('11-pawly-cover', 'app', 1110, 150, at(8, .4), end(8), { h: 780 });
+P('12-friends', 'app', 1500, 150, at(8, 2.0), end(8), { h: 780 });
+
+// 10. Every day
+T(`<div class="h l" style="text-align:center">Every day, at a glance.</div>`, 960, 150, at(9, .2), end(9), { center: true });
+P('10-home-owner', 'app', 960, 280, at(9, .6), end(9), { center: true, h: 770, dy: 60 });
+
+// 11. Close
+T(`<img src="${A}pawsure-logo-vertical.png" style="height:230px">`, 960, 330, at(10, .2), end(10), { center: true, dy: 0, zoom: .03, hold: true });
+T(`<div class="m" style="text-align:center">Be sure, whoever’s caring.</div>`, 960, 610, at(10, .8), end(10), { center: true, hold: true });
+T(`<div class="stats"><div class="stat"><b>Mumbai</b><span>Andheri–Powai</span></div><div class="stat"><b>20</b><span>homes</span></div><div class="stat"><b>4</b><span>weeks</span></div></div>`, 960, 740, at(10, 1.8), end(10), { center: true, hold: true });
+
+const DURATION = TIMES[TIMES.length - 1];
+const stage = document.getElementById('stage'), bar = document.getElementById('progress');
+for (const s of scenes) {
+  const d = document.createElement('div'); d.className = 'el'; d.innerHTML = s.html; stage.appendChild(d); s.node = d;
+  if (s.h) d.querySelector('img').style.height = s.h + 'px';
+}
+const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3);
+const easeIn = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x;
+window.render = t => {
+  for (const s of scenes) {
+    const IN = .8, OUT = .5, dy = s.dy ?? 24;
+    const i = ease((t - s.a) / IN), o = s.hold ? 0 : easeIn((t - (s.b - OUT)) / OUT);
+    const op = Math.max(0, i - o);
+    const n = s.node; n.style.opacity = op; n.style.visibility = op > 0 ? 'visible' : 'hidden';
+    if (op <= 0) continue;
+    const z = 1 + (s.zoom ?? 0) * Math.min(1, Math.max(0, (t - s.a) / (s.b - s.a)));
+    const ty = (1 - i) * dy - o * 12;
+    const w = n.offsetWidth;
+    n.style.left = (s.center ? s.x - w / 2 : s.x) + 'px'; n.style.top = s.y + 'px';
+    n.style.transform = `translateY(${ty}px) scale(${z})`;
+    if (s.tick) s.tick(t - s.a, n);
+  }
+  bar.style.width = (t / DURATION * 100) + '%';
+};
+window.DURATION = DURATION;
+window.ready = Promise.all([...document.images].map(im => im.decode().catch(() => {}))).then(() => document.fonts.ready);
+// Live preview when opened directly (render.mjs passes ?frames to drive it itself)
+if (!location.search.includes('frames')) { const t0 = performance.now(); const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; window.ready.then(loop); }
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+import { test, expect, Page } from '@playwright/test';
+import { boot, signUp, signInOwner, intake, tab, headOut } from './helpers';
+const D = 'docs/pitch/shots/';
+// Captures the app screenshots used in the pitch video (docs/pitch/shots). Skipped in the normal run:
+//   PITCH_SHOTS=1 npx playwright test e2e/pitch-shots.spec.ts --trace off --workers=1
+test.skip(!process.env.PITCH_SHOTS, 'only when refreshing the pitch video screenshots');
+test.use({ viewport: { width: 1440, height: 980 }, deviceScaleFactor: 2 });
+const app = (page: Page, n: string) => page.waitForTimeout(700).then(() => page.locator('.device > .pwa').screenshot({ path: D + n + '.png', animations: 'disabled' }));
+test('pitch: welcome + sign-up + first task', async ({ page }) => {
+  test.setTimeout(180_000);
+  await boot(page, '', { tools: false, intro: true });
+  await app(page, '01-welcome');
+  await page.getByRole('button', { name: 'Get started' }).click();
+  await signUp(page, '9822200777');
+  await page.getByRole('checkbox', { name: /Terms of Use/ }).check(); await page.getByRole('checkbox', { name: /Privacy Notice/ }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.waitForTimeout(1500); await app(page, '02-pawly-signup');
+  await intake(page, 'Isha Rao', 'Raheja Vihar, Powai', { helper: { name: 'Lata Pawar', phone: '9876500777' } });
+  await page.getByRole('button', { name: 'Yes, I have someone' }).click();
+  const wa = page.frameLocator('.wa-dock iframe');
+  const phone = (n: string) => page.waitForTimeout(700).then(() => wa.locator('.phone').screenshot({ path: D + n + '.png', animations: 'disabled' }));
+  await phone('03-wa-invite');
+  for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click();
+  await expect(page.locator('.help-card')).not.toContainText('Invite pending', { timeout: 10000 });
+  await app(page, '04-home-accepted');
+  await wa.locator('.screen [data-go]').first().click();
+  await wa.locator('.screen .view').click();
+  await expect(wa.locator('.notif')).toContainText('Breakfast');
+  await phone('05-wa-reminder');
+  await wa.locator('.screen [data-go]').first().click();
+  await wa.locator('.screen [data-go]').first().click();
+  await expect(page.locator('.review-note')).toBeVisible({ timeout: 10000 });
+  await phone('06-wa-photo');
+  await app(page, '07-home-approve');
+  await page.locator('.review-note').getByRole('button', { name: 'Review' }).click();
+  await page.waitForTimeout(600); await app(page, '08-review');
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByText(/Approved: Breakfast/)).toBeVisible();
+  await app(page, '09-approved');
+});
+test('pitch: owner home + find cover', async ({ page }) => {
+  test.setTimeout(120_000);
+  await boot(page, '', { tools: false });
+  await signInOwner(page, { home: true });
+  await app(page, '10-home-owner');
+  await tab(page, 'Find cover');
+  await expect(page.getByRole('heading', { name: /How can I help\?/ })).toBeVisible();
+  await app(page, '11-pawly-cover');
+  await page.getByRole('button', { name: /Walk/ }).first().click();
+  await expect(page.locator('.friend-card').first()).toBeVisible({ timeout: 15000 });
+  await app(page, '12-friends');
+});
