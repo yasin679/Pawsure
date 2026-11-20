@@ -65,7 +65,6 @@ export async function intake(page: Page, name: string, society: string, o: { cit
 export async function petAndCare(page: Page, pet = 'Coco', helper?: { name: string; phone: string }, nobody = false) {
   await page.locator('#pn0').fill(pet); await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.getByRole('button', { name: /Dog/ }).click();
-  await page.getByRole('button', { name: '1–3 years' }).click();
   await page.locator('#pf0').fill('1 cup kibble at 8 AM and 7 PM'); await page.getByRole('button', { name: 'Send', exact: true }).click(); // saves the pet
   await page.getByRole('button', { name: 'No, that’s all' }).click();
   // Playbook 3: Care details

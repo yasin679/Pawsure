@@ -451,6 +451,12 @@ body{background:var(--stage)}
   /* Demo phones sit beside the device and scale with it (fixed inside the scaled device = placed relative to it). */
   .device > .pwa > .simdock{position:fixed;top:0;left:calc(100% + var(--dock-gap));width:var(--dock-w);max-height:100%;overflow:auto;flex-direction:column;flex-wrap:nowrap;z-index:5}
   .device > .pwa > .simdock > .sheet{max-height:none;max-width:none;flex:0 0 auto}
+  /* The helper's WhatsApp phone: the same size as the owner's phone, level with it; its caption and Hide sit just above */
+  .device:has(> .pwa .wa-sim){--dock-w:var(--dev-w);--z:var(--dev-zw,1);left:calc(50% - (var(--dev-w) * 2 + var(--dock-gap)) * var(--z) / 2);top:calc(50% - (var(--dev-h) - var(--wa-bar-h)) * var(--z) / 2)}
+  .device > .pwa > .simdock.wa-sim{top:-3px;overflow:visible;max-height:none;height:var(--dev-h)}
+  .wa-sim .wa-dock{position:relative;max-width:none;height:100%;gap:0}
+  .wa-sim .wa-dock > .wa-bar{position:absolute;left:0;right:0;bottom:calc(100% + 8px);margin:0;padding:6px 10px;font-size:.78rem;min-height:0}
+  .wa-sim .wa-dock iframe{width:var(--dev-w);height:var(--dev-h);min-height:0;border-radius:65px}
 }
 
 /* ---------- Pawly: the friend search, shown with its steps ---------- */
@@ -1076,7 +1082,6 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 /* the helper's WhatsApp beside the owner's phone (demo) */
 .wa-dock{display:flex;flex-direction:column;gap:8px;flex:1 1 340px;max-width:440px}
 .wa-dock iframe{width:100%;height:min(720px,calc(100vh - 150px));min-height:520px;border:0;border-radius:28px;background:transparent}
-.wa-note{margin:0}
 .invite-pill .watch-helper{background:var(--deep,#24402C)!important;color:#fff!important}
 /* pet tabs: white with an outline; the chosen one in the navigation's green */
 .today .pet-tab.petchip,.pet-tab.tone-0,.pet-tab.tone-1,.pet-tab.tone-2,.pet-tab.tone-3{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line-2)}

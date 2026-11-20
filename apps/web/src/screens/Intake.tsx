@@ -28,7 +28,6 @@ const CHAPTERS = ['Your information', 'Your pet', 'Care details'] as const;
 const FEEDS: [number, string, string][] = [[480, 'Morning · 8 AM', 'Breakfast'], [780, 'Afternoon · 1 PM', 'Lunch'], [1140, 'Evening · 7 PM', 'Dinner'], [1320, 'Night · 10 PM', 'Late snack']];
 const WALKS: [number, string, string][] = [[420, 'Morning · 7 AM', 'Morning walk'], [720, 'Midday · 12 PM', 'Midday walk'], [1080, 'Evening · 6 PM', 'Evening walk'], [1260, 'Night · 9 PM', 'Night walk']];
 const LITTER: [number, string][] = [[600, 'Morning · 10 AM'], [1200, 'Evening · 8 PM']];
-const AGES = ['Under 1 year', '1–3 years', '4–7 years', '8+ years'];
 const names = (xs: string[]) => xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} & ${xs.at(-1)}`;
 const QUICK_LANGS = ['en', 'hi', 'mr'];
 const langLabel = (code: string) => { const l = LANGUAGES.find(x => x.code === code); return l ? (l.native === l.name ? l.name : `${l.native} · ${l.name}`) : code; };
@@ -265,8 +264,6 @@ export function Intake({ onDone }: { onDone: () => void }) {
         compose: () => text(`pn${i}`, tr('Pet’s name'), tr('e.g. Bruno'), v => { setPet(i, { name: v }); next(); }, { max: 40, validate: v => hasLetter(v) ? null : tr('Give your pet a name with letters.') }) },
       { key: `p${i}.species`, chapter: 1, pet: i, answer: x.species, ask: <><b>{tr('Is')} {nm} {tr('a dog, a cat or something else?')}</b></>,
         compose: () => <div className="cb-chips big">{(['Dog', 'Cat', 'Other'] as Species[]).map(sp => <button key={sp} type="button" className="chip" aria-pressed={x.species === sp} onClick={() => { setPet(i, { species: sp }); next(); }}>{sp === 'Dog' ? '🐶 ' : sp === 'Cat' ? '🐱 ' : '🐾 '}{tr(sp)}</button>)}</div> },
-      { key: `p${i}.age`, chapter: 1, pet: i, answer: x.age || tr('Skip'), draft: x.age, ask: <><b>{tr('How old is')} {nm}?</b></>,
-        compose: () => text(`pa${i}`, tr('Age'), tr('Or type it, e.g. 3 years'), v => { setPet(i, { age: v }); next(); }, { optional: true, max: 30, chips: AGES }) },
       { key: `p${i}.food`, chapter: 1, pet: i, answer: x.food, draft: x.food,
         ask: <><b>{tr('What does')} {nm} {tr('eat, and how much?')}</b><span className="cb-note">{tr('Your helper and any friend who covers will see this.')}</span></>,
         compose: () => <>{err && <div className="cb-err" role="alert">{err}</div>}{text(`pf${i}`, tr('Food and feeding'), tr('e.g. 1 cup kibble, curd rice at lunch'), v => finishPet(i, { food: v, ...NOT_YET }), { max: 300 , voice: true })}</> }

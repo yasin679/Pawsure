@@ -73,7 +73,6 @@ export function HelperSim({ hh, day, onChange }: { hh: string; day: DayView | nu
 export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: string; owner: string; pets: string[]; onChange: () => void; onClose: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [helper, setHelper] = useState<{ mid: string; phone: string; name: string } | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   useEffect(() => { api<{ mid: string; phone: string; name: string }>(`/demo/helper-of/${hh}`, { auth: false }).then(setHelper).catch(() => setHelper(null)); }, [hh]);
   const first = helper?.name.split(' ')[0] ?? 'Your helper';
   // '*' with a source check on the way back: the phone page may be served from the artifact's own file host.
@@ -97,7 +96,6 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
     const on = async (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow || e.data?.pawsure !== 'helper-phone') return;
       if (e.data.action === 'joined') await join(e.data.method ?? 'photo');
-      if (e.data.action === 'id_sent') setNote(`${first} sent a photo ID.`);
       if (e.data.action === 'task_photo') await sendTaskPhoto(typeof e.data.photo === 'string' ? e.data.photo : undefined);
     };
     addEventListener('message', on); return () => removeEventListener('message', on);
@@ -112,7 +110,6 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
     if (photo) await api(`/demo/helper-photo/${hh}`, { body: { taskId: firstTask.id, photo }, auth: false });
     else await api('/webhooks/whatsapp', { body: { messageId: 'wa-photo-' + Date.now(), from: h.phone, type: 'photo', taskId: firstTask.id, mediaRef: 'wa-bowl-' + Date.now() }, auth: false });
     await api('/jobs/tick', { body: {}, auth: false });
-    setNote(`${first} sent a photo for ${firstTask.title}. It’s waiting for your review on Home.`);
     onChange();
   }
   /** She said Yes and chose how to check in: the same WhatsApp replies a real helper sends. */
@@ -125,13 +122,11 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
       setJoined(true);
       await reply('consent_yes'); await reply('method_' + method);
       await api('/jobs/tick', { body: {}, auth: false });
-      setNote(`${first} joined with ${method === 'photo' ? 'photo' : method === 'voice' ? 'voice-note' : 'missed-call'} check-ins. Her invite is now accepted on your Home.`);
       onChange();
   }
   return <div className="wa-dock" aria-label={`${first}’s WhatsApp (simulated)`}>
-    <div className="banner sim"><span className="bi">⚙</span><div className="grow">{first}’s WhatsApp (simulated). Tap the highlighted part of her phone.</div><button className="btn ghost sm" onClick={onClose}>Hide</button></div>
-    {note && <div className="banner info wa-note" role="status">{note}</div>}
-    {!joined && <button type="button" className="btn ghost sm" onClick={() => join('photo')}>{first} said Yes (if her phone doesn’t respond)</button>}
+    <div className="banner sim wa-bar"><span className="bi">⚙</span><div className="grow">{first}’s WhatsApp (simulated). Tap the highlighted part.
+      {!joined && <> <button type="button" className="intro-link" onClick={() => join('photo')}>{first} said Yes</button></>}</div><button className="btn ghost sm" onClick={onClose}>Hide</button></div>
     <iframe ref={frame} title={`${first}’s WhatsApp (simulated)`} src={`${import.meta.env.BASE_URL}helper-phone.html`} onLoad={setup} />
   </div>;
 }

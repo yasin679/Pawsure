@@ -7,12 +7,14 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /** Device size in CSS px at scale 1 (styles.css: --dev-w, --dev-h), the docked demo phones, and the margin around them. */
-const DEV_W = 428 + 8, DEV_H = 900, DOCK = 30 + 440, MARGIN = 24;
+const DEV_W = 428 + 8, DEV_H = 900, DOCK = 30 + 440, MARGIN = 24, WA_BAR = 60;
 function fitDevice() {
   const w = innerWidth - 2 * MARGIN, h = innerHeight - 2 * MARGIN;
   const z = (width: number) => String(Math.max(0.3, Math.min(1, h / DEV_H, w / width)));
   const s = document.documentElement.style;
   s.setProperty('--dev-z', z(DEV_W)); s.setProperty('--dev-zd', z(DEV_W + DOCK));
+  // the helper's WhatsApp phone is as big as the owner's, with its caption above both (styles.css .wa-sim)
+  s.setProperty('--wa-bar-h', WA_BAR + 'px'); s.setProperty('--dev-zw', String(Math.max(0.3, Math.min(1, h / (DEV_H + WA_BAR), w / (DEV_W * 2 + 30))))); 
 }
 
 const now = () => { const d = new Date(); return `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2, '0')}`; };

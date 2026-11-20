@@ -249,8 +249,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await intakeInfo(page, 'Isha');
     await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: /Dog/ }).click();
-    await page.getByRole('button', { name: '1–3 years' }).click();
-    await page.getByRole('button', { name: 'Speak your answer' }).click();
+      await page.getByRole('button', { name: 'Speak your answer' }).click();
     await expect(page.locator('#pf0')).toHaveValue('Two cups of rice and curd at lunch');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.locator('.cb.me', { hasText: 'Two cups of rice and curd at lunch' })).toBeVisible(); // the answer, saved with the pet
@@ -300,7 +299,7 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     const wa = page.frameLocator('.wa-dock iframe');
     await expect(wa.locator('.notif')).toContainText('Hello Lata! Isha has invited you to Pawsure for Coco');
     for (let k = 0; k < 4; k++) await wa.locator('.screen [data-go]').first().click(); // open, open the chat, send ID, join with photos
-    await expect(page.locator('.wa-note')).toContainText('Lata joined with photo check-ins');
+    await expect(page.locator('.wa-note')).toHaveCount(0); // no status note above her phone (20 Nov)
     await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
     await expect(card.locator('.help-track')).toContainText('Accepted');
   });
@@ -437,7 +436,7 @@ test.describe('V. Breed and sex, and small forms in the conversation (16 Nov)', 
     await intakeInfo(page, 'Isha');
     await page.locator('#pn0').fill('Coco'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await page.getByRole('button', { name: /Dog/ }).click();
-    await page.getByRole('button', { name: '1–3 years' }).click();
+    await expect(page.getByText(/How old is/)).toHaveCount(0); // no age question (20 Nov)
     await expect(page.getByRole('group', { name: 'Breed and sex' })).toHaveCount(0);
     await page.locator('#pf0').fill('Kibble twice a day'); await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.getByText('Coco’s profile is saved.')).toBeVisible(); // straight after the food question

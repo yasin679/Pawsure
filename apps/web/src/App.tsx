@@ -107,7 +107,7 @@ export function App() {
   return <div className="pwa">
     {!online && <div className="offline">You’re offline. Missed-call check-ins still work.</div>}
     {demo && hh && tools && <DemoBar hh={hh} day={day} onChange={load} wa={waOpen} setWa={setWaOpen} />}
-    {demo && hh && waOpen && <div className="simdock" aria-label="Helper’s WhatsApp"><HelperWhatsApp hh={hh} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} onChange={load} onClose={() => setWaOpen(false)} /></div>}
+    {demo && hh && waOpen && <div className="simdock wa-sim" aria-label="Helper’s WhatsApp"><HelperWhatsApp hh={hh} owner={me?.user.display_name ?? ''} pets={pets.map(p => p.name)} onChange={load} onClose={() => setWaOpen(false)} /></div>}
     {demo && hh && !waOpen && tab === 'today' && <HelperWhatsAppLink key={hh + String(waOpen)} hh={hh} onShow={() => setWaOpen(true)} />}{demo && <DemoToolsSwitch on={tools} onToggle={toggleTools} />}
     {sub === 'routine' && hh && <RoutineScreen hh={hh} pets={pets} onBack={() => { setSub(null); load(); }} onChanged={load} />}
     {sub === 'health' && hh && <HealthScreen hh={hh} pets={pets} onBack={() => setSub(null)} />}
