@@ -2,7 +2,7 @@
 
 The style is minimal: a warm ivory background, dark ink type, one sage accent, real app screenshots and simple infographics.
 Headings have no full stops.
-The video runs 3 min 5 s at 1920 × 1080, with an ElevenLabs voice-over and music.
+The video runs 3 min 4 s at 1920 × 1080, with an ElevenLabs voice-over and music.
 
 Sources:
 - **PRD:** PRD v1.5, short version (19 Nov 2026).
@@ -21,7 +21,7 @@ Sources:
 | 7 | Bar chart: rely on someone 62% (28/45), changed plans 69% (31/45), camera 42% (19/45), paid for care 40% (18/45) | Sixty-two percent rely on someone else to check. Sixty-nine percent have changed their plans because of their pet. And forty-two percent use a camera. But a camera can watch. It can’t help. | PRD §2 survey |
 | 8 | Competitor grid: book · watch · proof · backup | Today’s options solve slices of the problem. Marketplaces help you book. Cameras let you watch. But a booking isn’t proof that care happened. | Deck p7 |
 | 9 | Others vs Pawsure, four before → after rows | Others help you book care. Pawsure assures it happened, and has a backup when it doesn’t. | Deck p8 |
-| 10 | Meet Pawly, your AI assistant: Pawly’s avatar with a soft pulse, a speech bubble and the sign-up chat | Sign-up is a short chat with Pawly, your AI assistant. Your pet, their routine, your helper, and today’s tasks are ready. | PRD §6.5 |
+| 10 | Meet Pawly, your AI assistant: Pawly’s avatar with a soft pulse, a speech bubble and the sign-up chat | Sign up with our personal AI assistant, Pawly. Your pet, their routine, your helper, and today’s tasks are ready. | PRD §6.5 |
 | 11 | 02 · Your helper (WhatsApp invite + reminder) | Your helper joins on WhatsApp… | PRD §5 |
 | 12 | 03 · Proof (bowl photo + Home) + Confirmed · Likely · Not confirmed | She sends a photo of the bowl. Never her face… | PRD §6.1 |
 | 13 | 04 · You decide (review + approved) | You check it, and approve it in one tap. | PRD §6.5 |
