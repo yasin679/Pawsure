@@ -146,9 +146,11 @@ const X = '<i class="no">✕</i>', V = '<i class="yes">✓</i>';
 const PPL = A + 'people/', PET = A + 'avatars/';
 // reveal the children matching `sel` at the given offsets (seconds after the element appears)
 const stagger = (sel, offs, dx = 0) => (dt, n) => n.querySelectorAll(sel).forEach((g, j) => { const p = Math.min(1, Math.max(0, (dt - (offs[j] ?? offs[offs.length - 1])) / .5)); g.style.opacity = p; g.style.transform = `translate(${(1 - p) * dx}px, ${(1 - p) * (dx ? 0 : 12)}px)`; });
-const persona = (n, img, name, role, pain, need, extra = '', offs = [0, 1.6, 3]) => {
+// persona cards ease in one after another, sliding from left to right
+const slideIn = offs => (dt, n) => n.querySelectorAll('.pn > div').forEach((g, j) => { const q = Math.min(1, Math.max(0, (dt - (offs[j] ?? offs[offs.length - 1])) / .8)), e = 1 - Math.pow(1 - q, 3); g.style.opacity = e; g.style.transform = `translateX(${(1 - e) * -40}px)`; });
+const persona = (n, img, name, role, pain, need, extra = '', offs = [0, 1.6, 3], lead = '') => {
   T(`<div class="who"><div class="av">${img}</div><div><div class="k">${role}</div><div class="h l">${name}</div></div></div>`, 200, 330, at(n, .2), end(n));
-  T(`<div class="pn"><div><i>Pain point</i><p>${pain}</p></div><div><i>What she needs</i><p>${need}</p></div>${extra}</div>`, 200, 620, at(n, 1.4), end(n), { tick: stagger('.pn > div', offs) });
+  T(`<div class="pn">${lead}<div><i>Pain point</i><p>${pain}</p></div><div><i>What she needs</i><p>${need}</p></div>${extra}</div>`, 200, 620, at(n, 1.4), end(n), { tick: slideIn(offs) });
 };
 
 // 0. Name and promise
@@ -163,10 +165,10 @@ T(`<div class="jobs"><span><b>Functional</b>Know each task was done</span><span>
 // 2–4. Who we're designing for
 persona(2, `<img src="${PPL}bob-glasses.webp"><img class="pet" src="${PET}dog.webp">`, 'Neha, 34', 'Primary owner · out 8–10 hours', 'Can’t tell if lunch, water and the walk actually happened', 'One honest status for the day', '', [4.8, 6.2]);
 T(`<div class="think">“Is Bruno okay?”</div>`, 1250, 370, at(2, 2.2), end(2));
-persona(3, `<img src="${PPL}bun-hoops.webp">`, 'Sunita, 45', 'Her helper · three flats', 'Apps, typing, and being blamed for honest mistakes', 'A simple request in her language, no app', `<div><i>How she works</i><p>WhatsApp and voice notes · Hindi or Marathi · sometimes a basic phone</p></div>`, [5, 6.6, 1.2]);
+persona(3, `<img src="${PPL}bun-hoops.webp">`, 'Sunita, 45', 'Her helper · three flats', 'Apps, typing, and being blamed for honest mistakes', 'A simple request in her language, no app', '', [1.2, 5, 6.6], `<div><i>How she works</i><p>WhatsApp and voice notes · Hindi or Marathi · sometimes a basic phone</p></div>`);
 T(`<div class="think">“Will I be blamed?”</div>`, 1250, 370, at(3, 8.4), end(3));
 T(`<div class="who"><div class="av two"><img src="${PPL}beard-glasses.webp"><img src="${PPL}curls-headphones.webp"></div><div><div class="k">Secondary owners · new to the city</div><div class="h l">Rohan &amp; Ankita</div></div></div>`, 200, 330, at(4, .2), end(4));
-T(`<div class="pn"><div><i>Pain point</i><p>No one they trust nearby when they travel or work late</p></div><div><i>What they need</i><p>A trusted care circle in their own society</p></div></div>`, 200, 620, at(4, 1.4), end(4), { tick: stagger('.pn > div', [0, 1.4]) });
+T(`<div class="pn"><div><i>Pain point</i><p>No one they trust nearby when they travel or work late</p></div><div><i>What they need</i><p>A trusted care circle in their own society</p></div></div>`, 200, 620, at(4, 1.4), end(4), { tick: slideIn([0, 1.4]) });
 
 // 5. The three gaps
 T(`<div class="k">The problem</div>`, 200, 300, at(5, .1), end(5));
