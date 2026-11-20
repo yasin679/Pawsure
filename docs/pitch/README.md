@@ -4,6 +4,8 @@
 
 | File | What it is |
 |------|------------|
+| `pawsure-pitch-4k.mp4` | The 4K master (3840 × 2160), drawn at 2x for sharp text and screenshots |
+| `pawsure-pitch.mp4` | A 1080p copy scaled down from the 4K render, for easy sharing and playback |
 | `script.md` | The script: scenes, voice-over lines, and where each claim comes from in the PRD v1.5 and the pitch deck |
 | `pitch.html` | The film itself, drawn by `render(t)`; open it in a browser to watch it play live (no sound) |
 | `timing.js` | When each scene starts, taken from the voice-over's word timings |
