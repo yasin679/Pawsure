@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signInOwner, tab, clockTo, taskCard, dialog, api, openPlan, closePlan, findCoverForm } from './helpers';
+import { boot, signInOwner, tab, clockTo, taskCard, dialog, api, openPlan, closePlan, findCoverForm, helperCantCome } from './helpers';
 
 const friendsPhone = (page: Page) => page.locator('.sheet', { hasText: 'Friends’ phones (simulated)' });
 async function friendReply(page: Page, name: string, button?: string, text?: string) {
@@ -30,8 +30,7 @@ test.describe('G. Find cover (AI Friend Finder)', () => {
 
   test('G1 Helper can’t come → ask Meera → she says Yes (Marathi) → owner confirms → only Bruno’s lunch moves to her', async ({ page }) => {
     await clockTo(page, '11:00');
-    await page.getByRole('button', { name: 'My help can’t come' }).click();
-    await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await helperCantCome(page);
     await findCoverForm(page);
     await page.locator('#ask').fill('Sunita can’t come today. Can someone feed Bruno at 1:00 pm?');
     await page.getByRole('button', { name: 'Understand my request' }).click();

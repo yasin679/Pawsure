@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake, openPlan, closePlan, headOut } from './helpers';
+import { boot, signInOwner, signUp, tab, noHorizontalScroll, dialog, intake, openPlan, closePlan, headOut, helperCantCome } from './helpers';
 
 test.describe('L. Cross-cutting', () => {
   test('L1 Phone width (390 px): no sideways scrolling on any main tab', async ({ page }) => {
@@ -17,8 +17,7 @@ test.describe('L. Cross-cutting', () => {
 
   test('L3 Reloading the demo keeps you signed in with your changes; Reset demo starts fresh', async ({ page }) => {
     await boot(page); await signInOwner(page);
-    await page.getByRole('button', { name: 'My help can’t come' }).click();
-    await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await helperCantCome(page);
     await expect(page.getByText('Sunita can’t come today.')).toBeVisible();
     await page.waitForTimeout(1500); // the demo saves to browser storage just after each change
     await page.reload();

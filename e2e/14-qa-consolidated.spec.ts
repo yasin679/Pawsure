@@ -272,7 +272,8 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     // no reload or tab switch: Home picks up the accepted invite by itself (17 Nov)
     await expect(card).not.toContainText('Invite pending', { timeout: 10000 });
     await expect(card.locator('.help-track')).toContainText('Accepted');
-    await expect(card.getByRole('button', { name: 'My help can’t come' })).toBeVisible();
+    await expect(card.locator('.help-track li', { hasText: 'Accepted' }).locator('.ht-dot')).toHaveText('✓'); // accepted shows ticked (20 Nov)
+    await expect(card.getByRole('button', { name: 'My help can’t come' })).toHaveCount(0); // removed from Home (20 Nov)
   });
   test('U2b The invited helper accepts on the simulated phone, and Home changes from Invite pending to Accepted at once', async ({ page }) => {
     await toCare(page, '9822200203');

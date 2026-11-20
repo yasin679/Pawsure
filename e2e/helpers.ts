@@ -187,3 +187,10 @@ export async function noHorizontalScroll(page: Page) {
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
   expect(sw, 'page should not scroll sideways').toBeLessThanOrEqual(iw);
 }
+
+/** Marks the helper unavailable for today (the Home button for this was removed; the helper can also say so on WhatsApp). */
+export async function helperCantCome(page: Page, hh = 'hh_demo') {
+  await api(page, 'PUT', `/v1/households/${hh}/day`, { helperUnavailable: true });
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Me' }).click();
+  await page.locator('nav.tabbar').getByRole('button', { name: 'Today' }).click();
+}

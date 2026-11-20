@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY, openPlan } from './helpers';
+import { boot, signIn, signUp, signInOwner, api, tick, webhook, clockTo, tab, dialog, staff, consoleSection, noHorizontalScroll, intake, PHONE, SUNITA, DAY, openPlan, helperCantCome } from './helpers';
 
 /** v1.4 cover continuity (PRD 17.1 new rows) through the real screens of the demo build. */
 const HH = '/v1/households/hh_demo';
@@ -143,8 +143,7 @@ test.describe('O. Cover continuity (v1.4)', () => {
 
   test('O9 “I’m leaving” with nobody confirmed → warning and options → Leave anyway → No cover planned', async ({ page }) => {
     await boot(page); await signInOwner(page, { home: true });
-    await page.getByRole('button', { name: 'My help can’t come' }).click();
-    await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await helperCantCome(page);
     await page.getByRole('button', { name: 'I’m leaving' }).click();
     await expect(dialog(page)).toContainText('Nobody has accepted Bruno’s 1:00 PM lunch + fresh water yet.');
     await expect(dialog(page).locator('[data-option]')).toHaveCount(6);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY, openPlan, closePlan, tab } from './helpers';
+import { boot, signInOwner, clockTo, taskCard, dialog, api, DAY, openPlan, closePlan, tab, helperCantCome } from './helpers';
 
 test.describe('D. Today: daily care', () => {
   // D2 is about the leaving flow itself, so it starts at home; the others start after heading out (tasks visible).
@@ -82,8 +82,7 @@ test.describe('D. Today: daily care', () => {
 
   test('D8 Can’t come today → plan kept, alone-window warning, “Ask a friend” pre-fills Find cover', async ({ page }) => {
     await clockTo(page, '11:00');
-    await page.getByRole('button', { name: 'My help can’t come' }).click();
-    await dialog(page).getByRole('button', { name: 'Mark unavailable' }).click();
+    await helperCantCome(page);
     await expect(page.getByText('Sunita can’t come today. Your original plan is kept.')).toBeVisible();
     await openPlan(page);
     await expect(page.getByText(/Alone-window warning/)).toBeVisible();

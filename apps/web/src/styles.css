@@ -1010,25 +1010,25 @@ button.tile:hover{box-shadow:0 10px 26px -14px rgba(38,48,39,.55)}
 .today .today-hero .th-date{font-size:1rem;color:var(--ink-2)}
 .today .today-hero .th-sos,:root[data-theme="dark"] .today .today-hero .th-sos{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 20px 0 16px;background:var(--sos);color:#fff;font-size:1rem;letter-spacing:.02em;box-shadow:0 8px 18px -10px rgba(228,100,79,.8)}
 /* your help today */
-.today .card.help-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--lav-a) 0%,var(--lav-b) 100%);color:var(--ink);border-radius:28px;padding:18px 18px 16px;gap:14px}
+.today .card.help-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--lav-a) 0%,var(--lav-b) 100%);color:var(--ink);border-radius:24px;padding:14px 16px 14px;gap:10px}
 .today .card.help-card::after{content:'';position:absolute;right:-50px;bottom:-60px;width:220px;height:170px;border-radius:50%;background:var(--lav-b);opacity:.9;pointer-events:none}
 .today .card.help-card > *{position:relative;z-index:1}
-.hc-spark{position:absolute!important;top:16px;right:18px;width:40px;height:30px;fill:none;stroke:var(--lav-ink);stroke-width:2.6;stroke-linecap:round}
-.today .card.help-card .eyebrow{color:var(--lav-ink);font-size:.82rem;letter-spacing:.06em}
-.today .card.help-card h2{color:var(--ink);font-size:1.6rem}
+.hc-spark{position:absolute!important;top:12px;right:14px;width:32px;height:24px;fill:none;stroke:var(--lav-ink);stroke-width:2.6;stroke-linecap:round}
+.today .card.help-card .eyebrow{color:var(--lav-ink);font-size:.75rem;letter-spacing:.06em}
+.today .card.help-card h2{color:var(--ink);font-size:1.35rem}
 .today .card.help-card .small,.today .card.help-card .muted{color:var(--ink-2)}
-.today .card.help-card .helper-av{width:84px;height:84px;box-shadow:0 0 0 4px #fff,0 6px 14px -8px rgba(60,40,90,.5)}
-.today .card.help-card .helper-av img{width:84px;height:84px}
-.today .card.help-card .btn:not(.primary){background:var(--surface);color:var(--ink);border-color:transparent;height:46px;font-size:1rem}
+.today .card.help-card .helper-av{width:67px;height:67px;box-shadow:0 0 0 4px #fff,0 6px 14px -8px rgba(60,40,90,.5)}
+.today .card.help-card .helper-av img{width:67px;height:67px}
+.today .card.help-card .btn:not(.primary){background:var(--surface);color:var(--ink);border-color:transparent;height:40px;font-size:.95rem}
 .today .card.help-card .btn.primary{background:var(--deep);border-color:var(--deep);color:#fff}
 .today .card.help-card .help-track li{color:var(--ink-2)}
 .today .card.help-card .help-track li:not(:first-child)::before{background:rgba(106,76,156,.25)}
 .today .card.help-card .ht-dot{background:var(--surface);border-color:var(--lav-ink)}
 .today .card.help-card .help-track li.done .ht-dot{background:var(--lav-ink);border-color:var(--lav-ink);color:#fff}
 .today .card.help-card .help-track li.now .ht-dot{border-color:var(--lav-ink);box-shadow:0 0 0 4px rgba(106,76,156,.2)}
-.today .card.help-card .invite-pill{background:var(--cream-note);border:0;border-radius:20px;padding:14px 14px 14px 16px;color:var(--ink);display:flex;align-items:center;gap:12px}
+.today .card.help-card .invite-pill{background:var(--cream-note);border:0;border-radius:18px;padding:10px 10px 10px 14px;color:var(--ink);display:flex;align-items:center;gap:10px}
 .today .card.help-card .invite-pill .ip-text b{font-size:1rem}
-.today .card.help-card .invite-pill .btn{background:var(--surface)!important;color:var(--deep)!important;border:0;border-radius:99px;font-weight:800;padding:0 18px;height:42px;box-shadow:0 4px 10px -6px rgba(0,0,0,.3)}
+.today .card.help-card .invite-pill .btn{background:var(--surface)!important;color:var(--deep)!important;border:0;border-radius:99px;font-weight:800;padding:0 16px;height:38px;box-shadow:0 4px 10px -6px rgba(0,0,0,.3)}
 /* heading out */
 .today .card.flat.out-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--peach-a) 0%,var(--peach-b) 100%);color:var(--peach-ink);border-radius:28px;padding:18px 18px 16px;min-height:150px}
 .today .card.flat.out-card::after{content:'';position:absolute;left:46%;bottom:-70px;width:260px;height:150px;border-radius:50%;background:var(--peach-b);pointer-events:none}
