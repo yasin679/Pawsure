@@ -2,7 +2,7 @@
 
 *How we designed Pawsure: proof of pet care at home, built around a helper who never wanted another app.*
 
-Team: Group-G, IITR · Research, product, design and a working demo · Web app + WhatsApp · Pilot planned in Mumbai, Andheri–Powai
+Team: Group-G, IITR · Research, product, design and a working demo · Mobile app + WhatsApp · Pilot planned in Mumbai, Andheri–Powai
 
 ---
 
