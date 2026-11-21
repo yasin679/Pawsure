@@ -127,7 +127,8 @@ tr.us td{background:var(--sage-soft);font-weight:600}
 .tradeoff{font-size:.92rem;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .tradeoff b{font:600 .68rem/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--rust);display:block;margin-bottom:6px}
 .bet-art{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.shot{width:min(240px,44%);border-radius:28px;border:6px solid #111;background:#111;box-shadow:0 24px 50px -30px rgba(0,0,0,.6);display:block;height:auto}
+/* the screenshots carry their own phone bezel, with transparent corners; only a soft shadow is added */
+.shot{width:min(240px,44%);display:block;height:auto;filter:drop-shadow(0 18px 28px rgba(0,0,0,.28))}
 .states{display:grid;gap:10px;width:100%;max-width:420px}
 .state{display:grid;grid-template-columns:14px minmax(0,1fr);gap:12px;align-items:start;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .state i{width:14px;height:14px;border-radius:50%;margin-top:6px}
@@ -145,7 +146,7 @@ tr.us td{background:var(--sage-soft);font-weight:600}
 /* ---------- walkthrough ---------- */
 .flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px;margin-top:2.4rem}
 .flow figure{display:grid;gap:10px;align-content:start}
-.flow .shot{width:100%;border-width:5px;border-radius:24px}
+.flow .shot{width:100%}
 .flow figcaption{margin:0;font-size:.86rem;line-height:1.45}
 .flow figcaption b{display:block;font:600 .68rem/1 var(--f-mono);letter-spacing:.12em;color:var(--sage);margin-bottom:4px}
 
@@ -336,7 +337,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-betw
         <p>Sunita sends a photo of the bowl, or a short video. Never a selfie. The photo lands on the task in the owner’s Home, which changes from <span class="mono">Pending</span> to <span class="mono">Approve</span>. The owner opens it, sees the same photo, and approves in one tap.</p>
         <p class="tradeoff"><b>What it cost</b>A bowl photo can be faked. We raise the effort with fresh codes and random photo requests, and we say plainly that this reduces fakes rather than eliminating them.</p>
       </div>
-      <div class="bet-art"><img class="shot" src="img/06-wa-photo.webp" alt="The helper’s chat with the bowl photo she sent" width="520" height="1092"><img class="shot" src="img/08-review.webp" alt="The owner’s review sheet showing the same photo and an Approve button" width="520" height="1092"></div>
+      <div class="bet-art"><img class="shot" src="img/06-wa-photo.webp" alt="The helper’s chat with the bowl photo she sent" width="520" height="1092"><img class="shot" src="img/08-review.webp" alt="The owner’s review sheet showing the same photo and an Approve button" width="520" height="1102"></div>
     </div>
 
     <div class="bet flip">
@@ -346,7 +347,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-betw
         <p>Owners type what they need in plain words to Pawly, the AI assistant. Pawly finds their own friends nearby who are free and comfortable with the task, nearest first, and drafts the WhatsApp message. Nothing is sent until the owner approves it.</p>
         <p class="tradeoff"><b>What it cost</b>A smaller pool than a marketplace. New-to-the-city owners like Rohan and Ankita may have nobody to ask yet, so sign-up helps them build a circle in their own society.</p>
       </div>
-      <div class="bet-art"><img class="shot" src="img/11-pawly-cover.webp" alt="Pawly, the cover assistant, asking how it can help" width="520" height="1092"><img class="shot" src="img/12-friends.webp" alt="Pawly suggesting three nearby friends with Ask buttons" width="520" height="1092"></div>
+      <div class="bet-art"><img class="shot" src="img/11-pawly-cover.webp" alt="Pawly, the cover assistant, asking how it can help" width="520" height="1102"><img class="shot" src="img/12-friends.webp" alt="Pawly suggesting three nearby friends with Ask buttons" width="520" height="1102"></div>
     </div>
 
     <div class="bet">
@@ -356,7 +357,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-betw
         <p>Instead of a form, sign-up is a short chat with Pawly. Your name, your home, your pet, what they eat and when. Each care answer becomes one of today’s tasks, and the last question invites your helper. By the end of the chat, the day is already planned.</p>
         <p class="tradeoff"><b>What it cost</b>Chats feel slower to skim than forms. We kept every question short and made most answers one tap.</p>
       </div>
-      <div class="bet-art"><img class="shot" src="img/02-pawly-signup.webp" alt="The sign-up chat with Pawly" width="520" height="1092"><img class="shot" src="img/04-home-accepted.webp" alt="The owner’s Home after sign-up, with the helper accepted and today’s first task" width="520" height="1092"></div>
+      <div class="bet-art"><img class="shot" src="img/02-pawly-signup.webp" alt="The sign-up chat with Pawly" width="520" height="1102"><img class="shot" src="img/04-home-accepted.webp" alt="The owner’s Home after sign-up, with the helper accepted and today’s first task" width="520" height="1102"></div>
     </div>
   </div>
 </section>
@@ -390,11 +391,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-betw
       <p>This is the path we tested hardest in the demo, because it’s the moment the product earns trust: the first time a task happens and the owner can see it.</p>
     </div>
     <div class="flow">
-      <figure><img class="shot" src="img/02-pawly-signup.webp" alt="" width="520" height="1092"><figcaption><b>1 · OWNER</b>A short chat with Pawly sets up the home, the pet and the routine.</figcaption></figure>
+      <figure><img class="shot" src="img/02-pawly-signup.webp" alt="" width="520" height="1102"><figcaption><b>1 · OWNER</b>A short chat with Pawly sets up the home, the pet and the routine.</figcaption></figure>
       <figure><img class="shot" src="img/03-wa-invite.webp" alt="" width="520" height="1092"><figcaption><b>2 · HELPER</b>Sunita gets an invite on WhatsApp and joins with photos.</figcaption></figure>
       <figure><img class="shot" src="img/05-wa-reminder.webp" alt="" width="520" height="1092"><figcaption><b>3 · HELPER</b>At task time, Pawsure reminds her what to do.</figcaption></figure>
-      <figure><img class="shot" src="img/07-home-approve.webp" alt="" width="520" height="1092"><figcaption><b>4 · OWNER</b>Her bowl photo appears on Home, waiting for review.</figcaption></figure>
-      <figure><img class="shot" src="img/09-approved.webp" alt="" width="520" height="1092"><figcaption><b>5 · OWNER</b>One tap to approve. Breakfast moves to Completed.</figcaption></figure>
+      <figure><img class="shot" src="img/07-home-approve.webp" alt="" width="520" height="1102"><figcaption><b>4 · OWNER</b>Her bowl photo appears on Home, waiting for review.</figcaption></figure>
+      <figure><img class="shot" src="img/09-approved.webp" alt="" width="520" height="1102"><figcaption><b>5 · OWNER</b>One tap to approve. Breakfast moves to Completed.</figcaption></figure>
     </div>
   </div>
 </section>
