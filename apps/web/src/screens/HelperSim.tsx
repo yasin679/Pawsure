@@ -77,17 +77,17 @@ export function HelperWhatsApp({ hh, owner, pets, onChange, onClose }: { hh: str
   const first = helper?.name.split(' ')[0] ?? 'Your helper';
   // '*' with a source check on the way back: the phone page may be served from the artifact's own file host.
   // Her first task today and today's code from the code card, so her phone shows the real reminder.
-  const [firstTask, setFirstTask] = useState<{ id: string; title: string; pet: string; time: string; code: string; day: number } | null>(null);
-  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: firstTask ? [firstTask.pet, ...pets.filter(p => p !== firstTask.pet)] : pets.length ? pets : ['your pet'], ...(firstTask ? { task: { title: firstTask.title, time: firstTask.time }, code: firstTask.code, day: firstTask.day } : {}) } }, '*');
+  const [firstTask, setFirstTask] = useState<{ id: string; title: string; type: string; pet: string; time: string; code: string; day: number } | null>(null);
+  const setup = () => frame.current?.contentWindow?.postMessage({ pawsure: 'setup', names: { helper: first, owner: owner.split(' ')[0] || 'Your owner', pets: firstTask ? [firstTask.pet, ...pets.filter(p => p !== firstTask.pet)] : pets.length ? pets : ['your pet'], ...(firstTask ? { task: { title: firstTask.title, time: firstTask.time, type: firstTask.type }, code: firstTask.code, day: firstTask.day } : {}) } }, '*');
   async function loadFirstTask(mid: string) {
     try {
-      const day = await api<{ tasks: { id: string; title: string; petId: string; due: number; assignee: string; ev: { state: string } }[]; careDate: string }>(`/v1/households/${hh}/today`);
+      const day = await api<{ tasks: { id: string; title: string; type: string; petId: string; due: number; assignee: string; ev: { state: string } }[]; careDate: string }>(`/v1/households/${hh}/today`);
       const petsOf = await api<{ id: string; name: string }[]>(`/v1/households/${hh}/pets`).catch(() => [] as { id: string; name: string }[]);
       const t = day.tasks.filter(x => x.assignee === mid && !['Confirmed', 'Likely', 'Matched', 'Cancelled'].includes(x.ev.state)).sort((a, b) => a.due - b.due)[0];
       if (!t) return;
       const card = await api<{ codes: Record<string, string>; today: number }>(`/v1/households/${hh}/code-cards/current`).catch(() => null);
       const h = Math.floor(t.due / 60), m = t.due % 60, time = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-      setFirstTask({ id: t.id, title: t.title, pet: petsOf.find(p => p.id === t.petId)?.name ?? pets[0] ?? 'your pet', time, code: card?.codes[card.today] ?? '', day: card?.today ?? Number(day.careDate.slice(8, 10)) });
+      setFirstTask({ id: t.id, title: t.title, type: t.type, pet: petsOf.find(p => p.id === t.petId)?.name ?? pets[0] ?? 'your pet', time, code: card?.codes[card.today] ?? '', day: card?.today ?? Number(day.careDate.slice(8, 10)) });
     } catch { /* the phone keeps its example task */ }
   }
   useEffect(() => { if (helper) loadFirstTask(helper.mid); }, [helper?.mid]);

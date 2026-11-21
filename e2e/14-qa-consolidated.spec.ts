@@ -361,6 +361,19 @@ test.describe('U. Helper invite and voice answers in onboarding (16 Nov)', () =>
     await expect(page.locator('.wa-dock')).toBeVisible();
   });
 
+  test('U2g The helper’s photo follows the task: a walk asks for a photo from the walk and sends a walk picture, not the food bowl', async ({ page }) => {
+    await page.goto('/helper-phone.html');
+    // what the app sends the phone: her first task is the evening walk
+    await page.evaluate(() => window.postMessage({ pawsure: 'setup', names: { helper: 'Lata', owner: 'Isha', pets: ['Coco'], task: { title: 'Evening walk', time: '6:00 PM', type: 'walk' } } }, '*'));
+    for (let k = 0; k < 5; k++) await page.locator('.screen [data-go]').first().click();
+    await page.locator('.screen .view').click();
+    await expect(page.locator('.notif')).toContainText('Evening walk (6:00 PM)');
+    await page.locator('.screen [data-go]').first().click(); // open the reminder
+    await expect(page.locator('.screen')).toContainText('send a photo or a short video from the walk');
+    await expect(page.locator('.screen')).not.toContainText('short video of the bowl');
+    await page.locator('.screen [data-go]').first().click(); // she sends her photo
+    await expect(page.locator('.screen img[alt="Photo from the walk, the dog on its lead"]')).toBeVisible();
+  });
   test('U5 Find cover works the same right after sign-up as after login: friends to ask, the in-chat form, Send', async ({ page }) => {
     await toCare(page, '9822200209');
     await intake(page, 'Isha Rao', 'Raheja Vihar, Powai');

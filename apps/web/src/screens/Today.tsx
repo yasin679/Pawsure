@@ -19,6 +19,8 @@ const RQ = [['food', 'Food bowl', 'Empty / eaten', 'Untouched'], ['water', 'Wate
 type SheetKind = null | 'addtask' | 'plan' | 'caring' | 'cantcome' | 'leaving' | 'return' | 'timeline' | 'report' | 'sos' | 'resolve' | 'task' | 'incident' | 'change' | 'predeparture' | 'delay';
 
 /** Task type icons and colours follow the prototype (feeding orange, water sky, walk green, toilet teal, medicine lilac). */
+/** The example photo shown for a task without a stored picture, by task type: a walk shows a walk, not a bowl. */
+const EVIDENCE_IMG: Record<string, string> = { feeding: 'evidence-bowl', water: 'evidence-water', walk: 'evidence-walk', medicine: 'evidence-medicine', toilet: 'evidence-toilet', litter: 'evidence-litter', other: 'evidence-other' };
 const TASK_ICON: Record<string, string> = { feeding: 'food', water: 'water', walk: 'walk', toilet: 'pad', litter: 'litter', medicine: 'pill', other: 'paw' };
 /** The carer's avatar: an illustrated portrait from the people set (no photos are stored); no helper shows an empty seat. */
 function HelperAvatar({ who, seed = '', name = '' }: { who: 'sunita' | 'helper' | 'friend' | 'none'; seed?: string; name?: string }) {
@@ -278,7 +280,7 @@ export function Today({ hh, day, pets, incidents, ownerName, reload, onFindCover
       <div className="row"><h2 className="grow">{task.title}</h2><StatusPill t={task} /></div>
       <div className="small muted">{petName(task.petId)} · {fmt(task.due)}{helperRow ? ` · ${helperFirst}` : ''}</div>
       {isDone(task) && task.ev.state !== 'Cancelled'
-        ? <>{toReview(task) && <div className="review-head">{helperFirst} {tr('sent this photo. Check it, then approve the task.')}</div>}<TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/evidence-bowl.webp`} alt={`${petName(task.petId)} eating from the bowl`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
+        ? <>{toReview(task) && <div className="review-head">{helperFirst} {tr('sent this photo. Check it, then approve the task.')}</div>}<TaskProof hh={hh} taskId={task.id} fallback={<figure className="ev-media"><img src={`${import.meta.env.BASE_URL}assets/${EVIDENCE_IMG[task.type] ?? 'evidence-other'}.webp`} alt={`Photo for ${task.title}`} /><figcaption>{evidenceCaption(task)}</figcaption></figure>} />
           {toReview(task) && <button className="btn primary block" onClick={() => run(async () => { await api(`${H}/tasks/${task.id}/owner-done`, { body: {} }); setMsg(`${tr('Approved')}: ${task.title}. ${tr('Thank you')}, ${helperFirst}!`); })}><Icon name="check" size={18} />{tr('Approve')}</button>}
           {task.returnCheck?.reviewed && <div className="small muted">✓ {tr('Approved by you')}</div>}</>
         : task.ev.state === 'Cancelled' ? <div className="task-desc">{tr('Cancelled for today.')}</div>
